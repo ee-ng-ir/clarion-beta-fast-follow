@@ -23,7 +23,10 @@ export function AdminsTab({ tenant }: { tenant: Tenant }) {
   const [q, setQ] = useState("")
   const [filter, setFilter] = useState<Filter>("all")
   const [adding, setAdding] = useState(false)
-  const limit = tenant.subscriptions.find((s) => s.status !== "cancelled")?.adminLicenses
+  // Admins are tenant-wide; each product's plan sets admin licences, so the
+  // largest one is the ceiling. Whether they should be per product is open.
+  const liveSubs = tenant.subscriptions.filter((s) => s.status !== "cancelled")
+  const limit = liveSubs.length ? Math.max(...liveSubs.map((s) => s.adminLicenses)) : undefined
   const used = tenant.admins.filter((a) => a.status !== "inactive").length
   const full = limit !== undefined && used >= limit
   const readOnly = tenant.status !== "active"

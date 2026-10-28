@@ -173,9 +173,10 @@ export function effectiveFlags(t: Tenant, globals: Record<string, FlagValue>): E
   const subValue = (key: string) => {
     for (const s of live) {
       if (key in s.flags) return { value: s.flags[key], product: s.product }
-      if (key === "clarion-admin-user-max") return { value: s.adminLicenses, product: s.product }
-      if (key === "clarion-widget-user-max") return { value: s.widgetLicenses, product: s.product }
-      if (key === "clarion-widget-ui-enabled") return { value: s.widgetExperience === "interactive", product: s.product }
+      if (key === `${s.product}-admin-user-max`) return { value: s.adminLicenses, product: s.product }
+      if (key === "clarion-widget-user-max" && s.product === "clarion") return { value: s.units, product: s.product }
+      if (key === "vantage-system-max" && s.product === "vantage") return { value: s.units, product: s.product }
+      if (key === "clarion-widget-ui-enabled" && s.product === "clarion") return { value: s.widgetExperience === "interactive", product: s.product }
     }
     return undefined
   }

@@ -8,7 +8,7 @@ import { PageTop } from "@/components/PageTop"
 import { ChoiceSelect, Link, Mono, SearchField, SortHead, StatusBadge, SyncBadge, TrialBadge } from "@/components/ui"
 import { toast } from "@/lib/toast"
 import { daysUntil, fmtDate } from "@/lib/format"
-import { LATEST_VERSION, productCatalog, productName, type ProductId } from "@/data/catalog"
+import { latestVersion, productDef, productName, type ProductId } from "@/data/catalog"
 import { resync, setVersion, useOps } from "@/data/store"
 
 /**
@@ -44,6 +44,8 @@ export function ProductPlansPage() {
   const picked = visibleKeys.filter((k) => selected.has(k))
   const allPicked = picked.length > 0 && picked.length === visibleKeys.length
   const toggle = (k: string) => setSelected((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n })
+  const pickedProducts = [...new Set(picked.map((k) => k.split(":")[1] as ProductId))]
+  const oneProduct = pickedProducts.length === 1 ? pickedProducts[0] : undefined
   const keys = () => picked.map((k) => { const [tenant, product] = k.split(":"); return { tenant, product: product as ProductId } })
   const sortBy = (key: typeof sort.key) => setSort((s) => ({ key, dir: s.key === key && s.dir === "asc" ? "desc" : "asc" }))
   const filtered = !!(q || products.length || versions.length || statuses.length || syncs.length)
@@ -67,7 +69,8 @@ export function ProductPlansPage() {
           <Button size="sm" variant="outline" onClick={() => { resync(keys()); toast({ title: `Resynced ${picked.length} plan${picked.length === 1 ? "" : "s"}` }); setSelected(new Set()) }}>
             <RefreshCw aria-hidden /> Resync
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setVersionOpen(true)}><Tag aria-hidden /> Update version</Button>
+          <Button size="sm" variant="outline" disabled={!oneProduct} onClick={() => setVersionOpen(true)}><Tag aria-hidden /> Update version</Button>
+          {!oneProduct ? <span className="text-body-sm text-content-neutral-muted">Pick plans of one product to change their version.</span> : null}
           <Button size="sm" variant="ghost" className="ms-auto" onClick={() => setSelected(new Set())}>Clear selection</Button>
         </div>
       ) : null}
@@ -85,6 +88,7 @@ export function ProductPlansPage() {
                 <TableHead align="start" className="border-t-0"><SortHead label="Tenant" active={sort.key === "tenant"} dir={sort.dir} onClick={() => sortBy("tenant")} /></TableHead>
                 <TableHead align="start" className="border-t-0">Product</TableHead>
                 <TableHead align="start" className="border-t-0">Version</TableHead>
+                <TableHead align="start" className="border-t-0">Licences used</TableHead>
                 <TableHead align="start" className="border-t-0">Status</TableHead>
                 <TableHead align="start" className="border-t-0">Sync</TableHead>
                 <TableHead align="start" className="border-t-0"><SortHead label="Updated" active={sort.key === "updated"} dir={sort.dir} onClick={() => sortBy("updated")} /></TableHead>
@@ -104,7 +108,11 @@ export function ProductPlansPage() {
                     <TableCell>{productName(s.product)}</TableCell>
                     <TableCell>
                       <Mono>{s.version}</Mono>
-                      {s.version !== LATEST_VERSION ? <div className="text-body-xs text-content-neutral-muted">Behind latest</div> : null}
+                      {s.version !== latestVersion(s.product) ? <div className="text-body-xs text-content-neutral-muted">Behind latest</div> : null}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {s.unitsUsed.toLocaleString()} <span className="text-content-neutral-muted">/ {s.units.toLocaleString()} {productDef(s.product).unit.plural}</span>
+                      {s.unitsUsed / s.units >= 0.9 ? <div className="text-body-xs text-content-warning-emphasis">{s.unitsUsed >= s.units ? "At limit" : "Nearly full"}</div> : null}
                     </TableCell>
                     <TableCell><div className="flex flex-wrap gap-1"><StatusBadge status={s.status} />{s.trial ? <TrialBadge /> : null}</div></TableCell>
                     <TableCell><SyncBadge sync={s.sync} /></TableCell>
@@ -122,7 +130,7 @@ export function ProductPlansPage() {
       </Card>
       <p className="text-body-sm text-content-neutral-muted">{rows.length} of {all.length} live plans.</p>
 
-      <BulkVersionDialog open={versionOpen} count={picked.length} onClose={() => setVersionOpen(false)} onConfirm={(v) => {
+      <BulkVersionDialog key={oneProduct} product={oneProduct ?? "clarion"} open={versionOpen} count={picked.length} onClose={() => setVersionOpen(false)} onConfirm={(v) => {
         setVersion(keys(), v)
         toast({ title: `${picked.length} plan${picked.length === 1 ? "" : "s"} moving to ${v}` })
         setSelected(new Set())
@@ -132,18 +140,18 @@ export function ProductPlansPage() {
   )
 }
 
-function BulkVersionDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose: () => void; onConfirm: (v: string) => void }) {
-  const [v, setV] = useState(LATEST_VERSION)
-  const versions = productCatalog.find((p) => p.id === "clarion")?.versions ?? []
+function BulkVersionDialog({ product, open, count, onClose, onConfirm }: { product: ProductId; open: boolean; count: number; onClose: () => void; onConfirm: (v: string) => void }) {
+  const [v, setV] = useState(latestVersion(product))
+  const versions = productDef(product).versions
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update plan version</DialogTitle>
+          <DialogTitle>Update {productName(product)} version</DialogTitle>
           <DialogDescription>Moves {count} selected plan{count === 1 ? "" : "s"} to a new version. Each one syncs on its own.</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <ChoiceSelect value={v} onChange={setV} aria-label="Version" options={versions.map((x) => ({ value: x, label: x, detail: x === LATEST_VERSION ? "Latest" : undefined }))} />
+          <ChoiceSelect value={v} onChange={setV} aria-label="Version" options={versions.map((x) => ({ value: x, label: x, detail: x === versions[0] ? "Latest" : undefined }))} />
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
