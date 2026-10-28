@@ -114,13 +114,13 @@ function ProductRoles({ product }: { product: ProductId }) {
           cols={["Product Admin", "Editor", "Viewer"]}
           rows={[
             { area: "Vantage", rows: [
-              ["See systems and their health", "loc", "loc", "loc"],
-              ["Acknowledge alerts and add notes", "loc", "loc", "none"],
+              ["See systems, their health and payment flow", "loc", "loc", "loc"],
+              ["Acknowledge payment alerts and add notes", "loc", "loc", "none"],
               ["Add systems and set their location", "loc", "none", "none"],
-              ["Alert rules", "full", "none", "none"],
+              ["Alert rules and cut-off times", "full", "none", "none"],
             ] },
           ]}
-          foot="Alert rules are tenant-wide, like Clarion's thresholds: the same open question applies to a location-limited Product Admin."
+          foot="Alert rules and cut-off times are tenant-wide, like Clarion's thresholds: the same open question applies to a location-limited Product Admin."
         />
       )}
     </>

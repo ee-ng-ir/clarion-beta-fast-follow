@@ -41,7 +41,7 @@ export const plans: ProductPlan[] = [
     expires: "30 Jun 2027",
     licenses: 50,
     blurb:
-      "Vantage monitors the voice and contact-centre infrastructure behind your sites: session border controllers, call managers, gateways, the contact-centre platform and call recording.",
+      "Vantage monitors high-value payments end to end: SWIFT and RTGS gateways, the payments hub, and the queues, HSMs and NonStop systems behind them, so payments operations see a stuck or late payment before cut-off.",
   },
 ]
 
