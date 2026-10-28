@@ -74,6 +74,14 @@ npm run build                  # builds everything (Turborepo caches unchanged a
 
 Node 22 (see `.nvmrc`).
 
+## Working on Picasso
+
+Edit Picasso in `Projects/picasso`, not here. While `npm run dev` (or any `dev:*`) is running, it watches Picasso and copies changes into `packages/picasso`; the apps hot-reload. It watches `packages/ui/src` and the built token CSS (`packages/tokens/dist/tokens.css`, `themes.css`, `theme.css`), so after editing token JSON run Picasso's token build.
+
+- **Deploys use the committed copy.** Vercel can't see your Picasso folder, so before you push: `npm run sync:picasso`, then commit `packages/picasso` (its `VERSION.json` records the Picasso commit).
+- **No Picasso folder?** Dev says so and uses the committed copy.
+- **Getting changes into IR's Picasso** is a Picasso-repo job: commit there and push to both remotes (`origin` on GitHub, `ir` on git.ir.local). This repo never pushes to Picasso.
+
 ## Deploying to Vercel
 
 Create **one Vercel project per app** (not per package), all pointing at this repo:

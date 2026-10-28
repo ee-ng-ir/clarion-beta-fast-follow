@@ -16,7 +16,8 @@ assets stay in `Projects/<Product>/`; runnable code comes here. See README "Fold
 
 - Monorepo: npm workspaces + Turborepo. Install at the root only (`npm install`), never inside an app.
 - `packages/picasso` (`@ir/ui`) is **generated** by `npm run sync:picasso`. Never hand-edit it; fix
-  things in the Picasso repo and re-sync. Picasso is switched on per shell with `<html data-picasso>`.
+  things in the Picasso repo and re-sync. `npm run dev` watches `Projects/picasso` and re-syncs on save
+  (`packages/picasso/scripts/watch-picasso.mjs`); before a deploy, run `npm run sync:picasso` and commit `packages/picasso`. Picasso is switched on per shell with `<html data-picasso>`.
 - `packages/mock-data` is the one dummy tenant. Don't fork its people, groups or locations into an
   app; import from `@ir/mock-data/*` and extend it there.
 - `packages/telemetry` is the contract between the widget and the dashboard: the demo agents, the feed,

@@ -124,6 +124,7 @@ export {
   PageHeader,
   type PageHeaderProps,
 } from "./components/page-header/page-header";
+export { PageFooter } from "./components/page-footer/page-footer";
 export {
   Progress,
   progressIndicatorVariants,

@@ -11,11 +11,11 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "dev:clarion": "turbo run dev --filter=clarion --filter=clarion-widget",
-    "dev:console": "turbo run dev --filter=client-console",
-    "dev:ops": "turbo run dev --filter=ops-console",
+    "dev:clarion": "turbo run dev --filter=clarion... --filter=clarion-widget...",
+    "dev:console": "turbo run dev --filter=client-console...",
+    "dev:ops": "turbo run dev --filter=ops-console...",
     "sync:picasso": "npm run sync --workspace @ir/ui",
-    "dev:clarion-widget": "turbo run dev --filter=clarion-widget"
+    "dev:clarion-widget": "turbo run dev --filter=clarion-widget..."
   },
   "devDependencies": {
     "turbo": "^2.5.0"

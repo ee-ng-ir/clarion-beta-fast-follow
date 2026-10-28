@@ -4,6 +4,11 @@
  *
  *   npm run sync:picasso                      # (from the monorepo root) reads ../picasso
  *   PICASSO_DIR=/path/to/picasso npm run sync:picasso
+ *   npm run dev                               # also keeps it in sync while you work
+ *                                             # (scripts/watch-picasso.mjs re-runs this on change)
+ *
+ * Writes only files whose content changed, and removes files Picasso no longer
+ * has — so re-running it while Vite is up hot-reloads just what you edited.
  *
  * Why a copy: Picasso isn't published yet and this prototype deploys to
  * Vercel, which can't see a sibling folder. Code imports from "@ir/ui" exactly
@@ -49,7 +54,18 @@ if (!fs.existsSync(path.join(picasso, "packages/ui/src/index.ts"))) {
 
 const uiSrc = path.join(picasso, "packages/ui/src")
 const uiOut = path.join(out, "ui")
-try { fs.rmSync(uiOut, { recursive: true, force: true }) } catch { /* overwrite in place below */ }
+const written = new Set()
+let changedCount = 0
+/** Write only when the content differs, so watchers see real changes only. */
+function writeIfChanged(dest, content) {
+  written.add(dest)
+  const prev = fs.existsSync(dest) ? fs.readFileSync(dest) : null
+  const next = Buffer.isBuffer(content) ? content : Buffer.from(content)
+  if (prev && prev.equals(next)) return
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.writeFileSync(dest, next)
+  changedCount++
+}
 
 const skip = (rel) =>
   /(^|\/)(stories|__tests__)(\/|$)/.test(rel) ||
@@ -74,14 +90,26 @@ function copyDir(from, rel = "") {
       // Picasso is type-checked in its own repo, under its own tsconfig. Don't
       // re-check its source under the prototype's (different) strictness flags.
       // Its exported types still flow into the prototype unchanged.
-      fs.writeFileSync(dest, `// @ts-nocheck — vendored from Picasso by scripts/sync-picasso.mjs; checked in the Picasso repo.\n${src}`)
+      writeIfChanged(dest, `// @ts-nocheck — vendored from Picasso by scripts/sync-picasso.mjs; checked in the Picasso repo.\n${src}`)
     } else {
-      fs.copyFileSync(path.join(from, r), dest)
+      writeIfChanged(dest, fs.readFileSync(path.join(from, r)))
     }
     fileCount++
   }
 }
 copyDir(uiSrc)
+
+// Remove files Picasso no longer has.
+let removedCount = 0
+function prune(dir) {
+  if (!fs.existsSync(dir)) return
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name)
+    if (entry.isDirectory()) { prune(p); if (!fs.readdirSync(p).length) fs.rmdirSync(p); continue }
+    if (!written.has(p)) { fs.rmSync(p); removedCount++ }
+  }
+}
+prune(uiOut)
 
 // ---- 2. CSS --------------------------------------------------------------------
 // A small brace-aware parser: enough for the token files, which are plain CSS
@@ -263,8 +291,7 @@ ${scopedValues.join("\n")}
 /* ── @ir/tokens — theme.css (Tailwind bridge, scoped) */
 ${bridgeOut}
 `
-fs.mkdirSync(out, { recursive: true })
-fs.writeFileSync(path.join(out, "picasso.css"), css)
+writeIfChanged(path.join(out, "picasso.css"), css)
 
 // ---- 3. Provenance -------------------------------------------------------------
 
@@ -276,8 +303,13 @@ const version = {
   uncommittedChanges: !!git("status --porcelain packages"),
   syncedAt: new Date().toISOString(),
 }
-fs.writeFileSync(path.join(out, "VERSION.json"), JSON.stringify(version, null, 2) + "\n")
+// Only touch VERSION.json when the source moved (keeps git quiet while watching).
+const versionFile = path.join(out, "VERSION.json")
+const prevVersion = fs.existsSync(versionFile) ? JSON.parse(fs.readFileSync(versionFile, "utf8")) : {}
+if (changedCount + removedCount > 0 || prevVersion.commit !== version.commit || prevVersion.package !== version.package || prevVersion.uncommittedChanges !== version.uncommittedChanges) {
+  fs.writeFileSync(versionFile, JSON.stringify(version, null, 2) + "\n")
+}
 
 console.log(`Picasso ${version.package} (${version.commit ?? "unknown"}${version.uncommittedChanges ? ", with uncommitted changes" : ""})`)
-console.log(`  ${fileCount} component files → vendor/picasso/ui`)
-console.log(`  ${globalDefaults.length} Tailwind keys scoped → vendor/picasso/picasso.css`)
+console.log(`  ${fileCount} component files → packages/picasso/ui (${changedCount} changed, ${removedCount} removed)`)
+console.log(`  ${globalDefaults.length} Tailwind keys scoped → packages/picasso/picasso.css`)
