@@ -3,27 +3,11 @@
 // console.dev-abhra.ir.com (Oct 2026), with the old product name replaced by
 // Clarion and test-only flags left out.
 
-// ------------------------------------------------------------ environments --
+// ------------------------------------------------------------------ stage --
 
-export interface Environment {
-  id: string
-  kind: "shared" | "ephemeral"
-  /** Has IAM (and the other backends) on Lattice — so it can be picked in the header. */
-  lattice: boolean
-}
-
-/** Stage "dev". The header switcher lists the Lattice ones; Services and Tofu modules list every env with state. */
+/** Stage "dev". Services and Tofu modules list every environment with state in it. */
 export const STAGE = "dev"
 export const STATE_BUCKET = "abhra-dev-ap-southeast-2-opentofu-state"
-
-export const environments: Environment[] = [
-  { id: "dev", kind: "shared", lattice: true },
-  { id: "dnui", kind: "ephemeral", lattice: true },
-  { id: "jani-dev", kind: "ephemeral", lattice: true },
-  { id: "mar", kind: "ephemeral", lattice: true },
-  { id: "danielm", kind: "ephemeral", lattice: true },
-  { id: "jv-oid", kind: "ephemeral", lattice: true },
-]
 
 export const regions = [
   { id: "ap-southeast-2", label: "Asia Pacific (Sydney)" },

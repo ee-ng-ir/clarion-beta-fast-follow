@@ -1,22 +1,18 @@
 import { useMemo, useState } from "react"
-import { Filter, MailX, RefreshCw } from "lucide-react"
-import { Button, Card, EmptyState, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ir/ui"
+import { Filter, MailX } from "lucide-react"
+import { Card, EmptyState, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ir/ui"
 import { PageTop } from "@/components/PageTop"
 import { CopyButton, Mono, SearchField, StatusBadge } from "@/components/ui"
-import { toast } from "@/lib/toast"
 import { fmtDateTime } from "@/lib/format"
 import { emailsByEnv, type EmailEvent } from "@/data/email"
-import { useOps } from "@/data/store"
 
 const NONE: EmailEvent[] = []
 const LABELS: Record<string, string> = { delivered: "Delivered", opened: "Opened", processed: "Processed", deferred: "Deferred", bounced: "Bounced", dropped: "Dropped" }
 
 export function EmailActivityPage() {
-  const env = useOps((s) => s.env)
-  const emails = emailsByEnv[env] ?? NONE
+  const emails = emailsByEnv.dev ?? NONE
   const [q, setQ] = useState("")
   const [statuses, setStatuses] = useState<string[]>([])
-  const [updated, setUpdated] = useState(() => new Date())
 
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase()
@@ -30,9 +26,8 @@ export function EmailActivityPage() {
     <div className="flex flex-col gap-gutter">
       <PageTop
         title="Email activity"
-        description={<>The last 100 emails the platform sent from <Mono>{env}</Mono>, from SendGrid's Email Activity. Results can be up to 60 seconds old.</>}
-        meta={<>Updated {updated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}{problems ? <> · <span className="text-content-danger-emphasis">{problems} not delivered</span></> : null}</>}
-        actions={<Button variant="outline" onClick={() => { setUpdated(new Date()); toast({ title: "Email activity refreshed", variant: "info" }) }}><RefreshCw aria-hidden /> Refresh</Button>}
+        description="The last 100 emails the platform sent, from SendGrid's Email Activity. Results can be up to 60 seconds old."
+        meta={problems ? <span className="text-content-danger-emphasis">{problems} not delivered</span> : undefined}
       />
 
       {emails.length ? (
@@ -46,8 +41,8 @@ export function EmailActivityPage() {
         {emails.length === 0 ? (
           <EmptyState
             icon={<MailX />}
-            title={`No email from ${env}`}
-            description={<>SendGrid has nothing in the <Mono>{env}</Mono> category. Email Activity history has to be on, and outbound mail has to be tagged with the stage category.</>}
+            title="No email yet"
+            description="SendGrid has no activity to show. Email Activity history has to be on, and outbound mail has to be tagged with the stage category."
             className="py-12"
           />
         ) : rows.length === 0 ? (

@@ -14,7 +14,6 @@ import { defaultFor, setGlobal, useOps, useOverrideCounts } from "@/data/store"
 
 /** targeting["*"] — the default every tenant gets unless it has its own override. */
 export function GlobalFlagsPage() {
-  const env = useOps((s) => s.env)
   const globals = useOps((s) => s.globalFlags)
   const counts = useOverrideCounts()
   const [q, setQ] = useState("")
@@ -27,7 +26,7 @@ export function GlobalFlagsPage() {
     <div className="flex flex-col gap-gutter">
       <PageTop
         title="Global feature flags"
-        description={<>Platform-wide defaults (<Mono>targeting["*"]</Mono>) for <Mono>{env}</Mono>. A default applies to every tenant without its own override.</>}
+        description={<>Platform-wide defaults (<Mono>targeting["*"]</Mono>) A default applies to every tenant without its own override.</>}
         actions={<Button onClick={() => setAdding(true)}><Plus aria-hidden /> Add global default</Button>}
       />
 
@@ -79,7 +78,7 @@ export function GlobalFlagsPage() {
                     <TableCell>
                       <FlagEditor type={def?.type ?? "string"} value={globals[k]} label={`Global default for ${k}`} onCommit={(v) => {
                         setGlobal(k, v)
-                        toast({ title: "Global default saved", description: `${k} = ${String(v)} in ${env}${counts[k] ? `. ${counts[k]} tenant override${counts[k] === 1 ? "" : "s"} unchanged.` : "."}` })
+                        toast({ title: "Global default saved", description: `${k} = ${String(v)}${counts[k] ? `. ${counts[k]} tenant override${counts[k] === 1 ? "" : "s"} unchanged.` : "."}` })
                       }} />
                     </TableCell>
                     <TableCell><Button variant="ghost" size="sm" onClick={() => setRemoving(k)}>Remove</Button></TableCell>
@@ -96,7 +95,7 @@ export function GlobalFlagsPage() {
           <DialogHeader>
             <DialogTitle>Remove the global default for {removing}?</DialogTitle>
             <DialogDescription>
-              Tenants without an override stop getting this flag in {env}.
+              Tenants without an override stop getting this flag.
               {removing && counts[removing] ? ` The ${counts[removing]} tenant override${counts[removing] === 1 ? "" : "s"} stay.` : ""}
             </DialogDescription>
           </DialogHeader>
@@ -107,12 +106,12 @@ export function GlobalFlagsPage() {
         </DialogContent>
       </Dialog>
 
-      <AddGlobalDialog open={adding} onClose={() => setAdding(false)} existing={globals} env={env} />
+      <AddGlobalDialog open={adding} onClose={() => setAdding(false)} existing={globals} />
     </div>
   )
 }
 
-function AddGlobalDialog({ open, onClose, existing, env }: { open: boolean; onClose: () => void; existing: Record<string, FlagValue>; env: string }) {
+function AddGlobalDialog({ open, onClose, existing }: { open: boolean; onClose: () => void; existing: Record<string, FlagValue> }) {
   const options = flagDefs.filter((f) => !(f.key in existing) && !f.tenantOnly)
   const [key, setKey] = useState<string | undefined>()
   const [value, setValue] = useState<FlagValue>(false)
@@ -123,7 +122,7 @@ function AddGlobalDialog({ open, onClose, existing, env }: { open: boolean; onCl
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>Add a global default</DialogTitle>
-          <DialogDescription>Sets <Mono>targeting["*"]</Mono> in {env} for a registered flag. Every tenant without an override gets it straight away.</DialogDescription>
+          <DialogDescription>Sets <Mono>targeting["*"]</Mono> for a registered flag. Every tenant without an override gets it straight away.</DialogDescription>
         </DialogHeader>
         <DialogBody className="gap-4">
           <Field>

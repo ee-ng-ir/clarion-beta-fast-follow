@@ -10,14 +10,12 @@ import { NOW } from "@/lib/format"
 export const OPERATOR = { name: "Ee Ng", email: "ee.ng@ir.com" }
 
 interface State {
-  env: string
   tenants: Tenant[]
   globalFlags: Record<string, FlagValue>
   audit: Record<string, AuditEvent[]>
 }
 
 let state: State = {
-  env: "dev",
   tenants: seedTenants,
   globalFlags: { ...seedGlobalFlags },
   audit: Object.fromEntries(seedTenants.map((t) => [t.id, seedAudit(t)])),
@@ -56,10 +54,6 @@ function patchTenant(id: string, fn: (t: Tenant) => Tenant, audit?: Parameters<t
   const tenants = state.tenants.map((t) => (t.id === id ? fn(t) : t))
   set({ tenants, ...(audit ? { audit: log(...audit) } : {}) })
 }
-
-// ------------------------------------------------------------------- env --
-
-export const setEnv = (env: string) => set({ env })
 
 // --------------------------------------------------------------- tenants --
 

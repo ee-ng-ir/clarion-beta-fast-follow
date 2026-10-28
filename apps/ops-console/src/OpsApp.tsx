@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react"
 import {
-  Building2, Cloud, ExternalLink, Flag, Layers, LogOut, Mail, Moon, RefreshCw, ScrollText, Server, Sun,
+  Building2, Cloud, ExternalLink, Flag, Layers, LogOut, Mail, Moon, ScrollText, Sun,
 } from "lucide-react"
 import {
   AppShell, AppShellContent, AppShellHeader, AppShellMain,
-  Avatar, AvatarFallback, Badge, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, Button,
+  Avatar, AvatarFallback, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
   Separator, Sidebar, SidebarBrand, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuLabel, SidebarProvider, SidebarTrigger,
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+  TooltipProvider,
 } from "@ir/ui"
 import consoleArt from "../../../packages/picasso/ui/brand-assets/Console.svg"
 import { matchRoute, useLocation, type Route } from "@/lib/router"
 import { CLARION_URL, CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { initials } from "@/lib/format"
-import { environments } from "@/data/catalog"
-import { OPERATOR, getTenant, setEnv, useOps } from "@/data/store"
-import { ChoiceSelect, Link } from "@/components/ui"
+import { OPERATOR, getTenant, useOps } from "@/data/store"
+import { Link } from "@/components/ui"
 import { Toaster } from "@/components/Toaster"
 import { toast } from "@/lib/toast"
 import { TenantsPage } from "@/pages/TenantsPage"
@@ -76,7 +75,6 @@ const TITLES: Partial<Record<Route["page"], string>> = {
 export function OpsApp() {
   const { path, query } = useLocation()
   const route = matchRoute(path)
-  const env = useOps((s) => s.env)
   const tenantName = useOps((s) => (route.page === "tenant" ? s.tenants.find((t) => t.id === route.id)?.name : undefined))
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"))
 
@@ -154,27 +152,6 @@ export function OpsApp() {
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <Badge color="warning" variant="outline" className="max-md:hidden">Internal</Badge>
-                <ChoiceSelect
-                  size="sm"
-                  aria-label="Environment"
-                  className="w-36"
-                  icon={<Server />}
-                  value={env}
-                  onChange={(v) => {
-                    setEnv(v)
-                    toast({ title: `Switched to ${v}`, description: "Tenants, flags and email now read from this environment.", variant: "info" })
-                  }}
-                  options={environments.filter((e) => e.lattice).map((e) => ({ value: e.id, label: e.id, detail: e.kind }))}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" aria-label="Refresh data" onClick={() => toast({ title: "Data refreshed", variant: "info" })}>
-                      <RefreshCw aria-hidden />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Refresh data</TooltipContent>
-                </Tooltip>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button type="button" aria-label={`Account: ${OPERATOR.name}`} className="cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-line-focused">

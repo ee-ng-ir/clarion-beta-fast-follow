@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import {
-  Alert, AlertDescription, Badge, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
+  Badge, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Field, FieldLabel, SegmentedControl, SegmentedControlItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import { PageTop } from "@/components/PageTop"
@@ -59,9 +59,6 @@ export function ServicesPage() {
           </SegmentedControl>
         }
       />
-      <Alert variant="info">
-        <AlertDescription>This page has its own environment picker. The one in the top bar only lists environments with IAM on Lattice; this one lists every environment with state. For the raw state, see Tofu modules.</AlertDescription>
-      </Alert>
 
       <div className="flex flex-wrap items-end gap-4">
         <Field className="w-72">

@@ -15,11 +15,11 @@ npm run dev:ops   # from the repo root → http://localhost:5175
 | `/tenants/:id` | Tenant: Overview, Client admins, Audit log, Feature flags, Products (`?tab=`) |
 | `/product-plans` | Every live subscription across tenants; bulk resync and version updates |
 | `/services` | Service dependency map (and list) with OpenTofu state and Lattice reachability by environment |
-| `/email-activity` | SendGrid Email Activity for the selected environment |
+| `/email-activity` | SendGrid Email Activity: recent platform email and whether it was delivered |
 | `/tofu-modules` | Raw OpenTofu state by environment, read-only |
 | `/feature-flags` | Global defaults (`targeting["*"]`) and how many tenants override each |
 
-The env switcher in the top bar works like the live one: it lists the Lattice environments. Services and Tofu modules ignore it on purpose, because they list every environment that has state.
+The live console's environment switcher, refresh button and "Internal" badge are left out: they're about which backend you're pointed at, not the product. Services and Tofu modules keep their own environment views, because state per environment is what those pages are about.
 
 ## How it's built
 

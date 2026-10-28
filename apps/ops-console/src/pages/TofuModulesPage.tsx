@@ -1,4 +1,4 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Alert, AlertDescription, Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ir/ui"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ir/ui"
 import { PageTop } from "@/components/PageTop"
 import { Mono } from "@/components/ui"
 import { STAGE, STATE_BUCKET, services, tofuEnvs } from "@/data/catalog"
@@ -19,11 +19,6 @@ export function TofuModulesPage() {
         title="Tofu modules"
         description="Raw OpenTofu state keys by environment. Read-only: this shows which modules have state, and when it last changed."
       />
-      <Alert variant="info">
-        <AlertDescription>
-          This page doesn't follow the environment in the top bar. That list only has environments with IAM on Lattice; this one has every environment with state in the bucket, ephemeral ones included.
-        </AlertDescription>
-      </Alert>
 
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line-neutral-muted px-6 py-3 text-body-sm text-content-neutral-muted">

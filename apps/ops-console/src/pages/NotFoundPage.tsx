@@ -7,7 +7,7 @@ export function NotFoundPage({ what = "page" }: { what?: string }) {
     <EmptyState
       icon={<SearchX />}
       title={`That ${what} doesn't exist`}
-      description={what === "tenant" ? "It may be in another environment. Check the environment in the top bar, or search the tenant list." : "Check the address, or pick a page from the sidebar."}
+      description={what === "tenant" ? "It may have been removed. Search the tenant list instead." : "Check the address, or pick a page from the sidebar."}
       action={<Button variant="outline" asChild><Link to="/tenants">Go to tenants</Link></Button>}
       className="py-16"
     />
