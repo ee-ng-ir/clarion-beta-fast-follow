@@ -2,6 +2,10 @@ import { useEffect, useState } from "react"
 import { AdminApp } from "@/AdminApp"
 import { CLARION_URL } from "@/lib/apps"
 import { buildPath, pageFromPath, readUserTab, type PageId, type UserTab } from "@/nav"
+import { restoreViewAs } from "@/lib/viewer"
+
+// Prototype: sign back in as whoever "View as" was last set to.
+restoreViewAs()
 
 /** Fleet routes that belong to the Clarion app, not here. */
 const clarionPaths = ["/endpoints", "/issues", "/thresholds", "/glossary", "/devices-model", "/issues-model", "/scope", "/components"]

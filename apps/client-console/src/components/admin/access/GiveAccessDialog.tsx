@@ -10,6 +10,7 @@ import {
   access, describeRole, grantsOf, jobsFor, matchingGroup, productName, suggestGroupName, type Assignment, type Job, type Scope,
 } from "@ir/mock-data/access"
 import { LocationChecklist, PersonCell, plural, useAccess } from "@/components/admin/access/AccessBits"
+import { useViewer } from "@/lib/viewer"
 
 /**
  * "Give access": the IT Admin answers what someone should do and where, and we put
@@ -42,7 +43,9 @@ export function GiveAccessDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const jobs = jobsFor(scope)
+  // A User Admin can't give Tenant Admin (assumed rule, open question 4).
+  const { perm } = useViewer()
+  const jobs = jobsFor(scope).filter((j) => perm.grantTenantAdmin || j.role !== "tenant_admin")
   const def = jobs.find((j) => j.id === job) ?? jobs[0]
   const scopedLocs = def.scoped && where === "some" ? locs : []
   const draft: Omit<Assignment, "id"> = { role: def.role, product: def.product, locations: scopedLocs }

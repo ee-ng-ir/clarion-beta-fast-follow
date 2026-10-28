@@ -16,7 +16,9 @@ const fmtN = (n: number) => n.toLocaleString()
 
 // ------------------------------------------------------------------ Add user --
 
-export function AddUserDialog({ open, onOpenChange, proposed }: { open: boolean; onOpenChange: (o: boolean) => void; proposed: boolean }) {
+/** `location`: where new users land. Assumed (open question 7): a Clarion admin limited
+ *  to one location adds users there, so they don't vanish from their own list. */
+export function AddUserDialog({ open, onOpenChange, proposed, location = null }: { open: boolean; onOpenChange: (o: boolean) => void; proposed: boolean; location?: string | null }) {
   const [f, setF] = useState({ first: "", last: "", loginId: "", email: "", site: "" })
   const [touched, setTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +30,7 @@ export function AddUserDialog({ open, onOpenChange, proposed }: { open: boolean;
   const submit = () => {
     setTouched(true)
     if (!f.loginId.trim() || (f.email.trim() && !emailOk(f.email.trim()))) return
-    const r = createUser({ loginId: f.loginId, name: `${f.first} ${f.last}`.trim(), email: f.email, site: f.site })
+    const r = createUser({ loginId: f.loginId, name: `${f.first} ${f.last}`.trim(), email: f.email, site: f.site, locationId: location })
     if (!r.ok) { setError(r.error); return }
     toast({ title: `${`${f.first} ${f.last}`.trim() || f.loginId} was added.` })
     onOpenChange(false)

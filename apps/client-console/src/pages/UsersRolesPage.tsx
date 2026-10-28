@@ -14,9 +14,10 @@ import {
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import {
-  ME, access, assignmentLabel, groupScopes, productAccess, products, scopes, tenantRolesOf, type Scope, describeRole, locationName, moveTarget, siteGroupsOf, clarionAccess, clarionReach, grantsOf, groupsOf, isTenantAdmin, roleDef, roles,
-  statusLabel, tenantAdmins, wouldOrphanTenant, type Person, type PersonStatus,
+  me, access, assignmentLabel, groupScopes, productAccess, products, scopes, tenantRolesOf, type Scope, describeRole, locationName, moveTarget, siteGroupsOf, clarionAccess, clarionReach, grantsOf, groupsOf, isTenantAdmin, roleDef, roles,
+  statusLabel, tenantAdmins, wouldOrphanTenant, canChangeGroup, type Permissions, type Person, type PersonStatus,
 } from "@ir/mock-data/access"
+import { useViewer } from "@/lib/viewer"
 import { AddRoleDialog, PersonCell, RoleBadge, fmt, locList, plural, useAccess } from "@/components/admin/access/AccessBits"
 import { GiveAccessDialog } from "@/components/admin/access/GiveAccessDialog"
 
@@ -32,6 +33,8 @@ let rememberedTab: Scope = "tenant"
 
 export function UsersRolesPage() {
   useAccess()
+  const { perm } = useViewer()
+  const canManage = perm.manageAccess
   const [search, setSearch] = useState("")
   const [groupF, setGroupF] = useState<string[]>([])
   const [roleF, setRoleF] = useState<string[]>([])
@@ -99,10 +102,10 @@ export function UsersRolesPage() {
               <Badge>{filteredOn ? `${fmt(filtered.length)} of ${fmt(people.length)}` : fmt(people.length)}</Badge>
             </div>
           </CardHeaderText>
-          <CardAction className="flex gap-2">
+          {canManage && <CardAction className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setGive([])}><ShieldCheck aria-hidden /> {isProduct ? `Give ${tabName} access` : "Give tenant role"}</Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}><Plus aria-hidden /> {isProduct ? `Invite to ${tabName}` : "Invite user"}</Button>
-          </CardAction>
+          </CardAction>}
         </CardHeader>
 
         <div className="flex flex-wrap items-center gap-2 px-6 pb-4">
@@ -134,10 +137,10 @@ export function UsersRolesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
+              {canManage && <TableHead className="w-10">
                 <Checkbox aria-label="Select all shown" checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id)) ? true : filtered.some((p) => selected.includes(p.id)) ? "indeterminate" : false}
                   onCheckedChange={() => setSelected(filtered.every((p) => selected.includes(p.id)) ? selected.filter((id) => !filtered.some((p) => p.id === id)) : [...new Set([...selected, ...filtered.filter((p) => p.status !== "deactivated").map((p) => p.id)])])} />
-              </TableHead>
+              </TableHead>}
               <TableHead align="start">User</TableHead>
               <TableHead align="start">Groups</TableHead>
               <TableHead align="start">{tab === "tenant" ? "Tenant role · products" : `${tabName} role`}</TableHead>
@@ -151,10 +154,10 @@ export function UsersRolesPage() {
               const gs = groupsOf(p.id)
               return (
                 <TableRow key={p.id} selected={selected.includes(p.id)} className={p.status === "deactivated" ? "cursor-pointer text-content-neutral-muted" : "cursor-pointer"} onClick={() => setOpen(p.id)}>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  {canManage && <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox aria-label={`Select ${p.name}`} disabled={p.status === "deactivated"} checked={selected.includes(p.id)}
                       onCheckedChange={() => setSelected((xs) => (xs.includes(p.id) ? xs.filter((x) => x !== p.id) : [...xs, p.id]))} />
-                  </TableCell>
+                  </TableCell>}
                   <TableCell className="max-w-64"><PersonCell p={p} /></TableCell>
                   <TableCell className="max-w-56">
                     {gs.length ? (
@@ -168,7 +171,7 @@ export function UsersRolesPage() {
                   <TableCell className="text-content-neutral-muted">{p.status === "invited" ? `Invited ${p.invitedAgo}` : (p.lastActive ?? "—")}</TableCell>
                   <TableCell><Badge color={statusColor[p.status]} dot>{statusLabel[p.status]}</Badge></TableCell>
                   <TableCell className="pe-3" onClick={(e) => e.stopPropagation()}>
-                    <RowMenu p={p} onOpen={() => setOpen(p.id)} onMove={() => setMoveFor(p.id)} />
+                    <RowMenu p={p} perm={perm} onOpen={() => setOpen(p.id)} onMove={() => setMoveFor(p.id)} />
                   </TableCell>
                 </TableRow>
               )
@@ -219,11 +222,13 @@ function AccessSummary({ p, tab }: { p: Person; tab: Scope }) {
   )
 }
 
-function RowMenu({ p, onOpen, onMove }: { p: Person; onOpen: () => void; onMove: () => void }) {
+function RowMenu({ p, perm, onOpen, onMove }: { p: Person; perm: Permissions; onOpen: () => void; onMove: () => void }) {
+  // Changing someone needs user management, and a User Admin can't change a Tenant Admin.
+  const canChange = perm.manageAccess && (perm.grantTenantAdmin || !isTenantAdmin(p.id))
   const lastAdmin = isTenantAdmin(p.id) && tenantAdmins().length <= 1
   const deactivate = () => {
     if (p.breakGlass) { toast({ title: "Break-glass accounts can't be deactivated here.", description: "Turn off \"SSO required\" first, then remove the break-glass flag in Single sign-on.", variant: "danger" }); return }
-    if (p.id === ME) { toast({ title: "You can't deactivate yourself.", variant: "danger" }); return }
+    if (p.id === me()) { toast({ title: "You can't deactivate yourself.", variant: "danger" }); return }
     if (lastAdmin) { toast({ title: "Can't deactivate the last Tenant Admin.", description: "Give someone else Tenant Admin first.", variant: "danger" }); return }
     access.setStatus(p.id, "deactivated")
     toast({ title: `${p.name} was deactivated.`, description: "They can't sign in. Their groups stay, so reactivating restores their access." })
@@ -235,11 +240,11 @@ function RowMenu({ p, onOpen, onMove }: { p: Person; onOpen: () => void; onMove:
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={onOpen}><ShieldCheck aria-hidden /> View access</DropdownMenuItem>
-        {siteGroupsOf(p.id).length > 0 && <DropdownMenuItem onSelect={onMove}><MapPin aria-hidden /> Move to another site…</DropdownMenuItem>}
-        {p.status === "invited" && <DropdownMenuItem onSelect={() => toast({ title: `Invite resent to ${p.email}.` })}><Mail aria-hidden /> Resend invite</DropdownMenuItem>}
-        {p.status === "active" && <DropdownMenuItem onSelect={() => toast({ title: `Password reset sent to ${p.email}.` })}><KeyRound aria-hidden /> Send password reset</DropdownMenuItem>}
-        <DropdownMenuSeparator />
-        {p.status === "deactivated"
+        {canChange && siteGroupsOf(p.id).some((g) => canChangeGroup(perm, g)) && <DropdownMenuItem onSelect={onMove}><MapPin aria-hidden /> Move to another site…</DropdownMenuItem>}
+        {canChange && p.status === "invited" && <DropdownMenuItem onSelect={() => toast({ title: `Invite resent to ${p.email}.` })}><Mail aria-hidden /> Resend invite</DropdownMenuItem>}
+        {canChange && p.status === "active" && <DropdownMenuItem onSelect={() => toast({ title: `Password reset sent to ${p.email}.` })}><KeyRound aria-hidden /> Send password reset</DropdownMenuItem>}
+        {canChange && <DropdownMenuSeparator />}
+        {!canChange ? null : p.status === "deactivated"
           ? <DropdownMenuItem onSelect={() => { access.setStatus(p.id, "active"); toast({ title: `${p.name} was reactivated.` }) }}><UserCheck aria-hidden /> Reactivate</DropdownMenuItem>
           : <DropdownMenuItem variant="destructive" onSelect={deactivate}><UserMinus aria-hidden /> Deactivate</DropdownMenuItem>}
       </DropdownMenuContent>
@@ -251,6 +256,7 @@ function RowMenu({ p, onOpen, onMove }: { p: Person; onOpen: () => void; onMove:
 
 function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClose: () => void; onGive: (id: string) => void; onMove: (id: string) => void }) {
   useAccess()
+  const { perm } = useViewer()
   const p = id ? access.person(id) : undefined
   const [roleOpen, setRoleOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
@@ -262,12 +268,13 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
   const reach = clarionReach(p.id)
   const admin = c.role === "tenant_admin"
   const canThresholds = admin || c.role === "product_admin"
+  const canChange = perm.manageAccess && (perm.grantTenantAdmin || !isTenantAdmin(p.id))
 
   const leaveGroup = (gid: string) => {
     const g = access.group(gid)!
     if (g.source === "linked") { toast({ title: "Membership of this group comes from your identity provider.", variant: "danger" }); return }
     if (wouldOrphanTenant({ groupId: gid, personId: p.id })) { toast({ title: "Can't remove the last Tenant Admin.", description: "Give someone else Tenant Admin first.", variant: "danger" }); return }
-    if (p.id === ME && g.assignments.some((x) => x.role === "tenant_admin")) { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
+    if (p.id === me() && g.assignments.some((x) => x.role === "tenant_admin")) { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
     access.removeMember(gid, p.id)
     toast({ title: `${p.name} was removed from ${g.name}.`, description: "Applies from their next request. Recorded in the audit log." })
   }
@@ -337,11 +344,11 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-label-lg text-content-neutral-emphasis">Groups</h3>
-              <div className="flex gap-2">
-                {siteGroupsOf(p.id).length > 0 && <Button variant="outline" size="sm" onClick={() => onMove(p.id)}><MapPin aria-hidden /> Move site</Button>}
+              {canChange && <div className="flex gap-2">
+                {siteGroupsOf(p.id).some((g) => canChangeGroup(perm, g)) && <Button variant="outline" size="sm" onClick={() => onMove(p.id)}><MapPin aria-hidden /> Move site</Button>}
                 <Button variant="outline" size="sm" onClick={() => onGive(p.id)}><ShieldCheck aria-hidden /> Give access</Button>
                 <Button variant="ghost" size="sm" onClick={() => setGroupOpen(true)}><Plus aria-hidden /> Add to group</Button>
-              </div>
+              </div>}
             </div>
             {gs.length ? (
               <ul className="flex flex-col divide-y divide-line-neutral-muted rounded-lg border border-line-neutral-muted">
@@ -351,7 +358,7 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
                       <span className="text-label-md text-content-neutral-emphasis">{g.name}</span>
                       <div className="flex flex-wrap gap-1">{g.assignments.length ? g.assignments.map((x) => <RoleBadge key={x.id} x={x} />) : <span className="text-body-xs text-content-neutral-subtle">No roles</span>}</div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => leaveGroup(g.id)}>Remove</Button>
+                    {canChange && canChangeGroup(perm, g) && <Button variant="ghost" size="sm" onClick={() => leaveGroup(g.id)}>Remove</Button>}
                   </li>
                 ))}
               </ul>
@@ -362,7 +369,7 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-label-lg text-content-neutral-emphasis">Roles, and where they come from</h3>
-              <Button variant="ghost" size="sm" onClick={() => setRoleOpen(true)}>Give a role directly…</Button>
+              {canChange && <Button variant="ghost" size="sm" onClick={() => setRoleOpen(true)}>Give a role directly…</Button>}
             </div>
             {grants.length ? (
               <Table size="sm">
@@ -377,7 +384,7 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
                           : <Badge color="warning">Direct (exception)</Badge>}
                       </TableCell>
                       <TableCell>
-                        {g.via.kind === "direct" && !p.breakGlass && (
+                        {canChange && g.via.kind === "direct" && !p.breakGlass && (perm.grantTenantAdmin || g.assignment.role !== "tenant_admin") && (
                           <Button variant="ghost" size="icon-xs" aria-label="Remove direct role" onClick={() => {
                             if (wouldOrphanTenant({ assignmentId: g.assignment.id })) { toast({ title: "Can't remove the last Tenant Admin.", variant: "danger" }); return }
                             access.removeDirect(p.id, g.assignment.id); toast({ title: "Direct role removed." })
@@ -414,7 +421,8 @@ function Can({ yes, children }: { yes?: boolean; children: React.ReactNode }) {
 
 function JoinGroupDialog({ open, onOpenChange, person }: { open: boolean; onOpenChange: (o: boolean) => void; person: Person }) {
   const [picked, setPicked] = useState<string[]>([])
-  const available = access.groups().filter((g) => !g.members.includes(person.id) && g.source === "local")
+  const { perm } = useViewer()
+  const available = access.groups().filter((g) => !g.members.includes(person.id) && canChangeGroup(perm, g))
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o) setPicked([]); onOpenChange(o) }}>
       <DialogContent size="md">
@@ -464,7 +472,8 @@ function InviteDialog({ open, onOpenChange, scope }: { open: boolean; onOpenChan
   const valid = emailRe.test(trimmed)
   const dupe = valid && access.people().some((p) => p.email.toLowerCase() === trimmed)
   const err = touched && !valid ? "Enter a valid email address." : touched && dupe ? "Someone with this email is already a user." : null
-  const local = useMemo(() => access.groups().filter((g) => g.source === "local" && (scope === "tenant" || groupScopes(g).includes(scope))), [open, scope]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { perm } = useViewer()
+  const local = useMemo(() => access.groups().filter((g) => canChangeGroup(perm, g) && (scope === "tenant" || groupScopes(g).includes(scope))), [open, scope, perm.grantTenantAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = () => {
     setTouched(true)
@@ -508,8 +517,9 @@ function InviteDialog({ open, onOpenChange, scope }: { open: boolean; onOpenChan
 function BulkGroupDialog({ mode, people, onClose }: { mode: "add" | "remove" | null; people: string[]; onClose: (done?: boolean) => void }) {
   const [picked, setPicked] = useState<string[]>([])
   const [lastMode, setLastMode] = useState<typeof mode>(null)
+  const { perm } = useViewer()
   if (mode !== lastMode) { setLastMode(mode); setPicked([]) }
-  const local = access.groups().filter((g) => g.source === "local")
+  const local = access.groups().filter((g) => canChangeGroup(perm, g))
   const groups = mode === "remove" ? local.filter((g) => people.some((id) => g.members.includes(id))) : local
   const n = people.length
 
@@ -522,7 +532,7 @@ function BulkGroupDialog({ mode, people, onClose }: { mode: "add" | "remove" | n
       for (const gid of picked) for (const pid of people) {
         const g = access.group(gid)!
         if (!g.members.includes(pid)) continue
-        if (wouldOrphanTenant({ groupId: gid, personId: pid }) || (pid === ME && g.assignments.some((x) => x.role === "tenant_admin"))) { blocked++; continue }
+        if (wouldOrphanTenant({ groupId: gid, personId: pid }) || (pid === me() && g.assignments.some((x) => x.role === "tenant_admin"))) { blocked++; continue }
         access.removeMember(gid, pid)
       }
       toast({ title: `Removed from ${plural(picked.length, "group")}.`, description: blocked ? `${plural(blocked, "removal was", "removals were")} skipped to keep a Tenant Admin, or your own admin access.` : "Applies from their next request.", variant: blocked ? "danger" : undefined })

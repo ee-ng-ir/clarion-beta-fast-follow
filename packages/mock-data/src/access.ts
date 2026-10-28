@@ -137,6 +137,7 @@ const seedPeople: Person[] = [
   { id: "p7", name: "Liam Chen", email: "liam.chen@acme.com", status: "invited", lastActive: null, invitedAgo: "2d ago", direct: [] },
   { id: "p10", name: "Elena Rossi", email: "elena.rossi@acme.com", status: "active", lastActive: "4d ago", direct: [a("viewer", [L.ldn])] },
   { id: "p13", name: "Sam Okoro", email: "sam.okoro@acme.com", status: "invited", lastActive: null, invitedAgo: "1h ago", direct: [] },
+  { id: "p14", name: "Mei Lin", email: "mei.lin@acme.com", status: "active", lastActive: "20m ago", direct: [] },
   { id: "p11", name: "Tomás Herrera", email: "tomas.herrera@acme.com", status: "deactivated", lastActive: "3w ago", direct: [] },
 ]
 
@@ -144,7 +145,8 @@ const seedGroups: Group[] = [
   { id: "g-it", name: "IT administrators", description: "Runs the Iris tenant", source: "local", locked: true, members: ["p2"], assignments: [a("tenant_admin")] },
   { id: "g-desk", name: "Service desk", description: "Onboards and offboards people", source: "local", members: ["p12"], assignments: [a("user_admin")] },
   { id: "g-sec", name: "Security and compliance", description: "Quarterly access reviews", source: "local", members: ["p9"], assignments: [a("auditor")] },
-  { id: "g-clarion-admin", name: "Clarion administrators", description: "Sets thresholds and manages widget users", source: "local", members: ["p2", "p12"], assignments: [a("product_admin")] },
+  { id: "g-clarion-admin", name: "Clarion administrators", description: "Sets thresholds and manages widget users", source: "local", members: ["p2"], assignments: [a("product_admin")] },
+  { id: "g-clarion-admin-syd", name: "Sydney Clarion administrators", description: "Adds and removes Sydney's widget users", source: "local", members: ["p14"], assignments: [a("product_admin", [L.syd])] },
   { id: "g-lead", name: "Contact centre leadership", description: "Sees every site, in every product", source: "local", members: ["p8"], assignments: [a("viewer"), a("viewer", [], "productx")] },
   { id: "g-px", name: "Product X analysts", description: "Read-only in Product X", source: "local", members: ["p13", "p9"], assignments: [a("viewer", [], "productx")] },
   { id: "g-apac", name: "APAC operations leads", description: "", source: "local", members: ["p5"], assignments: [a("viewer", [L.syd, L.mel, L.akl])] },
@@ -161,8 +163,10 @@ const listeners = new Set<() => void>()
 const bump = () => { state = { ...state, version: state.version + 1 }; listeners.forEach((l) => l()) }
 const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 8)}`
 
-/** The admin using the prototype: Marcus, a Tenant Admin through "IT administrators". */
-export const ME = "p2"
+/** Who is signed in. Marcus (Tenant Admin through "IT administrators") by default;
+ *  the prototype's "View as" switch changes it with access.setMe(). */
+let meId = "p2"
+export const me = () => meId
 
 export const access = {
   subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l) } },
@@ -173,6 +177,7 @@ export const access = {
   person: (id: string) => state.people.find((p) => p.id === id),
   group: (id: string) => state.groups.find((g) => g.id === id),
   location: (id: string) => state.locations.find((l) => l.id === id),
+  setMe(id: string) { if (state.people.some((p) => p.id === id)) { meId = id; bump() } },
   reset() { state = { people: clone(seedPeople), groups: clone(seedGroups), locations: clone(seedLocations), version: state.version + 1 }; listeners.forEach((l) => l()) },
 
   // people
@@ -521,4 +526,87 @@ export function moveTarget(fromGroupId: string, toLocation: string) {
   const oldName = locationName(x.locations[0]), newName = locationName(toLocation)
   const name = g.name.includes(oldName) ? g.name.replace(oldName, newName) : suggestGroupName(x.role === "product_admin" ? "manage" : "view", [toLocation], x.product ?? "clarion")
   return { draft, match, name }
+}
+
+// ------------------------------------------------------------- permissions --
+// What the signed-in person can see and do in the client console, from the roles
+// they hold. One place, so every screen agrees. Rules not yet agreed with Ben are
+// marked "Assumed".
+
+export interface Permissions {
+  tenantAdmin: boolean
+  userAdmin: boolean
+  auditor: boolean
+  clarion: ProductAccess
+  /** Users, groups and roles. */
+  seeAccess: boolean
+  manageAccess: boolean
+  /** Assumed (open question 4): a User Admin gives any role except Tenant Admin, and
+   *  can't change groups that give Tenant Admin. */
+  grantTenantAdmin: boolean
+  seeLocations: boolean
+  manageLocations: boolean
+  seeSso: boolean
+  manageSso: boolean
+  /** Account and Billing & plans. */
+  seeTenant: boolean
+  /** Widget users: add, remove, set location. Limited to `widgetScope`. */
+  manageWidgetUsers: boolean
+  /** null = every location, including widget users with no location. */
+  widgetScope: string[] | null
+  /** Resource centre: the installer and install command. */
+  deployWidget: boolean
+  /** Assumed: the enrolment token is a tenant-wide secret, so Tenant Admin only. */
+  rotateEnrolmentToken: boolean
+  /** Can open Clarion (any Clarion role). */
+  seeClarion: boolean
+  /** Sees any part of Administration. */
+  admin: boolean
+}
+
+export function permissionsOf(personId: string): Permissions {
+  const tenant = tenantRolesOf(personId)
+  const tenantAdmin = tenant.includes("tenant_admin")
+  const userAdmin = tenant.includes("user_admin")
+  const auditor = tenant.includes("auditor")
+  const clarion = clarionAccess(personId)
+  const clarionAdmin = clarion.role === "tenant_admin" || clarion.role === "product_admin"
+  const seeAccess = tenantAdmin || userAdmin || auditor
+  return {
+    tenantAdmin, userAdmin, auditor, clarion,
+    seeAccess,
+    manageAccess: tenantAdmin || userAdmin,
+    grantTenantAdmin: tenantAdmin,
+    seeLocations: seeAccess || clarionAdmin,
+    manageLocations: tenantAdmin,
+    seeSso: tenantAdmin || auditor,
+    manageSso: tenantAdmin,
+    seeTenant: tenantAdmin || auditor,
+    manageWidgetUsers: clarionAdmin,
+    widgetScope: clarionAdmin ? clarion.locations : [],
+    deployWidget: clarionAdmin,
+    rotateEnrolmentToken: tenantAdmin,
+    seeClarion: !!clarion.role,
+    admin: seeAccess || clarionAdmin,
+  }
+}
+
+/** Can this person change this group's members and roles? */
+export function canChangeGroup(perm: Permissions, g: Group) {
+  if (!perm.manageAccess || g.source === "linked") return false
+  return perm.grantTenantAdmin || !g.assignments.some((x) => x.role === "tenant_admin")
+}
+
+/** People to switch between in the prototype, one per kind of access. */
+export const viewAsPeople = ["p2", "p12", "p9", "p14", "p8", "p5", "p3", "p6"]
+
+/** One line of what someone holds: "Tenant Admin", "Clarion Viewer · Sydney". */
+export function accessLine(personId: string) {
+  const tenant = tenantRolesOf(personId).map((r) => roleDef(r).name)
+  if (tenant.includes("Tenant Admin")) return "Tenant Admin"
+  const c = clarionAccess(personId)
+  const clarion = c.role && c.role !== "tenant_admin"
+    ? `Clarion ${roleDef(c.role).name} · ${c.locations === null ? "All locations" : c.locations.map(locationName).join(", ")}`
+    : null
+  return [...tenant, clarion].filter(Boolean).join(" + ") || "No access"
 }

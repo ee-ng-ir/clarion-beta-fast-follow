@@ -13,6 +13,7 @@ import { setLocation } from "@ir/mock-data/widget-users"
 import { MatchLocationsDialog } from "@/components/admin/access/LocationTools"
 import { PersonCell, RoleBadge, fmt, plural, useAccess } from "@/components/admin/access/AccessBits"
 import { GiveAccessDialog } from "@/components/admin/access/GiveAccessDialog"
+import { useViewer } from "@/lib/viewer"
 
 /**
  * Locations (Iris platform, Client Admin). Flat, named by the customer, shared by every
@@ -21,6 +22,10 @@ import { GiveAccessDialog } from "@/components/admin/access/GiveAccessDialog"
  */
 export function LocationsPage({ onOpenWidgetUsers }: { onOpenWidgetUsers?: () => void }) {
   useAccess()
+  // The list is tenant-level: only Tenant Admins change it. Others read it.
+  const { perm } = useViewer()
+  const canEdit = perm.manageLocations
+  const canMatch = perm.manageWidgetUsers && perm.widgetScope === null
   const [editing, setEditing] = useState<Location | "new" | null>(null)
   const [deleting, setDeleting] = useState<Location | null>(null)
   const [giveFor, setGiveFor] = useState<string | null>(null)
@@ -32,7 +37,7 @@ export function LocationsPage({ onOpenWidgetUsers }: { onOpenWidgetUsers?: () =>
   return (
     <div className="flex flex-col gap-4">
       {unassigned > 0 && (
-        <Alert variant="warning" action={matchable
+        <Alert variant="warning" action={!canMatch ? undefined : matchable
           ? <Button variant="outline" size="xs" onClick={() => setMatchOpen(true)}><MapPin aria-hidden /> Match {fmt(matchable)} from site</Button>
           : onOpenWidgetUsers && <Button variant="outline" size="xs" onClick={onOpenWidgetUsers}>Set locations</Button>}>
           <AlertTitle>{plural(unassigned, "widget user has", "widget users have")} no location</AlertTitle>
@@ -48,7 +53,7 @@ export function LocationsPage({ onOpenWidgetUsers }: { onOpenWidgetUsers?: () =>
           <CardHeaderText>
             <div className="flex items-center gap-2"><CardTitle>Locations</CardTitle><Badge>{fmt(locs.length)}</Badge></div>
           </CardHeaderText>
-          <CardAction><Button size="sm" onClick={() => setEditing("new")}><Plus aria-hidden /> Add location</Button></CardAction>
+          {canEdit && <CardAction><Button size="sm" onClick={() => setEditing("new")}><Plus aria-hidden /> Add location</Button></CardAction>}
         </CardHeader>
         <Table>
           <TableHeader>
@@ -78,18 +83,18 @@ export function LocationsPage({ onOpenWidgetUsers }: { onOpenWidgetUsers?: () =>
                         {who.people.length > 0 && <Badge color="warning">{plural(who.people.length, "person", "people")} directly</Badge>}
                       </div>
                     ) : <span className="text-content-neutral-subtle">Nobody yet</span>}
-                    <Button variant="link" size="xs" className="mt-1 px-0" onClick={() => setGiveFor(l.id)}>Give someone access</Button>
+                    {perm.manageAccess && <Button variant="link" size="xs" className="mt-1 px-0" onClick={() => setGiveFor(l.id)}>Give someone access</Button>}
                   </TableCell>
                   <TableCell className="pe-3">
-                    <DropdownMenu>
+                    {(canEdit || perm.manageAccess) && <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Actions for ${l.name}`}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setGiveFor(l.id)}><ShieldCheck aria-hidden /> Give access to {l.name}</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setEditing(l)}><Pencil aria-hidden /> Rename</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(l)}><Trash2 aria-hidden /> Delete…</DropdownMenuItem>
+                        {perm.manageAccess && <DropdownMenuItem onSelect={() => setGiveFor(l.id)}><ShieldCheck aria-hidden /> Give access to {l.name}</DropdownMenuItem>}
+                        {canEdit && <DropdownMenuItem onSelect={() => setEditing(l)}><Pencil aria-hidden /> Rename</DropdownMenuItem>}
+                        {canEdit && <DropdownMenuSeparator />}
+                        {canEdit && <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(l)}><Trash2 aria-hidden /> Delete…</DropdownMenuItem>}
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    </DropdownMenu>}
                   </TableCell>
                 </TableRow>
               )

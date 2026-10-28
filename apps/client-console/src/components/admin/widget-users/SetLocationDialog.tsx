@@ -12,8 +12,10 @@ import type { Target } from "@/components/admin/widget-users/dialogs"
  * limited to locations only see users — and their endpoints — in those locations.
  */
 export function SetLocationDialog({
-  target, onClose, onConfirm,
+  target, onClose, onConfirm, allowed = null,
 }: {
+  /** RBAC: locations the signed-in person may use. null = all, plus No location. */
+  allowed?: string[] | null
   target: Target | null
   onClose: () => void
   onConfirm: (t: Target, locationId: string | null) => void
@@ -25,7 +27,7 @@ export function SetLocationDialog({
     const ids = new Set(target?.users.map((u) => u.locationId ?? "none"))
     setValue(ids.size === 1 ? [...ids][0] : "")
   }
-  const locs = access.locations()
+  const locs = access.locations().filter((l) => allowed === null || allowed.includes(l.id))
   const n = target?.count ?? 0
   const chosen = value === "none" ? null : value
   const who = chosen ? whoSees(chosen) : null
@@ -42,7 +44,7 @@ export function SetLocationDialog({
             {locs.map((l) => (
               <FieldOption key={l.id} control={<Radio value={l.id} />} description={`${widgetUsersIn(l.id).toLocaleString()} widget users`}>{l.name}</FieldOption>
             ))}
-            <FieldOption control={<Radio value="none" />} description="Only people with access to all locations see them.">No location</FieldOption>
+            {allowed === null && <FieldOption control={<Radio value="none" />} description="Only people with access to all locations see them.">No location</FieldOption>}
           </RadioGroup>
           {who && (
             <Alert variant="info">

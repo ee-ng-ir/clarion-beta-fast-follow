@@ -6,6 +6,7 @@ import {
   FieldOption, InputGroup, InputGroupAddon, InputGroupInput, Radio, RadioGroup,
   SegmentedControl, SegmentedControlItem,
 } from "@ir/ui"
+import { useViewer } from "@/lib/viewer"
 import {
   access, assignmentLabel, describeRole, initials, locationName, productName, products, roleDef, roles, widgetUsersIn,
   type Assignment, type Person, type ProductId, type RoleId, type Scope,
@@ -67,6 +68,7 @@ export function AddRoleDialog({
   onAdd: (x: Omit<Assignment, "id">) => void
 }) {
   useAccess()
+  const { perm } = useViewer()
   const first = !scope || scope === "tenant" ? (scope === "tenant" ? "tenant:auditor" : "clarion:viewer") : `${scope}:viewer`
   const [pick, setPick] = useState(first)
   const [sc, role] = pick.split(":") as [Scope, RoleId]
@@ -103,7 +105,7 @@ export function AddRoleDialog({
         <DialogBody className="max-h-[64vh] gap-5 overflow-y-auto">
           <RadioGroup value={pick} onValueChange={setPick} className="gap-4">
             {products.filter((p) => !scope || scope === p.id).map((p) => <RoleGroup key={p.id} scope={p.id} label={p.name} ids={["viewer", "editor", "product_admin"]} />)}
-            {(!scope || scope === "tenant") && <RoleGroup scope="tenant" label="Whole tenant" ids={["auditor", "user_admin", "tenant_admin"]} />}
+            {(!scope || scope === "tenant") && <RoleGroup scope="tenant" label="Whole tenant" ids={perm.grantTenantAdmin ? ["auditor", "user_admin", "tenant_admin"] : ["auditor", "user_admin"]} />}
           </RadioGroup>
 
           {product && (

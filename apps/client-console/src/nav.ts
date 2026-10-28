@@ -15,6 +15,7 @@ import {
   ReceiptText,
   type LucideIcon,
 } from "lucide-react"
+import type { Permissions } from "@ir/mock-data/access"
 
 /**
  * The Iris admin portal (client console).
@@ -64,6 +65,23 @@ export const proposalNavItems: NavItem[] = [
   { id: "groupsdoc", label: "Groups & locations doc", icon: Network },
   { id: "billingdoc", label: "Subscription & billing doc", icon: ReceiptText },
 ]
+
+/** Whether the signed-in person can open this page (RBAC). Docs are always open. */
+export function pageAllowed(id: PageId, p: Permissions): boolean {
+  switch (id) {
+    case "home": return true
+    case "account": case "billing": return p.seeTenant
+    case "usermgmt": return p.seeAccess || p.manageWidgetUsers
+    case "resources": return p.deployWidget
+    case "clarion": return p.seeClarion
+    case "users": case "groups": return p.seeAccess
+    case "roles": return p.admin
+    case "locations": return p.seeLocations
+    case "sso": return p.seeSso
+    case "widgetusers": return p.manageWidgetUsers
+    default: return true
+  }
+}
 
 export const isProposal = (id: PageId) => proposalNavItems.some((n) => n.id === id)
 export const isProduct = (id: PageId) => productNavItems.some((n) => n.id === id)

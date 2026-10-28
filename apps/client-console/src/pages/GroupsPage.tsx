@@ -10,8 +10,9 @@ import {
   SegmentedControl, SegmentedControlItem, Tabs, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
-import { ME, access, assignmentLabel, groupScopes, scopes, type Scope, createSuggested, describeRole, locationName, updateGroupRole, initials, suggestedGroups, wouldOrphanTenant, type Group, type Suggestion } from "@ir/mock-data/access"
+import { me, access, canChangeGroup, assignmentLabel, groupScopes, scopes, type Scope, createSuggested, describeRole, locationName, updateGroupRole, initials, suggestedGroups, wouldOrphanTenant, type Group, type Suggestion } from "@ir/mock-data/access"
 import { AddRoleDialog, LocationChecklist, PeoplePicker, PersonCell, RoleBadge, fmt, plural, useAccess } from "@/components/admin/access/AccessBits"
+import { useViewer } from "@/lib/viewer"
 
 /**
  * Groups (Iris platform, Client Admin). Flat — groups can't contain groups — so they
@@ -23,6 +24,7 @@ let rememberedGroupTab: Scope = "tenant"
 
 export function GroupsPage() {
   useAccess()
+  const { perm } = useViewer()
   const [dismissed, setDismissed] = useState(suggestionsDismissed)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const suggestions = suggestedGroups()
@@ -52,7 +54,7 @@ export function GroupsPage() {
       <p className="-mt-1 text-body-sm text-content-neutral-muted">
         {tab === "tenant" ? "Groups that give tenant roles: who runs Iris. Only Tenant Admins can change these." : `Groups that give ${tabName} roles. A group can also give roles in another product; it shows in both tabs.`}
       </p>
-      {tab === "clarion" && suggestions.length > 0 && !dismissed && (
+      {perm.manageAccess && tab === "clarion" && suggestions.length > 0 && !dismissed && (
         <Alert variant="info" onDismiss={() => { suggestionsDismissed = true; setDismissed(true) }} dismissLabel="Not now"
           action={<Button variant="outline" size="xs" onClick={() => setSuggestOpen(true)}><Sparkles aria-hidden /> Review {suggestions.length} suggestions</Button>}>
           <AlertTitle>Set up groups from your locations</AlertTitle>
@@ -68,7 +70,7 @@ export function GroupsPage() {
           <CardHeaderText>
             <div className="flex items-center gap-2"><CardTitle>{tab === "tenant" ? "Tenant groups" : `${tabName} groups`}</CardTitle><Badge>{fmt(all.length)}</Badge></div>
           </CardHeaderText>
-          <CardAction><Button size="sm" onClick={() => setEditing("new")}><Plus aria-hidden /> Create group</Button></CardAction>
+          {perm.manageAccess && <CardAction><Button size="sm" onClick={() => setEditing("new")}><Plus aria-hidden /> Create group</Button></CardAction>}
         </CardHeader>
         <div className="px-6 pb-4">
           <InputGroup className="w-72">
@@ -111,9 +113,9 @@ export function GroupsPage() {
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Actions for ${g.name}`}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => setOpen(g.id)}>Open</DropdownMenuItem>
-                      {!g.locked && <DropdownMenuItem onSelect={() => setEditing(g)}><Pencil aria-hidden /> Rename</DropdownMenuItem>}
-                      {!g.locked && <DropdownMenuSeparator />}
-                      {!g.locked && <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(g)}><Trash2 aria-hidden /> Delete…</DropdownMenuItem>}
+                      {!g.locked && canChangeGroup(perm, g) && <DropdownMenuItem onSelect={() => setEditing(g)}><Pencil aria-hidden /> Rename</DropdownMenuItem>}
+                      {!g.locked && canChangeGroup(perm, g) && <DropdownMenuSeparator />}
+                      {!g.locked && canChangeGroup(perm, g) && <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(g)}><Trash2 aria-hidden /> Delete…</DropdownMenuItem>}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -153,22 +155,24 @@ function Members({ ids }: { ids: string[] }) {
 
 function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; onClose: () => void; onRename: (g: Group) => void; onDelete: (g: Group) => void }) {
   useAccess()
+  const { perm } = useViewer()
   const g = id ? access.group(id) : undefined
   const [roleOpen, setRoleOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(false)
   const [editLocs, setEditLocs] = useState<string | null>(null)
   if (!g) return <Drawer open={false} />
   const members = g.members.map((m) => access.person(m)).filter(Boolean)
+  const editable = canChangeGroup(perm, g)
 
   const removeRole = (aid: string) => {
     if (wouldOrphanTenant({ groupId: g.id, assignmentId: aid })) { toast({ title: "Can't remove the last Tenant Admin.", description: "Someone else needs Tenant Admin first.", variant: "danger" }); return }
-    if (g.members.includes(ME) && g.assignments.find((x) => x.id === aid)?.role === "tenant_admin") { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
+    if (g.members.includes(me()) && g.assignments.find((x) => x.id === aid)?.role === "tenant_admin") { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
     access.removeGroupRole(g.id, aid)
     toast({ title: "Role removed.", description: `${plural(g.members.length, "member")} lose it from their next request.` })
   }
   const removeMember = (pid: string) => {
     if (wouldOrphanTenant({ groupId: g.id, personId: pid })) { toast({ title: "Can't remove the last Tenant Admin.", variant: "danger" }); return }
-    if (pid === ME && g.assignments.some((x) => x.role === "tenant_admin")) { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
+    if (pid === me() && g.assignments.some((x) => x.role === "tenant_admin")) { toast({ title: "You can't remove your own admin access.", variant: "danger" }); return }
     access.removeMember(g.id, pid)
     toast({ title: `${access.person(pid)?.name} was removed from ${g.name}.` })
   }
@@ -182,7 +186,7 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
               <DrawerTitle>{g.name}</DrawerTitle>
               <DrawerDescription>{g.description || "No description"}</DrawerDescription>
             </DrawerTitleGroup>
-            {!g.locked && <Button variant="ghost" size="icon-sm" aria-label="Rename group" onClick={() => onRename(g)}><Pencil aria-hidden /></Button>}
+            {!g.locked && editable && <Button variant="ghost" size="icon-sm" aria-label="Rename group" onClick={() => onRename(g)}><Pencil aria-hidden /></Button>}
             <DrawerCloseButton />
           </DrawerHeading>
         </DrawerHeader>
@@ -198,7 +202,7 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-label-lg text-content-neutral-emphasis">Roles</h3>
-              <Button variant="outline" size="sm" onClick={() => setRoleOpen(true)}><Plus aria-hidden /> Add role</Button>
+              {editable && <Button variant="outline" size="sm" onClick={() => setRoleOpen(true)}><Plus aria-hidden /> Add role</Button>}
             </div>
             {g.assignments.length ? (
               <ul className="flex flex-col divide-y divide-line-neutral-muted rounded-lg border border-line-neutral-muted">
@@ -206,10 +210,10 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
                   <li key={x.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                     <RoleBadge x={x} />
                     <div className="flex items-center gap-1">
-                      {x.product && <Button variant="ghost" size="sm" onClick={() => setEditLocs(x.id)}><MapPin aria-hidden /> Edit locations</Button>}
+                      {x.product && editable && <Button variant="ghost" size="sm" onClick={() => setEditLocs(x.id)}><MapPin aria-hidden /> Edit locations</Button>}
                       {g.locked && x.role === "tenant_admin"
                         ? <Lock className="size-4 text-content-neutral-subtle" aria-label="Locked" />
-                        : <Button variant="ghost" size="icon-xs" aria-label={`Remove ${assignmentLabel(x)}`} onClick={() => removeRole(x.id)}><X aria-hidden /></Button>}
+                        : editable && <Button variant="ghost" size="icon-xs" aria-label={`Remove ${assignmentLabel(x)}`} onClick={() => removeRole(x.id)}><X aria-hidden /></Button>}
                     </div>
                   </li>
                 ))}
@@ -220,14 +224,14 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-label-lg text-content-neutral-emphasis">Members <span className="text-content-neutral-muted">{fmt(members.length)}</span></h3>
-              <Button variant="outline" size="sm" disabled={g.source === "linked"} onClick={() => setPeopleOpen(true)}><Plus aria-hidden /> Add people</Button>
+              {editable && <Button variant="outline" size="sm" onClick={() => setPeopleOpen(true)}><Plus aria-hidden /> Add people</Button>}
             </div>
             {members.length ? (
               <ul className="flex flex-col divide-y divide-line-neutral-muted rounded-lg border border-line-neutral-muted">
                 {members.map((p) => (
                   <li key={p!.id} className="flex items-center justify-between gap-3 px-4 py-2">
                     <PersonCell p={p!} sub={p!.status !== "active" ? `${p!.email} · ${p!.status}` : undefined} />
-                    {g.source === "local" && <Button variant="ghost" size="sm" onClick={() => removeMember(p!.id)}>Remove</Button>}
+                    {editable && <Button variant="ghost" size="sm" onClick={() => removeMember(p!.id)}>Remove</Button>}
                   </li>
                 ))}
               </ul>
@@ -240,7 +244,7 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
           </section>
         </DrawerBody>
         <DrawerFooter className="justify-between">
-          {g.locked ? <span /> : <Button variant="ghost" className="text-content-danger-emphasis" onClick={() => onDelete(g)}><Trash2 aria-hidden /> Delete group</Button>}
+          {g.locked || !editable ? <span /> : <Button variant="ghost" className="text-content-danger-emphasis" onClick={() => onDelete(g)}><Trash2 aria-hidden /> Delete group</Button>}
           <Button variant="outline" onClick={onClose}>Done</Button>
         </DrawerFooter>
       </DrawerContent>

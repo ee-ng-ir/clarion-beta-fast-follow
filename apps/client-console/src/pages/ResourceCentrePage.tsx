@@ -6,6 +6,7 @@ import {
 } from "@ir/ui"
 import { tenant } from "@ir/mock-data/tenant"
 import { toast } from "@/components/ui/toast"
+import { useViewer } from "@/lib/viewer"
 
 const MSI = "clarion-1.0.2.msi"
 const dateFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" })
@@ -20,6 +21,7 @@ export function ResourceCentrePage() {
   const [token, setToken] = useState(newToken)
   const [expires, setExpires] = useState(() => new Date("2029-10-17T00:00:00+11:00"))
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const { perm } = useViewer()
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(command(token)); toast({ title: "Install command copied." }) }
@@ -66,7 +68,7 @@ export function ResourceCentrePage() {
         </CardContent>
         <CardFooter className="flex-wrap justify-between gap-2">
           <span className="text-body-sm text-content-neutral-muted">Enrolment token expires {dateFmt.format(expires)}</span>
-          <Button variant="outline" onClick={() => setConfirmOpen(true)}><RefreshCw /> Generate new token</Button>
+          {perm.rotateEnrolmentToken && <Button variant="outline" onClick={() => setConfirmOpen(true)}><RefreshCw /> Generate new token</Button>}
         </CardFooter>
       </Card>
 

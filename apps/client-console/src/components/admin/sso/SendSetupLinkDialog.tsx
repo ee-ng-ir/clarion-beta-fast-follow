@@ -5,7 +5,7 @@ import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Field, FieldControl, FieldDescription, FieldError, FieldLabel, Input, Textarea,
 } from "@ir/ui"
-import { access, ME } from "@ir/mock-data/access"
+import { access, me } from "@ir/mock-data/access"
 import { INVITE_DAYS, newInviteId, type SetupInvite } from "@/data/ssoDelegate"
 import type { SsoDraft } from "./SsoWizard"
 
@@ -44,7 +44,7 @@ export function SendSetupLinkDialog({
       id: newInviteId(),
       email: email.trim(),
       note: note.trim(),
-      from: (({ name, email }) => ({ name, email }))(access.people().find((p) => p.id === ME)!),
+      from: (({ name, email }) => ({ name, email }))(access.people().find((p) => p.id === me())!),
       sentAt: now,
       expiresAt: now + INVITE_DAYS * 24 * 60 * 60 * 1000,
       status: "sent",

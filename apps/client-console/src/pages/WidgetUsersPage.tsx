@@ -24,6 +24,7 @@ import { access, locationName, planMatch } from "@ir/mock-data/access"
 import { MatchLocationsDialog, WhoCanSeeDialog } from "@/components/admin/access/LocationTools"
 import { useAccess } from "@/components/admin/access/AccessBits"
 import { LicenseUsage } from "@/components/admin/portal/parts"
+import { useViewer } from "@/lib/viewer"
 
 type View = "current" | "proposed"
 // Module-level so the prototype remembers the view while you move between pages.
@@ -46,6 +47,9 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
   const [view, setViewState] = useState<View>(asBuilt ? "current" : rememberedView)
   const setView = (v: View) => { rememberedView = v; setViewState(v); clearSelection() }
   const proposed = view === "proposed"
+  // RBAC: a Clarion admin limited to locations only gets users in them, as the server would.
+  const scope = useViewer().perm.widgetScope
+  const scopeKey = scope === null ? "*" : scope.join()
 
   // ---- query -------------------------------------------------------------
   const [search, setSearch] = useState("")
@@ -53,8 +57,8 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
   useEffect(() => { const t = setTimeout(() => setDebounced(search.trim()), 300); return () => clearTimeout(t) }, [search])
   const [filters, setFilters] = useState<Pick<Query, "connection" | "status" | "location" | "sort">>({ connection: [], status: [], location: [], sort: "hash" })
   const query: Query = useMemo(
-    () => (proposed ? { ...emptyQuery, q: debounced, ...filters } : { ...emptyQuery, q: debounced }),
-    [proposed, debounced, filters],
+    () => (proposed ? { ...emptyQuery, q: debounced, ...filters, scope } : { ...emptyQuery, q: debounced, scope }),
+    [proposed, debounced, filters, scopeKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const filtered = proposed && (filters.connection.length + filters.status.length + filters.location.length > 0 || !!debounced)
 
@@ -175,7 +179,7 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
   const [locationTarget, setLocationTarget] = useState<Target | null>(null)
   const [matchOpen, setMatchOpen] = useState(false)
   const [whoUser, setWhoUser] = useState<WidgetUser | null>(null)
-  const matchable = useMemo(() => (proposed ? planMatch().matched.reduce((n, m) => n + m.users.length, 0) : 0), [proposed, version]) // eslint-disable-line react-hooks/exhaustive-deps
+  const matchable = useMemo(() => (proposed && scope === null ? planMatch().matched.reduce((n, m) => n + m.users.length, 0) : 0), [proposed, version]) // eslint-disable-line react-hooks/exhaustive-deps
   const doSetLocation = (t: Target, loc: string | null) => {
     const r = setLocation(t.users.map((u) => u.userId), loc)
     if (r.ok) toast({ title: loc ? `${r.changed === 1 ? t.label : plural(r.changed, "user")} moved to ${locationName(loc)}.` : `${r.changed === 1 ? t.label : plural(r.changed, "user")} now ${r.changed === 1 ? "has" : "have"} no location.`, description: "Who can see them changes from the next request. Recorded in the audit log." })
@@ -234,6 +238,7 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
   }
 
   const s = stats()
+  const inScope = scope === null ? s.total : runQuery({ ...emptyQuery, scope }).length
 
   return (
     <div className="flex flex-col gap-4">
@@ -273,13 +278,13 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
               <div className="flex items-center gap-3">
                 <UserPlus className="size-5 text-content-neutral-muted" />
                 <h2 className="text-heading-xs text-content-neutral-emphasis">Clarion widget users</h2>
-                {proposed && <Badge>{filtered ? `${fmt(total)} of ${fmt(s.total)}` : fmt(s.total)}</Badge>}
+                {proposed && <Badge>{filtered ? `${fmt(total)} of ${fmt(inScope)}` : fmt(inScope)}</Badge>}
               </div>
               <div className="flex flex-wrap gap-2">
                 {proposed ? (
                   <>
                     {/* Exports what you're looking at: everyone, or the filtered set. */}
-                    <Button variant="outline" onClick={() => exportUsers(filtered ? runQuery(query) : store.all(), "clarion-widget-users.csv")}>
+                    <Button variant="outline" onClick={() => exportUsers(runQuery(query), "clarion-widget-users.csv")}>
                       <Download /> Export
                     </Button>
                     <Button variant="outline" onClick={() => setImportOpen(true)}><Upload /> Import</Button>
@@ -310,7 +315,7 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
                   options={[{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }]}
                   onValueChange={(v) => setFilters({ ...filters, status: v as Query["status"] })} /></div>
                 <div className="w-40"><Select size="md" label="Location" value={filters.location} icon={<MapPin />}
-                  options={[...access.locations().map((l) => ({ value: l.id, label: l.name })), { value: "none", label: "No location" }]}
+                  options={[...access.locations().filter((l) => scope === null || scope.includes(l.id)).map((l) => ({ value: l.id, label: l.name })), ...(scope === null ? [{ value: "none", label: "No location" }] : [])]}
                   onValueChange={(v) => setFilters({ ...filters, location: v })} /></div>
                 {(filters.connection.length + filters.status.length + filters.location.length > 0) && (
                   <Button variant="ghost" size="sm" onClick={() => setFilters({ ...filters, connection: [], status: [], location: [] })}>Clear filters</Button>
@@ -460,14 +465,14 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
       </Card>
 
 
-      <AddUserDialog open={addOpen} onOpenChange={setAddOpen} proposed={proposed} />
+      <AddUserDialog open={addOpen} onOpenChange={setAddOpen} proposed={proposed} location={scope?.length === 1 ? scope[0] : null} />
       <CurrentCsvDialog open={csvOpen} onOpenChange={setCsvOpen} />
       <ImportFlow open={importOpen} onOpenChange={setImportOpen} />
       <RemoveDialog open={!!removeTarget} onOpenChange={(o) => { if (!o) setRemoveTarget(null) }} target={removeTarget}
         onRemove={doRemove} onDeactivateInstead={() => { if (removeTarget) { setDeactivateTarget(onlyActive(removeTarget, true)); setRemoveTarget(null) } }} />
       <MatchLocationsDialog open={matchOpen} onOpenChange={setMatchOpen} onShowUnassigned={() => setFilters({ ...filters, location: ["none"] })} />
       <WhoCanSeeDialog user={whoUser} onClose={() => setWhoUser(null)} />
-      <SetLocationDialog target={locationTarget} onClose={() => setLocationTarget(null)} onConfirm={doSetLocation} />
+      <SetLocationDialog target={locationTarget} onClose={() => setLocationTarget(null)} onConfirm={doSetLocation} allowed={scope} />
       <EditUserDialog open={!!editUser} onOpenChange={(o) => { if (!o) setEditUser(null) }} user={editUser} />
       <DeactivateDialog open={!!deactivateTarget} onOpenChange={(o) => { if (!o) setDeactivateTarget(null) }} target={deactivateTarget}
         onConfirm={() => deactivateTarget && doDeactivate(deactivateTarget)} />

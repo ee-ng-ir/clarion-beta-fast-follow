@@ -9,23 +9,28 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@ir/ui"
-import { ACCOUNT_ADMIN_LIMIT, ME_ADMIN, accountAdmins, useAccountAdmins, type AccountAdmin } from "@ir/mock-data/tenant"
+import { ACCOUNT_ADMIN_LIMIT, accountAdmins, useAccountAdmins, type AccountAdmin } from "@ir/mock-data/tenant"
 import { initials } from "@ir/mock-data/access"
 import { toast } from "@/components/ui/toast"
 import { LicenseUsage, formatSignIn } from "@/components/admin/portal/parts"
 import { WidgetUsersPage } from "@/pages/WidgetUsersPage"
 import type { UserTab } from "@/nav"
+import { useViewer } from "@/lib/viewer"
 
 /**
  * User management, as in the live portal: Account admins and Clarion widget
  * users, as two views of the tenant's users. Underline tabs, synced to ?tab=.
  */
 export function UserManagementPage({ tab, onTabChange }: { tab: UserTab; onTabChange: (t: UserTab) => void }) {
+  const { perm } = useViewer()
+  // Account admins: anyone who sees access. Clarion widget users: Clarion admins.
+  const tabs = ([["admins", perm.seeAccess], ["clarion", perm.manageWidgetUsers]] as const).filter(([, ok]) => ok).map(([t]) => t)
+  const current: UserTab = tabs.includes(tab) ? tab : tabs[0] ?? "admins"
   return (
-    <Tabs value={tab} onValueChange={(v) => onTabChange(v as UserTab)}>
+    <Tabs value={current} onValueChange={(v) => onTabChange(v as UserTab)}>
       <TabsList>
-        <TabsTrigger value="admins">Account admins</TabsTrigger>
-        <TabsTrigger value="clarion">Clarion</TabsTrigger>
+        {tabs.includes("admins") && <TabsTrigger value="admins">Account admins</TabsTrigger>}
+        {tabs.includes("clarion") && <TabsTrigger value="clarion">Clarion</TabsTrigger>}
       </TabsList>
       <TabsContent value="admins" className="pt-gutter"><AccountAdminsPanel /></TabsContent>
       <TabsContent value="clarion" className="pt-gutter"><WidgetUsersPage asBuilt /></TabsContent>
@@ -41,6 +46,9 @@ const statusBadge: Record<AccountAdmin["status"], React.ReactNode> = {
 
 function AccountAdminsPanel() {
   const admins = useAccountAdmins()
+  // Account admins hold Tenant Admin, so only someone who can give it changes this list.
+  const viewer = useViewer()
+  const canEdit = viewer.perm.grantTenantAdmin
   const used = accountAdmins.seatsUsed()
   const full = used >= ACCOUNT_ADMIN_LIMIT
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -49,7 +57,7 @@ function AccountAdminsPanel() {
   return (
     <div className="flex flex-col gap-gutter">
       {/* A live condition, so it stays until a seat frees up (no dismiss). */}
-      {full && (
+      {full && canEdit && (
         <Alert variant="info">
           <AlertTitle>All Account admin licenses are in use</AlertTitle>
           <AlertDescription>To invite someone, deactivate an admin who no longer needs access, or ask your IR account manager for more licenses.</AlertDescription>
@@ -62,9 +70,9 @@ function AccountAdminsPanel() {
             <CardTitle><h2>Account admins</h2></CardTitle>
             <CardDescription>Account admins can add and remove users, open the Fleet dashboard and manage this tenant.</CardDescription>
           </CardHeaderText>
-          <CardAction>
+          {canEdit && <CardAction>
             <Button onClick={() => setInviteOpen(true)} disabled={full}><UserPlus /> Invite admin</Button>
-          </CardAction>
+          </CardAction>}
         </CardHeader>
         <div className="border-t border-line-neutral-muted px-6 py-4">
           <LicenseUsage label="Licenses in use" used={used} limit={ACCOUNT_ADMIN_LIMIT} />
@@ -80,7 +88,7 @@ function AccountAdminsPanel() {
           </TableHeader>
           <TableBody>
             {admins.map((a) => {
-              const me = a.id === ME_ADMIN
+              const me = a.email === viewer.person.email
               return (
                 <TableRow key={a.id} className={a.status === "deactivated" ? "text-content-neutral-muted" : undefined}>
                   <TableCell>
@@ -95,7 +103,7 @@ function AccountAdminsPanel() {
                   <TableCell>{formatSignIn(a.lastLogin)}</TableCell>
                   <TableCell>{statusBadge[a.status]}</TableCell>
                   <TableCell>
-                    {!me && (
+                    {!me && canEdit && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="xs" aria-label={`Actions for ${a.name}`}><MoreHorizontal /></Button>

@@ -4,6 +4,7 @@ import { ACCOUNT_ADMIN_LIMIT, accountAdmins, plans, useAccountAdmins } from "@ir
 import { stats, store } from "@ir/mock-data/widget-users"
 import { ProductMark, TenantSummary } from "@/components/admin/portal/parts"
 import { CLARION_URL } from "@/lib/apps"
+import { useViewer } from "@/lib/viewer"
 import type { PageId, UserTab } from "@/nav"
 
 const count = new Intl.NumberFormat()
@@ -11,6 +12,7 @@ const count = new Intl.NumberFormat()
 export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTab) => void }) {
   useSyncExternalStore(store.subscribe, store.version)
   useAccountAdmins()
+  const { perm } = useViewer()
   const s = stats()
   const admins = accountAdmins.seatsUsed()
   const adminsFull = admins >= ACCOUNT_ADMIN_LIMIT
@@ -19,7 +21,7 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
     <div className="flex flex-col gap-gutter">
       <TenantSummary />
 
-      <KpiRow>
+      {perm.admin && <KpiRow>
         <KpiTile label="Products" value={plans.length} footer={<Note>{plans.map((p) => p.productName).join(", ")}</Note>} />
         <KpiTile
           label="Clarion users"
@@ -39,7 +41,7 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
             ? <Button variant="link" size="sm" onClick={() => onNavigate("usermgmt", "admins")}>Manage admins</Button>
             : <Note>{ACCOUNT_ADMIN_LIMIT - admins} licenses left</Note>}
         />
-      </KpiRow>
+      </KpiRow>}
 
       <section className="flex flex-col gap-4" aria-labelledby="products-heading">
         <h2 id="products-heading" className="text-heading-lg text-content-neutral-emphasis">Your products</h2>
@@ -55,10 +57,10 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
             <CardContent>
               <p className="max-w-content-reading text-body-md text-content-neutral-muted">{p.blurb}</p>
             </CardContent>
-            <CardFooter className="justify-end gap-2">
+            {perm.seeClarion && <CardFooter className="justify-end gap-2">
               <Button variant="outline" asChild><a href={CLARION_URL} target="_blank" rel="noopener">Open Fleet dashboard</a></Button>
               <Button onClick={() => onNavigate("clarion")}>Go to {p.productName}</Button>
-            </CardFooter>
+            </CardFooter>}
           </Card>
         ))}
       </section>

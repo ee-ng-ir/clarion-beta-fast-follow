@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react"
 import { KeyRound, ShieldCheck, Send, Check, ExternalLink } from "lucide-react"
 import {
-  Badge, Button,
+  Badge, Button, EmptyState,
   Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardHeaderText, CardTitle,
   KpiTile,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
+import { useViewer } from "@/lib/viewer"
 import { roleLabel } from "@ir/mock-data/users"
 import { providers, providerById, activeMembers, sampleEmailDomain, signInPage, setupSteps, recentSignIns, connectMethodLabel } from "@/data/sso"
 import { SsoWizard, emptyDraft, type SsoDraft, type SsoMode } from "@/components/admin/sso/SsoWizard"
@@ -33,6 +34,7 @@ export function SsoPage() {
     if ("live" in next) setLiveState(next.live ?? null)
   }
 
+  const readOnly = !useViewer().perm.manageSso
   const start = (from: SsoDraft = draft ?? emptyDraft) => save({ view: "setup", draft: from })
 
   // ---- Setup link (hand setup to IT) ----
@@ -64,6 +66,20 @@ export function SsoPage() {
       }}
     />
   )
+
+  // Auditors read the settings; only Tenant Admins change them.
+  if (readOnly) {
+    return live
+      ? <ActiveView live={live} readOnly onMode={() => {}} onEdit={() => {}} onTurnOff={() => {}} />
+      : (
+        <Card className="w-full">
+          <CardContent className="py-6">
+            <EmptyState size="sm" icon={<KeyRound />} title="Single sign-on isn't set up"
+              description="Members sign in with their Iris password. Only a Tenant Admin can set up single sign-on." />
+          </CardContent>
+        </Card>
+      )
+  }
 
   if (view === "setup") {
     return (
@@ -245,8 +261,10 @@ function InviteBanner({ invite, onRevoke, onReview }: { invite: SetupInvite; onR
 // ---- Active --------------------------------------------------------------------
 
 function ActiveView({
-  live, onMode, onEdit, onTurnOff,
+  live, onMode, onEdit, onTurnOff, readOnly = false,
 }: {
+  /** Auditor: settings shown, no controls. */
+  readOnly?: boolean
   live: SsoDraft
   onMode: (m: SsoMode) => void
   onEdit: () => void
@@ -283,7 +301,7 @@ function ActiveView({
         <Callout
           tone="warning"
           title="The signing certificate expires in 21 days"
-          action={<Button size="xs" onClick={() => setReplaceOpen(true)}>Replace certificate</Button>}
+          action={readOnly ? undefined : <Button size="xs" onClick={() => setReplaceOpen(true)}>Replace certificate</Button>}
         >
           When it expires, nobody can sign in with {p.short}. Download the new certificate from {p.short} and upload it here.
         </Callout>
@@ -303,12 +321,12 @@ function ActiveView({
               {live.mode === "optional" ? " or their Clarion password" : ""}. Last successful sign-in {recentSignIns.find((s) => s.outcome === "success")?.when}.
             </CardDescription>
           </CardHeaderText>
-          <CardAction>
+          {!readOnly && <CardAction>
             {live.mode === "optional"
               ? <Button variant="outline" onClick={() => setConfirmRequired(true)}>Make required</Button>
               : <Button variant="outline" onClick={() => onMode("optional")}>Make optional</Button>}
             <Button variant="outline" onClick={onEdit}>Edit connection</Button>
-          </CardAction>
+          </CardAction>}
         </CardHeader>
         {confirmRequired && (
           <CardContent className="pt-4">
@@ -360,7 +378,7 @@ function ActiveView({
                         <span className="text-body-xs text-content-neutral-muted">
                           {autoRefresh ? "New certificates are picked up automatically." : "Uploaded, so it won't renew itself. We'll email Admins 30 and 7 days before it expires."}
                         </span>
-                        {!autoRefresh && (
+                        {!autoRefresh && !readOnly && (
                           <Button variant="link" size="xs" className="h-auto w-fit p-0" onClick={() => setReplaceOpen(true)}>Replace certificate</Button>
                         )}
                       </span>
@@ -379,7 +397,7 @@ function ActiveView({
         <Card>
           <CardHeader>
             <CardHeaderText><CardTitle>Who can sign in</CardTitle></CardHeaderText>
-            <CardAction><Button variant="link" size="xs" onClick={onEdit}>Edit</Button></CardAction>
+            {!readOnly && <CardAction><Button variant="link" size="xs" onClick={onEdit}>Edit</Button></CardAction>}
           </CardHeader>
           <CardContent className="pt-2">
             <DetailList
@@ -433,7 +451,7 @@ function ActiveView({
       </Card>
 
       {/* Turn off */}
-      {confirmOff ? (
+      {readOnly ? null : confirmOff ? (
         <Callout
           tone="destructive"
           title="Turn off single sign-on?"

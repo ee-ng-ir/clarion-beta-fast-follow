@@ -279,6 +279,9 @@ export interface Query {
   /** Location ids; "none" = no location. */
   location: string[]
   sort: SortKey
+  /** RBAC: the locations the signed-in person may see. Unset or null = every location,
+   *  including users with no location. Applied before any filter, like the server would. */
+  scope?: string[] | null
 }
 
 export const emptyQuery: Query = { q: "", connection: [], status: [], location: [], sort: "hash" }
@@ -292,6 +295,7 @@ export function runQuery(query: Query): WidgetUser[] {
     if (query.connection.length && !query.connection.includes(connectionOf(u))) return false
     if (query.status.length && !query.status.includes(u.active ? "active" : "deactivated")) return false
     if (query.location.length && !query.location.includes(u.locationId ?? "none")) return false
+    if (query.scope && !(u.locationId && query.scope.includes(u.locationId))) return false
     return true
   })
   const by: Record<SortKey, (a: WidgetUser, b: WidgetUser) => number> = {
@@ -313,7 +317,7 @@ export async function fetchPage(query: Query, offset: number) {
 
 export type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string }
 
-export function createUser(input: { loginId: string; name: string; email: string; site: string }): Result {
+export function createUser(input: { loginId: string; name: string; email: string; site: string; locationId?: string | null }): Result {
   const loginId = input.loginId.trim().toLowerCase()
   if (!loginId) return { ok: false, error: "Login ID is required." }
   if (state.users.some((u) => u.loginId === loginId)) return { ok: false, error: "A user with that login ID already exists." }
@@ -322,7 +326,7 @@ export function createUser(input: { loginId: string; name: string; email: string
   const now = Date.now()
   state.users = [...state.users, {
     userId: hashId(loginId), loginId, name: input.name.trim(), email: input.email.trim(), site: input.site.trim(),
-    active: true, registerStatus: "", createdAt: now, updatedAt: now, lastSeen: null, locationId: null,
+    active: true, registerStatus: "", createdAt: now, updatedAt: now, lastSeen: null, locationId: input.locationId ?? null,
   }]
   bump()
   return { ok: true }
