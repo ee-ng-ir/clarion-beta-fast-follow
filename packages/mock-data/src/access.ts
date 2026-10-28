@@ -20,12 +20,12 @@ import { clearLocation, setLocation, setLocationResolver, store as widgetStore, 
 // ------------------------------------------------------------------ catalogue --
 
 export type RoleId = "tenant_admin" | "user_admin" | "auditor" | "product_admin" | "editor" | "viewer"
-export type ProductId = "clarion" | "productx"
+export type ProductId = "clarion" | "vantage"
 /** Where a role applies: the whole tenant, or one product. Drives the tabs on Users, Groups and Roles. */
 export type Scope = "tenant" | ProductId
 
-/** Product X stands in for the next Iris product, to show how the console scales. */
-export const products: { id: ProductId; name: string; placeholder?: boolean }[] = [{ id: "clarion", name: "Clarion" }, { id: "productx", name: "Product X", placeholder: true }]
+/** Vantage, the next Iris product: no permissions defined yet. Shows how the console scales. */
+export const products: { id: ProductId; name: string; placeholder?: boolean }[] = [{ id: "clarion", name: "Clarion" }, { id: "vantage", name: "Vantage", placeholder: true }]
 export const scopes: { id: Scope; name: string }[] = [{ id: "tenant", name: "Tenant" }, ...products.map((p) => ({ id: p.id as Scope, name: p.name }))]
 export const productName = (id?: ProductId) => products.find((p) => p.id === id)?.name ?? ""
 
@@ -147,8 +147,8 @@ const seedGroups: Group[] = [
   { id: "g-sec", name: "Security and compliance", description: "Quarterly access reviews", source: "local", members: ["p9"], assignments: [a("auditor")] },
   { id: "g-clarion-admin", name: "Clarion administrators", description: "Sets thresholds and manages widget users", source: "local", members: ["p2"], assignments: [a("product_admin")] },
   { id: "g-clarion-admin-syd", name: "Sydney Clarion administrators", description: "Adds and removes Sydney's widget users", source: "local", members: ["p14"], assignments: [a("product_admin", [L.syd])] },
-  { id: "g-lead", name: "Contact centre leadership", description: "Sees every site, in every product", source: "local", members: ["p8"], assignments: [a("viewer"), a("viewer", [], "productx")] },
-  { id: "g-px", name: "Product X analysts", description: "Read-only in Product X", source: "local", members: ["p13", "p9"], assignments: [a("viewer", [], "productx")] },
+  { id: "g-lead", name: "Contact centre leadership", description: "Sees every site, in every product", source: "local", members: ["p8"], assignments: [a("viewer"), a("viewer", [], "vantage")] },
+  { id: "g-vantage", name: "Vantage analysts", description: "Read-only in Vantage", source: "local", members: ["p13", "p9"], assignments: [a("viewer", [], "vantage")] },
   { id: "g-apac", name: "APAC operations leads", description: "", source: "local", members: ["p5"], assignments: [a("viewer", [L.syd, L.mel, L.akl])] },
   { id: "g-syd", name: "Sydney CC managers", description: "", source: "local", members: ["p3", "p4"], assignments: [a("viewer", [L.syd])] },
   { id: "g-mnl", name: "Manila CC managers", description: "Outsourcer team leads", source: "local", members: ["p6", "p7"], assignments: [a("viewer", [L.mnl])] },

@@ -21,11 +21,11 @@ export const regionLabel = (id: string) => {
 
 // --------------------------------------------------------------- products --
 
-export type ProductId = "clarion" | "productx"
+export type ProductId = "clarion" | "vantage"
 export const productCatalog: { id: ProductId; name: string; versions: string[]; available: boolean }[] = [
   { id: "clarion", name: "Clarion", versions: ["v1.0.0-alpha.5", "v1.0.0-alpha.4", "v1.0.0-alpha.3"], available: true },
   // Stands in for the next Iris product, as it does in the client console.
-  { id: "productx", name: "Product X", versions: [], available: false },
+  { id: "vantage", name: "Vantage", versions: [], available: false },
 ]
 export const LATEST_VERSION = "v1.0.0-alpha.5"
 export const productName = (id: ProductId) => productCatalog.find((p) => p.id === id)?.name ?? id

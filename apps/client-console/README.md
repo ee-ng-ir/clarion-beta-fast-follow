@@ -1,6 +1,6 @@
 # Iris client console
 
-What a customer's IT admin (Client Admin) uses to run their tenant: Users, Groups, Locations and Roles (with Tenant · Clarion · Product X tabs), Single sign-on, and Clarion's admin (Widget users, Device management).
+What a customer's IT admin (Client Admin) uses to run their tenant: Users, Groups, Locations and Roles (with Tenant · Clarion · Vantage tabs), Single sign-on, and Clarion's admin (Widget users, Device management).
 
 ```bash
 npm run dev:console   # from the repo root → http://localhost:5174

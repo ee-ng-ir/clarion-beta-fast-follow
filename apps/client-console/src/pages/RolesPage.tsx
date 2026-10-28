@@ -84,7 +84,7 @@ function ProductRoles({ product }: { product: ProductId }) {
         <AlertTitle>Using {name}</AlertTitle>
         <AlertDescription>
           {name} roles cover {name} only. Each can be given for all locations or limited to some. Tenant Admins have Product Admin here automatically.
-          {!clarion && " Product X is a stand-in for the next Iris product; its team defines what each role allows."}
+          {!clarion && " Vantage is the next Iris product. Its team defines what each role allows."}
         </AlertDescription>
       </Alert>
       <RoleTable rows={roles.filter((r) => r.level === "product")} product={product}
