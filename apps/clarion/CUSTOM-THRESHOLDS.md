@@ -1,7 +1,7 @@
 # Custom thresholds by location — strawman
 
 Draft, 28 Oct 2026. To prompt discussion, not a decision. Built on **Thresholds** in the Clarion prototype
-(use the dashed "Prototype · viewing as" bar to switch people).
+(switch people with **View as** in the top-right account menu, as in the client console).
 
 ## Where this comes from
 - The Clarion prototype had **custom rules** in June 2026 (Default thresholds + Custom rules + a rule editor
@@ -35,6 +35,9 @@ the defaults. Who can change what follows the Clarion role and its locations.
 | Mei Lin | Clarion Product Admin · Sydney | Read-only | Sees rules that touch Sydney. Edits only rules whose locations are **all** hers. Location picker offers only Sydney |
 | Hannah Schmidt | Auditor | Read-only | Read-only, all locations *(open question)* |
 | Priya Nair | Clarion Viewer · Sydney | No Thresholds page | — |
+
+The switcher lists everyone in the shared tenant with a Clarion role. Hannah (Auditor, no Clarion role) isn't in it,
+so the Auditor row can't be tried in Clarion yet.
 
 Rules that reach locations a person can't see show as **"+N other locations"**. They never name those
 locations. Rules entirely outside their access are counted ("2 more rules apply only to locations outside your
@@ -70,11 +73,12 @@ Thresholds use Product Admin grants only. The real authorisation service needs t
    metric count, so this is about UI and audit noise rather than payload.
 
 ## Not in the prototype
+- Overview and Endpoints aren't limited to a Viewer's locations yet (Priya still sees the whole fleet).
 - Rules aren't persisted (in-memory only) and don't feed the endpoint states or the widget yet.
 - Endpoint drawer "measured against", location-move preview and delete impact (points 4–6).
 - Policy options 1b / 1c and the band caps in point 2.
 
 ## Build notes
-- New: `src/data/thresholdRules.ts` (model, access, resolution), `components/thresholds/{CustomRules,WhatAppliesWhere,ViewAs}.tsx`.
+- New: `src/data/thresholdRules.ts` (model, access, resolution), `components/thresholds/{CustomRules,WhatAppliesWhere}.tsx`, `lib/viewer.ts` (signed-in person, mirrors the client console).
 - Changed: `RuleEditor.tsx` (locations instead of regions, edit scope) and `ThresholdsPage.tsx`.
 - People and locations come from `@ir/mock-data/access` (Clarion now depends on it). Nothing in `packages/` changed.
