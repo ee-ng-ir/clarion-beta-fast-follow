@@ -88,16 +88,13 @@ Create **one Vercel project per app** (not per package), all pointing at this re
 
 | Vercel project | Root Directory |
 | --- | --- |
-| clarion | `apps/clarion` (also serves the Clarion widget at `/widget`) |
-| client-console | `apps/client-console` |
-| ops-console | `apps/ops-console` |
+| ir-clarion | `apps/clarion` (also serves the Clarion widget at `/widget`) |
+| ir-client-console | `apps/client-console` |
+| ir-ops-console | `apps/ops-console` |
 
 1. Vercel → Add New → Project → import this repo, then set the **Root Directory**.
 2. Leave framework, install and build settings as they are. Each app's `vercel.json` handles them, and Vercel installs from the repo root because it's an npm workspace.
-3. **Environment variables** (Production and Preview) in every project, so the apps can link to each other:
-   - `VITE_CLARION_URL` = the clarion project's URL
-   - `VITE_CLIENT_CONSOLE_URL` = the client-console project's URL
-   - `VITE_OPS_CONSOLE_URL` = the ops-console project's URL
+3. **Links between apps** default to the live URLs (`ir-clarion.vercel.app`, `ir-client-console.vercel.app`, `ir-ops-console.vercel.app`) in builds, and to the local ports in `npm run dev`. To point at other URLs (a custom domain, say), set `VITE_CLARION_URL`, `VITE_CLIENT_CONSOLE_URL` or `VITE_OPS_CONSOLE_URL` in the Vercel project and redeploy. Defaults live in each app's `src/lib/apps.ts`.
 4. `"ignoreCommand": "npx turbo-ignore"` in each `vercel.json` means a push only rebuilds the apps it touched (or a package they use).
 
 ## Clarion widget → dashboard (live)
