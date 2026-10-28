@@ -21,6 +21,7 @@ import { useStreaming } from "@/hooks/useStreaming"
 import { DEFAULT_LOCATION, locationById } from "@/data/dashboard"
 import type { Endpoint, Rollup } from "@/data/endpoints"
 import { rollupsAll, queryEndpoints, endpointById } from "@/data/endpoints"
+import { canOpen, useViewer } from "@/lib/viewer"
 import { pageLabel, pageSubtitle, pageFromPath, buildPath, readDrawerParams, experienceOf, defaultPageFor, type PageId, type Experience } from "@/nav"
 
 type DeviceDrawer = { rows: Endpoint[]; index: number }
@@ -140,6 +141,11 @@ export default function App() {
   const switchExperience = (e: Experience) =>
     e === "admin" ? window.location.assign(`${CLIENT_CONSOLE_URL}/`) : navigate(defaultPageFor[e])
 
+  // After "View as" switches person, leave any page they can't open (same as the client console).
+  const viewer = useViewer()
+  const allowed = canOpen(page, viewer)
+  useEffect(() => { if (!allowed) navigate("overview") }, [allowed, viewer.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (experienceOf(page) === "admin") {
     window.location.replace(`${CLIENT_CONSOLE_URL}${window.location.pathname}${window.location.search}`)
     return null
@@ -226,7 +232,7 @@ export default function App() {
               openAlertId={openAlertId}
             />
           )}
-          {page === "thresholds" && <ThresholdsPage />}
+          {page === "thresholds" && allowed && <ThresholdsPage />}
           {page === "glossary" && <GlossaryPage />}
           {page === "devicesdoc" && <DevicesModelPage />}
           {page === "issuesdoc" && <IssuesDocPage />}

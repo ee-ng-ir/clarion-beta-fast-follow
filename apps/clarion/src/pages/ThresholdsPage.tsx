@@ -11,8 +11,8 @@ import { toast } from "@/components/ui/toast"
 import { RuleEditor } from "@/components/thresholds/RuleEditor"
 import { CustomRules } from "@/components/thresholds/CustomRules"
 import { WhatAppliesWhere } from "@/components/thresholds/WhatAppliesWhere"
-import { ViewAsBar, useMe } from "@/components/thresholds/ViewAs"
-import { claimsOf, seedRules, thresholdAccess, type LocationRule } from "@/data/thresholdRules"
+import { useViewer } from "@/lib/viewer"
+import { claimsOf, seedRules, type LocationRule } from "@/data/thresholdRules"
 
 export function ThresholdsPage() {
   // default policy: `policy` is the working draft, `savedPolicy` is the committed state.
@@ -25,8 +25,8 @@ export function ThresholdsPage() {
   const [justSaved, setJustSaved] = useState(false)
 
   // Custom thresholds by location, gated by Iris RBAC (see data/thresholdRules.ts).
-  const meId = useMe()
-  const acc = thresholdAccess(meId)
+  // Who is signed in comes from the account menu's "View as" (prototype).
+  const { id: meId, thresholds: acc } = useViewer()
   const readOnlyDefaults = !acc.editDefaults
   const [rules, setRules] = useState<LocationRule[]>(seedRules)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -61,24 +61,8 @@ export function ThresholdsPage() {
   const discardPolicy = () => setPolicy(clone(savedPolicy))
   const resetToDefaults = () => setPolicy(clone(defaultPolicy))
 
-  if (acc.mode === "none") {
-    // In the product the nav item is hidden; the prototype explains why instead.
-    return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <ViewAsBar />
-        <Card className="w-full items-center gap-1 rounded-xl px-6 py-14 text-center">
-          <p className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>You don’t have access to Thresholds</p>
-          <p className="max-w-md text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
-            Thresholds need Clarion Product Admin. Endpoints still show which thresholds they’re measured against.
-          </p>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      <ViewAsBar />
       {/* Section 1 — Default thresholds */}
       <Card className="w-full gap-0 overflow-hidden rounded-xl p-0">
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border-neutral-subtle)" }}>

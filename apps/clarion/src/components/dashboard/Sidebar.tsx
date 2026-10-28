@@ -3,6 +3,7 @@ import { ChevronDown, PanelLeftClose, CircleHelp, Moon, ExternalLink } from "luc
 import { Switch } from "@/components/ui/switch"
 import { navItems, type NavItem, type PageId } from "@/nav"
 import { cn } from "@/lib/utils"
+import { canOpen, useViewer } from "@/lib/viewer"
 
 export function Sidebar({
   active,
@@ -23,6 +24,7 @@ export function Sidebar({
    *  per-second update doesn't re-render the whole app. */
   lastRefreshAt: number
 }) {
+  const viewer = useViewer()
   const [secondsAgo, setSecondsAgo] = useState(0)
   useEffect(() => {
     const tick = () => setSecondsAgo(Math.max(0, Math.round((Date.now() - lastRefreshAt) / 1000)))
@@ -60,7 +62,8 @@ export function Sidebar({
 
       {/* Content — nav */}
       <div className="flex-1 overflow-y-auto p-2">
-        <NavGroup label="Workspace" items={navItems} active={active} onNavigate={onNavigate} touch={!!onClose} />
+        {/* only pages the signed-in person can open (Thresholds needs Product Admin) */}
+        <NavGroup label="Workspace" items={navItems.filter((n) => canOpen(n.id, viewer))} active={active} onNavigate={onNavigate} touch={!!onClose} />
       </div>
 
       {/* Phones: Help and Dark theme, moved from the top bar (option B) */}
