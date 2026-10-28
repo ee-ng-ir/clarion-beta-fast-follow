@@ -6,6 +6,13 @@ import { ThresholdSlider } from "@/components/thresholds/ThresholdSlider"
 import { InfoTip } from "@/components/ui/info-tip"
 import { AlertRouting } from "@/components/thresholds/AlertRouting"
 import { METRICS, METRIC_CATEGORIES, metricById, defaultPolicy, type ThresholdPolicy } from "@/data/thresholds"
+import { access } from "@ir/mock-data/access"
+import { toast } from "@/components/ui/toast"
+import { RuleEditor } from "@/components/thresholds/RuleEditor"
+import { CustomRules } from "@/components/thresholds/CustomRules"
+import { WhatAppliesWhere } from "@/components/thresholds/WhatAppliesWhere"
+import { ViewAsBar, useMe } from "@/components/thresholds/ViewAs"
+import { claimsOf, seedRules, thresholdAccess, type LocationRule } from "@/data/thresholdRules"
 
 export function ThresholdsPage() {
   // default policy: `policy` is the working draft, `savedPolicy` is the committed state.
@@ -16,6 +23,25 @@ export function ThresholdsPage() {
   const [policy, setPolicy] = useState<ThresholdPolicy>(() => clone(defaultPolicy))
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+
+  // Custom thresholds by location, gated by Iris RBAC (see data/thresholdRules.ts).
+  const meId = useMe()
+  const acc = thresholdAccess(meId)
+  const readOnlyDefaults = !acc.editDefaults
+  const [rules, setRules] = useState<LocationRule[]>(seedRules)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editing, setEditing] = useState<LocationRule | null>(null)
+  // TODO(api): PUT/POST a rule. The server re-checks that every location in the rule is
+  // inside the caller's Product Admin locations, and that no (location × metric) is taken.
+  const saveRule = (rule: LocationRule) => {
+    const existed = rules.some((r) => r.id === rule.id)
+    setRules((rs) => (existed ? rs.map((r) => (r.id === rule.id ? rule : r)) : [...rs, rule]))
+    toast({ variant: "success", title: existed ? "Custom threshold updated" : "Custom threshold created", description: rule.name })
+  }
+  const deleteRule = (rule: LocationRule) => {
+    setRules((rs) => rs.filter((r) => r.id !== rule.id))
+    toast({ variant: "info", title: "Custom threshold deleted", description: `${rule.name} · those locations go back to the defaults` })
+  }
 
   const dirty = JSON.stringify(policy) !== JSON.stringify(savedPolicy)
   const isCustom = JSON.stringify(savedPolicy) !== JSON.stringify(defaultPolicy)
@@ -35,16 +61,36 @@ export function ThresholdsPage() {
   const discardPolicy = () => setPolicy(clone(savedPolicy))
   const resetToDefaults = () => setPolicy(clone(defaultPolicy))
 
+  if (acc.mode === "none") {
+    // In the product the nav item is hidden; the prototype explains why instead.
+    return (
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        <ViewAsBar />
+        <Card className="w-full items-center gap-1 rounded-xl px-6 py-14 text-center">
+          <p className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>You don’t have access to Thresholds</p>
+          <p className="max-w-md text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
+            Thresholds need Clarion Product Admin. Endpoints still show which thresholds they’re measured against.
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <ViewAsBar />
       {/* Section 1 — Default thresholds */}
       <Card className="w-full gap-0 overflow-hidden rounded-xl p-0">
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border-neutral-subtle)" }}>
           <div className="flex flex-col">
             <h2 className="text-base font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>Threshold settings</h2>
-            <span className="text-sm" style={{ color: "var(--fg-neutral-muted)" }}>Applies to every endpoint</span>
+            <span className="text-sm" style={{ color: "var(--fg-neutral-muted)" }}>Applies to every endpoint unless a custom threshold below overrides it</span>
           </div>
-          {/* Save-gated: edits stay in a draft until committed. After save, a confirmation + Reset appears. */}
+          {/* Save-gated: edits stay in a draft until committed. After save, a confirmation + Reset appears.
+              Read-only for anyone who can't change every location (e.g. a site's Product Admin). */}
+          {readOnlyDefaults ? (
+            <span className="text-xs" style={{ color: "var(--fg-neutral-subtle)" }}>Read-only · set by administrators with access to every location</span>
+          ) : (
           <div className="flex items-center gap-2">
             {saving ? (
               <Button size="sm" loading>Saving…</Button>
@@ -66,6 +112,7 @@ export function ThresholdsPage() {
               </>
             )}
           </div>
+          )}
         </div>
 
         {METRIC_CATEGORIES.map((cat, ci) => {
@@ -91,11 +138,11 @@ export function ThresholdsPage() {
                       <span className="text-xs" style={{ color: "var(--fg-neutral-subtle)" }}>{m.direction === "higher" ? "Higher is worse" : "Lower is worse"}</span>
                     </div>
                   </div>
-                  <div className="min-w-px flex-1">
+                  <div className="min-w-px flex-1" inert={readOnlyDefaults} style={readOnlyDefaults ? { opacity: 0.7 } : undefined}>
                     <ThresholdSlider metric={m} warn={policy[m.id].warn} crit={policy[m.id].crit} onChange={(w, c) => setBand(m.id, w, c)} />
                   </div>
                   <div className="flex sm:w-8 sm:shrink-0 sm:justify-end">
-                    {(policy[m.id].warn !== m.defaultWarn || policy[m.id].crit !== m.defaultCrit) && (
+                    {!readOnlyDefaults && (policy[m.id].warn !== m.defaultWarn || policy[m.id].crit !== m.defaultCrit) && (
                       <button type="button" aria-label={`Set ${m.name} to default`} title="Set to default" onClick={() => resetMetric(m.id)}
                         className="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-[var(--bg-neutral-subtle-hovered)]" style={{ color: "var(--fg-neutral-muted)" }}>
                         <RotateCcw className="size-4" />
@@ -109,8 +156,18 @@ export function ThresholdsPage() {
         })}
       </Card>
 
-      {/* Section 2 — Alert routing */}
-      <AlertRouting />
+      {/* Section 2 — Custom thresholds by location */}
+      <CustomRules rules={rules} acc={acc} onNew={() => { setEditing(null); setEditorOpen(true) }}
+        onEdit={(r) => { setEditing(r); setEditorOpen(true) }} onDelete={deleteRule} />
+      <WhatAppliesWhere defaults={savedPolicy} rules={rules} acc={acc} />
+
+      {/* Section 3 — Alert routing. Tenant-wide, so only people who can change the defaults edit it. */}
+      <fieldset disabled={readOnlyDefaults} className="contents">
+        <AlertRouting />
+      </fieldset>
+
+      <RuleEditor open={editorOpen} rule={editing} baseline={savedPolicy} claims={claimsOf(rules, editing?.id)}
+        editScope={acc.editScope} author={access.person(meId)?.name ?? "You"} onOpenChange={setEditorOpen} onSave={saveRule} />
     </div>
   )
 }

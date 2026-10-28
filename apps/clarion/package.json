@@ -11,6 +11,7 @@
     "preview": "vite preview --port 5173"
   },
   "dependencies": {
+    "@ir/mock-data": "*",
     "@ir/telemetry": "*",
     "@ir/ui": "*",
     "@radix-ui/react-accordion": "^1.2.20",

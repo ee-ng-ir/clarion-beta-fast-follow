@@ -4,15 +4,17 @@ import { X, Plus, Search, Trash2, Check, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Chip } from "@/components/ui/chip"
-import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverAnchor, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { ThresholdSlider } from "./ThresholdSlider"
-import {
-  METRICS, metricById, regionScopes, scopeById, fmtRange,
-  type ThresholdRule, type ThresholdPolicy, type ScopeOption,
-} from "@/data/thresholds"
+import { locationName } from "@ir/mock-data/access"
+import { METRICS, metricById, fmtRange, type ThresholdPolicy } from "@/data/thresholds"
+import { inScope, ruleLocations, type LocationRule } from "@/data/thresholdRules"
 
-// the baseline a custom rule inherits from = the current saved "Rules" policy
+// Location × metric → the rule that already sets it (one owner per pair).
+type Claims = Record<string, Record<string, LocationRule>>
+type LocationOption = { id: string; name: string; count: number }
+
+// the baseline a custom rule inherits from = the saved tenant defaults
 const bandOf = (baseline: ThresholdPolicy, id: string) => {
   const m = metricById(id)!
   return baseline[id] ?? { warn: m.defaultWarn, crit: m.defaultCrit }
@@ -20,34 +22,29 @@ const bandOf = (baseline: ThresholdPolicy, id: string) => {
 
 type Draft = { name: string; scopes: string[]; overrides: ThresholdPolicy }
 const emptyDraft = (): Draft => ({ name: "", scopes: [], overrides: {} })
-const draftFromRule = (r: ThresholdRule): Draft => JSON.parse(JSON.stringify({ name: r.name, scopes: r.scopes, overrides: r.overrides }))
+const draftFromRule = (r: LocationRule): Draft => JSON.parse(JSON.stringify({ name: r.name, scopes: r.locations, overrides: r.overrides }))
 
 /* ---------------- scope multi-select ---------------- */
-function ScopePicker({ value, onChange, claims, selectedMetrics, container }: { value: string[]; onChange: (v: string[]) => void; claims: Record<string, Record<string, string>>; selectedMetrics: string[]; container?: HTMLElement | null }) {
+function ScopePicker({ value, onChange, claims, selectedMetrics, editScope, container }: { value: string[]; onChange: (v: string[]) => void; claims: Claims; selectedMetrics: string[]; editScope: string[] | null; container?: HTMLElement | null }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState("")
-  const selected = value.map(scopeById).filter(Boolean) as ScopeOption[]
-  const filtered = regionScopes.filter((s) => s.name.toLowerCase().includes(q.trim().toLowerCase()))
+  // only the locations this person administers are offered at all
+  const options: LocationOption[] = ruleLocations().filter((l) => inScope(editScope, l.id))
+  const selected = value.map((id) => options.find((o) => o.id === id) ?? { id, name: locationName(id), count: 0 })
+  const filtered = options.filter((s) => s.name.toLowerCase().includes(q.trim().toLowerCase()))
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id])
-
-  const disabledSection = (label: string) => (
-    <div className="flex items-center justify-between px-2 py-1.5 opacity-50">
-      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fg-neutral-subtle)" }}>{label}</span>
-      <Badge variant="secondary">Coming later</Badge>
-    </div>
-  )
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div
-          role="combobox" aria-expanded={open} aria-haspopup="listbox" aria-label="Apply to regions" tabIndex={0}
+          role="combobox" aria-expanded={open} aria-haspopup="listbox" aria-label="Apply to locations" tabIndex={0}
           onClick={() => setOpen(true)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true) } }}
           className="flex min-h-9 w-full cursor-text flex-wrap items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm shadow-xs transition-colors hover:border-[var(--border-input-hovered)]"
           style={{ border: "1px solid var(--border-input-default)", background: "var(--bg-input-default)" }}
         >
-          {selected.length === 0 && <span className="px-1" style={{ color: "var(--fg-neutral-muted)" }}>Select regions…</span>}
+          {selected.length === 0 && <span className="px-1" style={{ color: "var(--fg-neutral-muted)" }}>Select locations…</span>}
           {selected.map((s) => (
             <Chip key={s.id} size="sm" onRemove={() => toggle(s.id)} removeLabel={`Remove ${s.name}`}>{s.name}</Chip>
           ))}
@@ -57,18 +54,18 @@ function ScopePicker({ value, onChange, claims, selectedMetrics, container }: { 
       <PopoverContent container={container} align="start" className="p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
         <div className="flex items-center gap-1.5 border-b px-2.5 py-2" style={{ borderColor: "var(--border-neutral-subtle)" }}>
           <Search className="size-4 shrink-0" style={{ color: "var(--fg-neutral-muted)" }} />
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search regions…"
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search locations…"
             className="min-w-px flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--fg-neutral-muted)]" style={{ color: "var(--fg-neutral-emphasis)" }} />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
-          <div className="px-2 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fg-neutral-subtle)" }}>By region</div>
+          <div className="px-2 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fg-neutral-subtle)" }}>Locations you manage</div>
           {filtered.map((s) => {
             const on = value.includes(s.id)
-            // only a conflict if one of THIS rule's chosen metrics is already set for this region by another rule
+            // only a conflict if one of THIS rule's chosen metrics is already set for this location by another rule
             const regionClaims = claims[s.id]
             const conflictMetric = !on && regionClaims ? selectedMetrics.find((mid) => regionClaims[mid]) : undefined
             if (conflictMetric) {
-              const ruleName = regionClaims![conflictMetric]
+              const ruleName = regionClaims![conflictMetric].name
               const metricName = metricById(conflictMetric)?.name ?? conflictMetric
               return (
                 <div key={s.id} aria-disabled className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-sm opacity-60" title={`${metricName} is already set for ${s.name} by “${ruleName}”`}>
@@ -89,10 +86,7 @@ function ScopePicker({ value, onChange, claims, selectedMetrics, container }: { 
               </button>
             )
           })}
-          {filtered.length === 0 && <div className="px-2 py-3 text-center text-sm" style={{ color: "var(--fg-neutral-muted)" }}>No regions match.</div>}
-          <div className="my-1 h-px" style={{ background: "var(--border-neutral-subtle)" }} />
-          {disabledSection("By call centre")}
-          {disabledSection("By agent")}
+          {filtered.length === 0 && <div className="px-2 py-3 text-center text-sm" style={{ color: "var(--fg-neutral-muted)" }}>No locations match.</div>}
         </div>
       </PopoverContent>
     </Popover>
@@ -100,7 +94,7 @@ function ScopePicker({ value, onChange, claims, selectedMetrics, container }: { 
 }
 
 /* ---------------- metric override picker (additive) ---------------- */
-function MetricPicker({ taken, onAdd, baseline, claims, selectedScopes, container }: { taken: string[]; onAdd: (id: string) => void; baseline: ThresholdPolicy; claims: Record<string, Record<string, string>>; selectedScopes: string[]; container?: HTMLElement | null }) {
+function MetricPicker({ taken, onAdd, baseline, claims, selectedScopes, container }: { taken: string[]; onAdd: (id: string) => void; baseline: ThresholdPolicy; claims: Claims; selectedScopes: string[]; container?: HTMLElement | null }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState("")
   const available = METRICS.filter((m) => !taken.includes(m.id) && m.name.toLowerCase().includes(q.trim().toLowerCase()))
@@ -125,11 +119,11 @@ function MetricPicker({ taken, onAdd, baseline, claims, selectedScopes, containe
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
           {available.map((m) => {
-            // disable if this metric is already governed for one of the regions this rule targets
+            // disable if this metric is already governed for one of the locations this rule targets
             let claimedBy: string | undefined, claimedRegion: string | undefined
-            for (const sid of selectedScopes) { const c = claims[sid]?.[m.id]; if (c) { claimedBy = c; claimedRegion = sid; break } }
+            for (const sid of selectedScopes) { const c = claims[sid]?.[m.id]; if (c) { claimedBy = c.name; claimedRegion = sid; break } }
             if (claimedBy) {
-              const regionName = scopeById(claimedRegion!)?.name ?? claimedRegion
+              const regionName = locationName(claimedRegion!)
               return (
                 <div key={m.id} aria-disabled className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-sm opacity-60" title={`${m.name} is already set for ${regionName} by “${claimedBy}”`}>
                   <m.icon className="size-4 shrink-0" style={{ color: "var(--fg-neutral-subtle)" }} />
@@ -156,14 +150,16 @@ function MetricPicker({ taken, onAdd, baseline, claims, selectedScopes, containe
 
 /* ---------------- panel ---------------- */
 export function RuleEditor({
-  open, rule, baseline, claims, onOpenChange, onSave,
+  open, rule, baseline, claims, editScope, author, onOpenChange, onSave,
 }: {
   open: boolean
-  rule: ThresholdRule | null
-  baseline: ThresholdPolicy // current saved "Rules" values the custom rule inherits from
-  claims: Record<string, Record<string, string>> // region id → metric id → name of the rule that already governs it
+  rule: LocationRule | null
+  baseline: ThresholdPolicy // saved tenant defaults the custom rule inherits from
+  claims: Claims // location id → metric id → the rule that already governs it (excluding this one)
+  editScope: string[] | null // locations this person may put in a rule; null = all
+  author: string
   onOpenChange: (o: boolean) => void
-  onSave: (rule: ThresholdRule) => void
+  onSave: (rule: LocationRule) => void
 }) {
   const [name, setName] = useState("")
   const [scopes, setScopes] = useState<string[]>([])
@@ -181,7 +177,7 @@ export function RuleEditor({
   }, [open, rule])
 
   const dirty = JSON.stringify({ name, scopes, overrides }) !== initialRef.current
-  // required to save: a name, at least one region, and at least one override
+  // required to save: a name, at least one location, and at least one override
   const nameError = nameTouched && name.trim().length === 0
   const canSave = name.trim().length > 0 && scopes.length > 0 && Object.keys(overrides).length > 0
 
@@ -199,7 +195,7 @@ export function RuleEditor({
   const updateMetric = (id: string, warn: number, crit: number) => setOverrides((o) => ({ ...o, [id]: { warn, crit } }))
 
   const save = () => {
-    onSave({ id: rule?.id ?? `rule-${Date.now()}`, name: name.trim(), scopes, overrides })
+    onSave({ id: rule?.id ?? `rule-${Date.now()}`, name: name.trim(), locations: scopes, overrides, updatedBy: author, updatedAgo: "just now" })
     onOpenChange(false)
   }
 
@@ -222,9 +218,9 @@ export function RuleEditor({
           {/* header */}
           <div className="flex shrink-0 items-start justify-between gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border-neutral-muted)" }}>
             <div className="flex min-w-px flex-col">
-              <Dialog.Title className="text-base font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{rule ? "Edit custom rule" : "New custom rule"}</Dialog.Title>
+              <Dialog.Title className="text-base font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{rule ? "Edit custom threshold" : "New custom threshold"}</Dialog.Title>
               <Dialog.Description className="truncate text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
-                {name.trim() || "Override the default thresholds for specific regions."}
+                {name.trim() || "Override the default thresholds for specific locations."}
               </Dialog.Description>
             </div>
             <button type="button" aria-label="Close" onClick={() => requestClose(false)}
@@ -241,12 +237,12 @@ export function RuleEditor({
                 Name<span aria-hidden style={{ color: "var(--fg-danger-emphasis)" }}> *</span>
               </label>
               <Input id="rule-name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setNameTouched(true)}
-                placeholder="e.g. Manila remote workers" required aria-required aria-invalid={nameError || undefined}
+                placeholder="e.g. Manila outsourcer" required aria-required aria-invalid={nameError || undefined}
                 aria-describedby={nameError ? "rule-name-error" : undefined} />
               {nameError && <span id="rule-name-error" className="text-xs" style={{ color: "var(--fg-danger-emphasis)" }}>Name is required.</span>}
             </div>
 
-            {/* overrides — chosen first so the scope picker can disable only the regions that conflict on these metrics */}
+            {/* overrides — chosen first so the location picker can disable only the locations that conflict on these metrics */}
             <div className="flex flex-col gap-2.5">
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fg-neutral-subtle)" }}>
                 Threshold overrides<span aria-hidden style={{ color: "var(--fg-danger-emphasis)" }}> *</span>
@@ -290,12 +286,15 @@ export function RuleEditor({
               )}
             </div>
 
-            {/* scope — a region is disabled only where one of the chosen metrics is already governed by another rule */}
+            {/* scope — a location is disabled only where one of the chosen metrics is already governed by another rule */}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fg-neutral-subtle)" }}>
                 Apply to<span aria-hidden style={{ color: "var(--fg-danger-emphasis)" }}> *</span>
               </span>
-              <ScopePicker value={scopes} onChange={setScopes} claims={claims} selectedMetrics={overriddenIds} container={panelEl} />
+              <ScopePicker value={scopes} onChange={setScopes} claims={claims} selectedMetrics={overriddenIds} editScope={editScope} container={panelEl} />
+              <span className="text-xs" style={{ color: "var(--fg-neutral-subtle)" }}>
+                Uses each widget user’s Iris location, set in Administration. The detected city on the map doesn’t count.
+              </span>
             </div>
           </div>
 
