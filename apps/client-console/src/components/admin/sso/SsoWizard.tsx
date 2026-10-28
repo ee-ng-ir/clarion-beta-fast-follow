@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Plus, Trash2, ShieldCheck, KeyRound, Users, Send, ExternalLink } from "lucide-react"
+import { Plus, Trash2, ShieldCheck, KeyRound, Users, Send, ExternalLink, ChevronDown } from "lucide-react"
 import {
   Badge, Button,
   Card, CardContent, CardFooter, CardHeader,
   Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption,
   FileUpload, FileUploadItem, Input, Loader, PasswordInput,
   Radio, RadioGroup, SegmentedControl, SegmentedControlItem,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import { cnPicasso as cn } from "@/lib/utils"
-import { users, roleLabel, type UserRole } from "@ir/mock-data/users"
+import { users } from "@ir/mock-data/users"
+import { access, accessLine, assignmentLabel, groupsOf, me } from "@ir/mock-data/access"
 import {
   providers, providerById, connectMethodLabel, activeMembers, setupSteps,
   type ProviderId, type ConnectMethod,
@@ -23,7 +25,9 @@ import { CertificateUpload, EXAMPLE_CERT, type CertInfo } from "./CertificateUpl
 export type SsoMode = "optional" | "required"
 export type NewUserRule = "invited" | "anyone"
 
-export interface GroupRule { id: string; value: string; label?: string; role: UserRole }
+/** An IdP group, and the Iris group it puts people in. The Iris group carries the access:
+ *  tenant roles, Clarion, Vantage, any product. "" = not chosen yet. */
+export interface GroupRule { id: string; value: string; label?: string; group: string }
 
 export interface SsoDraft {
   step: number
@@ -576,7 +580,7 @@ function StepMap({ p, d, set }: { p: Provider; d: SsoDraft; set: (patch: Partial
   const setRule = (id: string, patch: Partial<GroupRule>) =>
     set({ groupRules: d.groupRules.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
   const valueLabel = p.groupMode === "ids" ? "Entra group Object ID" : p.groupMode === "names" ? `${p.short} group name` : "Group value"
-  const grid = p.groupMode === "ids" ? "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+  const grid = p.groupMode === "ids" ? "sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]"
 
   return (
     <>
@@ -626,7 +630,7 @@ function StepMap({ p, d, set }: { p: Provider; d: SsoDraft; set: (patch: Partial
         <CardContent>
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h3 className="text-heading-xs text-content-neutral-emphasis">Give Clarion roles from {p.short} groups</h3>
+              <h3 className="text-heading-xs text-content-neutral-emphasis">Give access from {p.short} groups</h3>
               <p className="max-w-content-reading text-body-sm text-content-neutral-muted"><Rich text={p.groupIntro} /></p>
             </div>
             {p.groupMode === "limited" && !d.groupsEnabled && <Badge>Not set up</Badge>}
@@ -635,27 +639,24 @@ function StepMap({ p, d, set }: { p: Provider; d: SsoDraft; set: (patch: Partial
           {p.groupMode === "limited" && !d.groupsEnabled ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => set({ groupsEnabled: true })}>Set up group mapping</Button>
-              <span className="text-body-xs text-content-neutral-muted">or keep assigning roles on the Members page</span>
+              <span className="text-body-xs text-content-neutral-muted">or keep giving access on the Users page</span>
             </div>
           ) : (
             <>
               <div className="flex flex-col gap-2">
                 <div className={cn("hidden gap-2 text-label-sm text-content-neutral-muted sm:grid", grid)}>
                   <span>{valueLabel}</span>
-                  {p.groupMode === "ids" && <span>Name in Clarion</span>}
-                  <span>Clarion role</span>
+                  {p.groupMode === "ids" && <span>Name in Iris</span>}
+                  <span>Iris group</span>
                   <span className="sr-only">Remove</span>
                 </div>
                 {d.groupRules.map((r, i) => (
                   <div key={r.id} className={cn("grid grid-cols-1 items-center gap-2", grid)}>
                     <Input size="sm" aria-label={`${valueLabel}, row ${i + 1}`} value={r.value} onChange={(e) => setRule(r.id, { value: e.target.value })} className={cn(p.groupMode === "ids" && "font-mono text-code-sm")} />
                     {p.groupMode === "ids" && (
-                      <Input size="sm" aria-label={`Name in Clarion, row ${i + 1}`} value={r.label ?? ""} placeholder="e.g. Contact centre managers" onChange={(e) => setRule(r.id, { label: e.target.value })} />
+                      <Input size="sm" aria-label={`Name in Iris, row ${i + 1}`} value={r.label ?? ""} placeholder="e.g. Contact centre managers" onChange={(e) => setRule(r.id, { label: e.target.value })} />
                     )}
-                    <SegmentedControl size="sm" aria-label={`Clarion role, row ${i + 1}`} value={r.role} onValueChange={(v) => setRule(r.id, { role: v as UserRole })}>
-                      <SegmentedControlItem value="admin">{roleLabel.admin}</SegmentedControlItem>
-                      <SegmentedControlItem value="manager">{roleLabel.manager}</SegmentedControlItem>
-                    </SegmentedControl>
+                    <IrisGroupPicker value={r.group} label={`Iris group, row ${i + 1}`} onChange={(g) => setRule(r.id, { group: g })} />
                     <Button variant="ghost" size="icon-sm" aria-label={`Remove row ${i + 1}`} onClick={() => set({ groupRules: d.groupRules.filter((x) => x.id !== r.id) })}>
                       <Trash2 aria-hidden />
                     </Button>
@@ -666,12 +667,12 @@ function StepMap({ p, d, set }: { p: Provider; d: SsoDraft; set: (patch: Partial
                 variant="outline"
                 size="sm"
                 className="w-fit"
-                onClick={() => set({ groupRules: [...d.groupRules, { id: newRuleId(), value: "", label: p.groupMode === "ids" ? "" : undefined, role: "manager" }] })}
+                onClick={() => set({ groupRules: [...d.groupRules, { id: newRuleId(), value: "", label: p.groupMode === "ids" ? "" : undefined, group: "" }] })}
               >
                 <Plus aria-hidden /> Add group
               </Button>
               <p className="text-body-xs text-content-neutral-muted">
-                CC Managers still need Groups assigned in Clarion to see any Widgets. Skip this to keep assigning roles on the Members page.
+                Each Iris group carries its own access: tenant roles, Clarion, Vantage. Someone in several mapped groups gets all of it; someone in none gets no access. The Iris group is then linked, so its members come from {p.short}.
               </p>
             </>
           )}
@@ -682,9 +683,9 @@ function StepMap({ p, d, set }: { p: Provider; d: SsoDraft; set: (patch: Partial
         <legend className="mb-2 text-heading-xs text-content-neutral-emphasis">Who can sign in with SSO</legend>
         <RadioGroup value={d.newUsers} onValueChange={(v) => set({ newUsers: v as NewUserRule })}>
           <FieldOption control={<Radio value="invited" />} description="Recommended. Everyone else is turned away at sign-in.">
-            Only people invited in Clarion
+            Only people already invited to Iris
           </FieldOption>
-          <FieldOption control={<Radio value="anyone" />} description="They get a CC Manager account with no Groups the first time they sign in.">
+          <FieldOption control={<Radio value="anyone" />} description="They get an Iris account on first sign-in, with no access until a mapped group gives them some.">
             Anyone assigned to Iris in {p.short}
           </FieldOption>
         </RadioGroup>
@@ -705,7 +706,9 @@ function StepTest({
   onFix: (step: number) => void
 }) {
   const [state, setState] = useState<"idle" | "running" | "passed" | "failed">(passed ? "passed" : "idle")
-  const tester = users.find((u) => u.role === "admin" && u.status === "active") ?? users[0]
+  // The person running the test: whoever is signed in.
+  const tester = access.person(me())!
+  const testerGroups = groupsOf(tester.id).map((g) => g.id)
 
   const run = async (fail = false) => {
     setState("running")
@@ -717,7 +720,7 @@ function StepTest({
   }
 
   const groupsSent = d.groupsEnabled && d.attributes.groups
-    ? d.groupRules.filter((r) => r.role === tester.role).map((r) => r.value).filter(Boolean)
+    ? d.groupRules.filter((r) => r.group && testerGroups.includes(r.group)).map((r) => r.value).filter(Boolean)
     : []
   const matchedRule = groupsSent.length ? d.groupRules.find((r) => r.value === groupsSent[0]) : undefined
   const [first, ...rest] = tester.name.split(" ")
@@ -769,8 +772,8 @@ function StepTest({
               <div className="flex flex-wrap items-center gap-2 text-body-sm text-content-neutral-muted">
                 <Users aria-hidden className="size-4" />
                 Matched Member <span className="font-medium text-content-neutral-emphasis">{tester.name}</span> ·
-                <Badge>{roleLabel[tester.role]}</Badge>
-                {matchedRule && <span>from group {matchedRule.label || matchedRule.value}</span>}
+                <Badge>{accessLine(tester.id)}</Badge>
+                {matchedRule && <span>from {matchedRule.label || matchedRule.value} → {access.group(matchedRule.group)?.name}</span>}
               </div>
               <Button variant="outline" size="sm" className="w-fit" onClick={() => run()}>Run test again</Button>
             </CardContent>
@@ -827,5 +830,34 @@ function StepTurnOn({ p, mode, onMode }: { p: Provider; mode: SsoMode; onMode: (
         </Callout>
       )}
     </>
+  )
+}
+
+// ---- Iris group picker ------------------------------------------------------------
+
+/** Pick the Iris group an IdP group maps to. Each option says what access it gives. */
+function IrisGroupPicker({ value, label, onChange }: { value: string; label: string; onChange: (id: string) => void }) {
+  const chosen = value ? access.group(value) : undefined
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" aria-label={label} className="w-full justify-between font-normal">
+          <span className={cn("truncate", !chosen && "text-content-neutral-subtle")}>{chosen?.name ?? "Choose a group"}</span>
+          <ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 w-80 overflow-y-auto">
+        {access.groups().map((g) => (
+          <DropdownMenuItem key={g.id} onSelect={() => onChange(g.id)} className="h-auto items-start py-1.5">
+            <span className="flex min-w-0 flex-col">
+              <span>{g.name}</span>
+              <span className="truncate text-body-xs text-content-neutral-muted">
+                {g.assignments.length ? g.assignments.map((x) => assignmentLabel(x)).join(" · ") : "No access yet"}
+              </span>
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

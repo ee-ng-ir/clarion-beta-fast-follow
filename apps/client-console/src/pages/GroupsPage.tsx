@@ -10,7 +10,7 @@ import {
   SegmentedControl, SegmentedControlItem, Tabs, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
-import { me, access, canChangeGroup, assignmentLabel, groupScopes, scopes, type Scope, createSuggested, describeRole, locationName, updateGroupRole, initials, suggestedGroups, wouldOrphanTenant, type Group, type Suggestion } from "@ir/mock-data/access"
+import { me, access, canChangeGroup, canChangeMembers, assignmentLabel, groupScopes, scopes, type Scope, createSuggested, describeRole, locationName, updateGroupRole, initials, suggestedGroups, wouldOrphanTenant, type Group, type Suggestion } from "@ir/mock-data/access"
 import { AddRoleDialog, LocationChecklist, PeoplePicker, PersonCell, RoleBadge, fmt, plural, useAccess } from "@/components/admin/access/AccessBits"
 import { useViewer } from "@/lib/viewer"
 
@@ -224,14 +224,14 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-label-lg text-content-neutral-emphasis">Members <span className="text-content-neutral-muted">{fmt(members.length)}</span></h3>
-              {editable && <Button variant="outline" size="sm" onClick={() => setPeopleOpen(true)}><Plus aria-hidden /> Add people</Button>}
+              {canChangeMembers(perm, g) && <Button variant="outline" size="sm" onClick={() => setPeopleOpen(true)}><Plus aria-hidden /> Add people</Button>}
             </div>
             {members.length ? (
               <ul className="flex flex-col divide-y divide-line-neutral-muted rounded-lg border border-line-neutral-muted">
                 {members.map((p) => (
                   <li key={p!.id} className="flex items-center justify-between gap-3 px-4 py-2">
                     <PersonCell p={p!} sub={p!.status !== "active" ? `${p!.email} · ${p!.status}` : undefined} />
-                    {editable && <Button variant="ghost" size="sm" onClick={() => removeMember(p!.id)}>Remove</Button>}
+                    {canChangeMembers(perm, g) && <Button variant="ghost" size="sm" onClick={() => removeMember(p!.id)}>Remove</Button>}
                   </li>
                 ))}
               </ul>
@@ -239,8 +239,17 @@ function GroupDrawer({ id, onClose, onRename, onDelete }: { id: string | null; o
           </section>
 
           <section className="flex flex-col gap-2 rounded-lg bg-surface-neutral-subtle p-4">
-            <span className="inline-flex items-center gap-2 text-label-md text-content-neutral-emphasis"><Link2 className="size-4" aria-hidden /> Membership: managed in Iris</span>
-            <p className="text-body-sm text-content-neutral-muted">Once single sign-on or SCIM is on, you can link this group to a group in your identity provider. Its members then come from there and can&apos;t be changed here.</p>
+            {g.source === "linked" ? (
+              <>
+                <span className="inline-flex items-center gap-2 text-label-md text-content-neutral-emphasis"><Link2 className="size-4" aria-hidden /> Membership: linked to {g.idpGroup}</span>
+                <p className="text-body-sm text-content-neutral-muted">Members come from this group in your identity provider, at each sign-in and through SCIM. Change them there. Its roles are still set here.</p>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-2 text-label-md text-content-neutral-emphasis"><Link2 className="size-4" aria-hidden /> Membership: managed in Iris</span>
+                <p className="text-body-sm text-content-neutral-muted">Once single sign-on or SCIM is on, you can link this group to a group in your identity provider. Its members then come from there and can&apos;t be changed here.</p>
+              </>
+            )}
           </section>
         </DrawerBody>
         <DrawerFooter className="justify-between">

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react"
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardHeaderText, CardTitle, KpiRow, KpiTile } from "@ir/ui"
 import { ACCOUNT_ADMIN_LIMIT, accountAdmins, plans, useAccountAdmins } from "@ir/mock-data/tenant"
 import { stats, store } from "@ir/mock-data/widget-users"
+import { useVantage } from "@ir/mock-data/vantage"
 import { ProductMark, TenantSummary } from "@/components/admin/portal/parts"
 import { CLARION_URL } from "@/lib/apps"
 import { useViewer } from "@/lib/viewer"
@@ -14,6 +15,8 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
   useAccountAdmins()
   const { perm } = useViewer()
   const s = stats()
+  const systems = useVantage().length
+  const vantagePlan = plans.find((p) => p.product === "vantage")
   const admins = accountAdmins.seatsUsed()
   const adminsFull = admins >= ACCOUNT_ADMIN_LIMIT
 
@@ -30,6 +33,15 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
           meter={{ value: s.active, max: s.limit }}
           footer={<Note>{count.format(Math.max(0, s.limit - s.active))} licenses left</Note>}
         />
+        {vantagePlan && (
+          <KpiTile
+            label="Vantage systems"
+            value={count.format(systems)}
+            unit={`/ ${count.format(vantagePlan.licenses)}`}
+            meter={{ value: systems, max: vantagePlan.licenses }}
+            footer={<Note>{count.format(Math.max(0, vantagePlan.licenses - systems))} licenses left</Note>}
+          />
+        )}
         <KpiTile
           label="Account admins"
           value={admins}
@@ -57,9 +69,9 @@ export function HomePage({ onNavigate }: { onNavigate: (id: PageId, tab?: UserTa
             <CardContent>
               <p className="max-w-content-reading text-body-md text-content-neutral-muted">{p.blurb}</p>
             </CardContent>
-            {perm.seeClarion && <CardFooter className="justify-end gap-2">
-              <Button variant="outline" asChild><a href={CLARION_URL} target="_blank" rel="noopener">Open Fleet dashboard</a></Button>
-              <Button onClick={() => onNavigate("clarion")}>Go to {p.productName}</Button>
+            {perm.products[p.product].see && <CardFooter className="justify-end gap-2">
+              {p.product === "clarion" && <Button variant="outline" asChild><a href={CLARION_URL} target="_blank" rel="noopener">Open Fleet dashboard</a></Button>}
+              <Button onClick={() => onNavigate(p.product)}>Go to {p.productName}</Button>
             </CardFooter>}
           </Card>
         ))}

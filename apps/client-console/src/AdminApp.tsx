@@ -22,6 +22,7 @@ import { UserManagementPage } from "@/pages/UserManagementPage"
 import { ResourceCentrePage } from "@/pages/ResourceCentrePage"
 import { BillingPage } from "@/pages/BillingPage"
 import { ClarionSpacePage } from "@/pages/ClarionSpacePage"
+import { VantagePage } from "@/pages/VantagePage"
 import { UsersRolesPage } from "@/pages/UsersRolesPage"
 import { WidgetUsersPage } from "@/pages/WidgetUsersPage"
 import { GroupsPage } from "@/pages/GroupsPage"
@@ -99,6 +100,7 @@ export function AdminApp({
               {page === "resources" && <ResourceCentrePage />}
               {page === "billing" && <BillingPage />}
               {page === "clarion" && <ClarionSpacePage onNavigate={onNavigate} />}
+              {page === "vantage" && <VantagePage />}
 
               {/* Proposals */}
               {page === "users" && <UsersRolesPage />}

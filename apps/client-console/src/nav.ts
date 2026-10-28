@@ -30,7 +30,7 @@ import type { Permissions } from "@ir/mock-data/access"
  */
 export type PageId =
   // As built (the live product)
-  | "home" | "account" | "usermgmt" | "resources" | "billing" | "clarion"
+  | "home" | "account" | "usermgmt" | "resources" | "billing" | "clarion" | "vantage"
   // Proposals
   | "users" | "widgetusers" | "groups" | "locations" | "roles" | "sso"
   | "rbacdoc" | "groupsdoc" | "billingdoc"
@@ -52,6 +52,7 @@ export const adminNavItems: NavItem[] = [
 /** Products the tenant has. Each gets a space under Products. */
 export const productNavItems: { id: PageId; label: string }[] = [
   { id: "clarion", label: "Clarion" },
+  { id: "vantage", label: "Vantage" },
 ]
 
 export const proposalNavItems: NavItem[] = [
@@ -74,6 +75,7 @@ export function pageAllowed(id: PageId, p: Permissions): boolean {
     case "usermgmt": return p.seeAccess || p.manageWidgetUsers
     case "resources": return p.deployWidget
     case "clarion": return p.seeClarion
+    case "vantage": return p.products.vantage.see
     case "users": case "groups": return p.seeAccess
     case "roles": return p.admin
     case "locations": return p.seeLocations
@@ -94,6 +96,7 @@ export const pageLabel = (id: PageId) =>
 export const pageSubtitle: Partial<Record<PageId, string>> = {
   resources: "Everything you and your team need to deploy the Clarion widget across your fleet. For further support, contact your IR account manager.",
   clarion: "Insights Hub – access to the fleet dashboard, recommendations, tips and training content.",
+  vantage: "The voice and contact-centre infrastructure behind your sites. Placeholder product, to show how access scales.",
   users: "Everyone who can sign in to Iris, and what they can access.",
   widgetusers: "Who can run the Clarion widget, whether it has connected, and who uses a licence.",
   groups: "Give access to groups of people instead of one person at a time.",
@@ -114,6 +117,7 @@ export const pagePath: Record<PageId, string> = {
   resources: "/resource-centre",
   billing: "/billing",
   clarion: "/product/clarion",
+  vantage: "/product/vantage",
   users: "/admin/users",
   widgetusers: "/admin/widget-users",
   groups: "/admin/groups",

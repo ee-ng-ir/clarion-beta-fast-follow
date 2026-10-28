@@ -3,12 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "One dummy Iris tenant (Acme Contact Centre) shared by every prototype: people, groups, locations, roles, Clarion widget users.",
+  "description": "One dummy Iris tenant (Acme Contact Centre) shared by every prototype: people, groups, locations, roles, Clarion widget users, Vantage systems.",
   "exports": {
     "./access": "./src/access.ts",
     "./widget-users": "./src/widgetUsers.ts",
     "./users": "./src/users.ts",
-    "./tenant": "./src/tenant.ts"
+    "./tenant": "./src/tenant.ts",
+    "./vantage": "./src/vantage.ts"
   },
   "peerDependencies": {
     "react": "^19.2.6"

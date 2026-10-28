@@ -16,6 +16,7 @@
 // See RBAC-PROPOSAL.md.
 
 import { clearLocation, setLocation, setLocationResolver, store as widgetStore, type WidgetUser } from "./widgetUsers"
+import { systemsIn, vantage } from "./vantage"
 
 // ------------------------------------------------------------------ catalogue --
 
@@ -24,8 +25,8 @@ export type ProductId = "clarion" | "vantage"
 /** Where a role applies: the whole tenant, or one product. Drives the tabs on Users, Groups and Roles. */
 export type Scope = "tenant" | ProductId
 
-/** Vantage, the next Iris product: no permissions defined yet. Shows how the console scales. */
-export const products: { id: ProductId; name: string; placeholder?: boolean }[] = [{ id: "clarion", name: "Clarion" }, { id: "vantage", name: "Vantage", placeholder: true }]
+/** Vantage is the second product (placeholder data in ./vantage), there to show how the console scales. */
+export const products: { id: ProductId; name: string; placeholder?: boolean }[] = [{ id: "clarion", name: "Clarion" }, { id: "vantage", name: "Vantage" }]
 export const scopes: { id: Scope; name: string }[] = [{ id: "tenant", name: "Tenant" }, ...products.map((p) => ({ id: p.id as Scope, name: p.name }))]
 export const productName = (id?: ProductId) => products.find((p) => p.id === id)?.name ?? ""
 
@@ -36,6 +37,8 @@ export interface RoleDef {
   summary: string
   /** What it means in Clarion. Each product team agrees its own mapping. */
   clarion: string
+  /** What it means in Vantage. Assumed: no Vantage spec yet. */
+  vantage: string
   /** Proposed, still to agree with the Clarion team. */
   open?: string
 }
@@ -43,23 +46,29 @@ export interface RoleDef {
 export const roles: RoleDef[] = [
   { id: "tenant_admin", name: "Tenant Admin", level: "tenant",
     summary: "Full access, including sign-in settings (SSO, SCIM, break-glass), users, groups, locations, roles and every product.",
-    clarion: "Everything in Clarion, every location." },
+    clarion: "Everything in Clarion, every location.",
+    vantage: "Everything in Vantage, every location." },
   { id: "user_admin", name: "User Admin", level: "tenant",
     summary: "Manages users and groups, and gives roles up to their own level. No sign-in settings or locations.",
-    clarion: "No Clarion data unless also given a Clarion role." },
+    clarion: "No Clarion data unless also given a Clarion role.",
+    vantage: "No Vantage data unless also given a Vantage role." },
   { id: "auditor", name: "Auditor", level: "tenant",
     summary: "Read-only view of settings, users, groups, locations, role assignments and the audit log.",
-    clarion: "No Clarion data unless also given a Clarion role." },
+    clarion: "No Clarion data unless also given a Clarion role.",
+    vantage: "No Vantage data unless also given a Vantage role." },
   { id: "product_admin", name: "Product Admin", level: "product",
     summary: "Configures the product and manages its settings. Limited to locations, it applies to resources in those locations only.",
-    clarion: "Overview, Endpoints, Thresholds and widget users. Manages widget users in their locations." },
+    clarion: "Overview, Endpoints, Thresholds and widget users. Manages widget users in their locations.",
+    vantage: "Everything an Editor can, plus adding systems, setting their location and alert rules." },
   { id: "editor", name: "Editor", level: "product",
     summary: "Creates and edits content in the product, or in the given locations.",
     clarion: "Same as Viewer today.",
+    vantage: "Everything a Viewer can, plus acknowledging alerts and adding notes to systems.",
     open: "Clarion has little to edit yet. Candidates: acknowledging alerts, notes on endpoints." },
   { id: "viewer", name: "Viewer", level: "product",
     summary: "Read-only access in the product, or in the given locations.",
-    clarion: "Overview and Endpoints, read-only. No Thresholds, no Administration. This is the PO's \"CC Manager\"." },
+    clarion: "Overview and Endpoints, read-only. No Thresholds, no Administration. This is the PO's \"CC Manager\".",
+    vantage: "Systems and their health, read-only." },
 ]
 export const roleDef = (id: RoleId) => roles.find((r) => r.id === id)!
 const productRank: Record<RoleId, number> = { tenant_admin: 4, product_admin: 3, editor: 2, viewer: 1, user_admin: 0, auditor: 0 }
@@ -109,7 +118,7 @@ export const statusLabel: Record<PersonStatus, string> = { active: "Active", inv
 
 // ----------------------------------------------------------------------- seed --
 
-const L = { syd: "loc-syd", mel: "loc-mel", akl: "loc-akl", mnl: "loc-mnl", ldn: "loc-ldn", chi: "loc-chi" }
+const L = { syd: "loc-syd", mel: "loc-mel", akl: "loc-akl", mnl: "loc-mnl", ldn: "loc-ldn", chi: "loc-chi", sydc: "loc-sydc", meldc: "loc-meldc", aws: "loc-aws" }
 
 const seedLocations: Location[] = [
   { id: L.syd, name: "Sydney", description: "Chatswood and Parramatta sites" },
@@ -118,6 +127,10 @@ const seedLocations: Location[] = [
   { id: L.mnl, name: "Manila", description: "Ortigas outsourcer" },
   { id: L.ldn, name: "London", description: "" },
   { id: L.chi, name: "Chicago", description: "" },
+  // Only Vantage uses these: where the voice network runs, not where people sit.
+  { id: L.sydc, name: "Sydney DC (Equinix SY3)", description: "Primary voice core" },
+  { id: L.meldc, name: "Melbourne DC (Equinix ME2)", description: "Secondary voice core" },
+  { id: L.aws, name: "AWS ap-southeast-2", description: "Cloud contact centre and recording" },
 ]
 
 let n = 0
@@ -138,6 +151,9 @@ const seedPeople: Person[] = [
   { id: "p10", name: "Elena Rossi", email: "elena.rossi@acme.com", status: "active", lastActive: "4d ago", direct: [a("viewer", [L.ldn])] },
   { id: "p13", name: "Sam Okoro", email: "sam.okoro@acme.com", status: "invited", lastActive: null, invitedAgo: "1h ago", direct: [] },
   { id: "p14", name: "Mei Lin", email: "mei.lin@acme.com", status: "active", lastActive: "20m ago", direct: [] },
+  { id: "p15", name: "Ravi Menon", email: "ravi.menon@acme.com", status: "active", lastActive: "5m ago", direct: [] },
+  { id: "p16", name: "Leah Walsh", email: "leah.walsh@acme.com", status: "active", lastActive: "1h ago", direct: [] },
+  { id: "p17", name: "Tom Becker", email: "tom.becker@acme.com", status: "active", lastActive: "yesterday", direct: [] },
   { id: "p11", name: "Tomás Herrera", email: "tomas.herrera@acme.com", status: "deactivated", lastActive: "3w ago", direct: [] },
 ]
 
@@ -149,7 +165,11 @@ const seedGroups: Group[] = [
   { id: "g-clarion-admin-syd", name: "Sydney Clarion administrators", description: "Adds and removes Sydney's widget users", source: "local", members: ["p14"], assignments: [a("product_admin", [L.syd])] },
   { id: "g-lead", name: "Contact centre leadership", description: "Sees every site, in every product", source: "local", members: ["p8"], assignments: [a("viewer"), a("viewer", [], "vantage")] },
   { id: "g-vantage", name: "Vantage analysts", description: "Read-only in Vantage", source: "local", members: ["p13", "p9"], assignments: [a("viewer", [], "vantage")] },
-  { id: "g-apac", name: "APAC operations leads", description: "", source: "local", members: ["p5"], assignments: [a("viewer", [L.syd, L.mel, L.akl])] },
+  { id: "g-apac", name: "APAC operations leads", description: "Their sites, in both products", source: "local", members: ["p5"], assignments: [a("viewer", [L.syd, L.mel, L.akl]), a("viewer", [L.syd, L.mel, L.akl], "vantage")] },
+  // Vantage. Two of these come from the IdP, to show SSO / SCIM linking.
+  { id: "g-vantage-admin", name: "Vantage administrators", description: "Adds systems and sets alert rules", source: "local", members: ["p17"], assignments: [a("product_admin", [], "vantage")] },
+  { id: "g-noc", name: "NOC engineers", description: "Acknowledge and work Vantage alerts, every site", source: "linked", idpGroup: "NOC-Engineers", members: ["p15"], assignments: [a("editor", [], "vantage")] },
+  { id: "g-apac-net", name: "APAC network team", description: "The data centres and cloud region", source: "linked", idpGroup: "Network-APAC", members: ["p16"], assignments: [a("viewer", [L.sydc, L.meldc, L.aws], "vantage")] },
   { id: "g-syd", name: "Sydney CC managers", description: "", source: "local", members: ["p3", "p4"], assignments: [a("viewer", [L.syd])] },
   { id: "g-mnl", name: "Manila CC managers", description: "Outsourcer team leads", source: "local", members: ["p6", "p7"], assignments: [a("viewer", [L.mnl])] },
   { id: "g-ldn", name: "London CC managers", description: "", source: "local", members: ["p11"], assignments: [a("viewer", [L.ldn])] },
@@ -238,6 +258,7 @@ export const access = {
     state.people = state.people.map((p) => ({ ...p, direct: strip(p.direct) }))
     bump()
     clearLocation(id)
+    vantage.clearLocation(id)
   },
 }
 
@@ -302,6 +323,10 @@ export function clarionReach(personId: string) {
   return all.filter((u) => u.locationId && set.has(u.locationId)).length
 }
 
+/** Records each product keeps in a location: what blocks deleting it. */
+export const recordsIn = (locationId: string): Record<ProductId, number> => ({ clarion: widgetUsersIn(locationId), vantage: systemsIn(locationId) })
+export const recordNoun: Record<ProductId, [string, string]> = { clarion: ["widget user", "widget users"], vantage: ["system", "systems"] }
+
 export const widgetUsersIn = (locationId: string) => widgetStore.all().filter((u) => u.locationId === locationId).length
 export const unassignedWidgetUsers = () => widgetStore.all().filter((u) => !u.locationId).length
 
@@ -344,7 +369,7 @@ export const initials = (name: string) => name.split(" ").map((p) => p[0]).slice
 // "What should they do?" + "Where?" → a role, then the group that already holds
 // exactly that role (or a new one). People always land in a group, never a direct role.
 
-export type Job = "view" | "manage" | "users" | "review" | "admin"
+export type Job = "view" | "work" | "manage" | "users" | "review" | "admin"
 export interface JobDef { id: Job; label: string; hint: string; role: RoleId; scoped: boolean; product?: ProductId }
 
 /** The choices in Give access, per tab: a product's own jobs, or the tenant's. */
@@ -358,8 +383,9 @@ export function jobsFor(scope: Scope): JobDef[] {
   return scope === "clarion"
     ? [{ id: "view", label: "See the Clarion dashboard", hint: "Overview and Endpoints, read-only", role: "viewer", scoped: true, product: scope },
        { id: "manage", label: "Manage Clarion", hint: "Also Thresholds and widget users", role: "product_admin", scoped: true, product: scope }]
-    : [{ id: "view", label: `View ${name}`, hint: "Read-only", role: "viewer", scoped: true, product: scope },
-       { id: "manage", label: `Manage ${name}`, hint: "Its settings and content", role: "product_admin", scoped: true, product: scope }]
+    : [{ id: "view", label: `See ${name}`, hint: "Systems and their health, read-only", role: "viewer", scoped: true, product: scope },
+       { id: "work", label: "Work Vantage alerts", hint: "Also acknowledge alerts and add notes", role: "editor", scoped: true, product: scope },
+       { id: "manage", label: `Manage ${name}`, hint: "Also add systems and set alert rules", role: "product_admin", scoped: true, product: scope }]
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
@@ -375,6 +401,7 @@ export function suggestGroupName(job: Job, locations: string[], product: Product
   const name = productName(product)
   switch (job) {
     case "view": return product === "clarion" ? (locations.length ? `${where} CC managers` : "Clarion viewers (all locations)") : (locations.length ? `${name} viewers – ${where}` : `${name} viewers`)
+    case "work": return locations.length ? `${name} engineers – ${where}` : `${name} engineers`
     case "manage": return locations.length ? `${name} administrators – ${where}` : `${name} administrators`
     case "users": return "User administrators"
     case "review": return "Auditors"
@@ -384,12 +411,15 @@ export function suggestGroupName(job: Job, locations: string[], product: Product
 
 /** Plain-language result of holding one role. */
 export function describeRole(role: RoleId, locations: string[], product: ProductId = "clarion") {
-  if (product !== "clarion" && (role === "viewer" || role === "editor" || role === "product_admin")) {
+  if (product === "vantage" && (role === "viewer" || role === "editor" || role === "product_admin")) {
     const where = locations.length ? locations.map(locationName).join(", ") : "all locations"
-    const name = productName(product)
+    const n = vantage.visible(locations.length ? locations : null).length
+    const systems = `Vantage systems for ${where} (${n.toLocaleString()} systems)`
     return role === "product_admin"
-      ? { sees: `${name}'s settings and content for ${where}`, not: "users, groups or sign-in settings" }
-      : { sees: `${name}, read-only, for ${where}`, not: `${name} settings or Administration` }
+      ? { sees: `${systems}, and can add systems and set alert rules`, not: "users, groups or sign-in settings" }
+      : role === "editor"
+        ? { sees: `${systems}, and can acknowledge alerts`, not: "alert rules or Administration" }
+        : { sees: `${systems}, read-only`, not: "alerts actions, alert rules or Administration" }
   }
   const reach = role === "user_admin" || role === "auditor" ? 0
     : locations.length ? widgetStore.all().filter((u) => u.locationId && locations.includes(u.locationId)).length : widgetStore.all().length
@@ -562,6 +592,30 @@ export interface Permissions {
   seeClarion: boolean
   /** Sees any part of Administration. */
   admin: boolean
+  /** Per product: role held, where, and what it allows. Scales to any product. */
+  products: Record<ProductId, ProductPerm>
+}
+
+export interface ProductPerm {
+  role: RoleId | null
+  /** null = every location, including records with no location. */
+  scope: string[] | null
+  see: boolean
+  /** Editor and up: act on records (Vantage: acknowledge alerts). */
+  act: boolean
+  /** Product Admin and up: add records, set their location, settings. */
+  manage: boolean
+}
+
+function productPerm(personId: string, product: ProductId): ProductPerm {
+  const acc = productAccess(personId, product)
+  const r = acc.role
+  return {
+    role: r, scope: r ? acc.locations : [],
+    see: !!r,
+    act: r === "tenant_admin" || r === "product_admin" || r === "editor",
+    manage: r === "tenant_admin" || r === "product_admin",
+  }
 }
 
 export function permissionsOf(personId: string): Permissions {
@@ -572,12 +626,15 @@ export function permissionsOf(personId: string): Permissions {
   const clarion = clarionAccess(personId)
   const clarionAdmin = clarion.role === "tenant_admin" || clarion.role === "product_admin"
   const seeAccess = tenantAdmin || userAdmin || auditor
+  const prods = Object.fromEntries(products.map((p) => [p.id, productPerm(personId, p.id)])) as Record<ProductId, ProductPerm>
+  const anyProductAdmin = products.some((p) => prods[p.id].manage)
   return {
+    products: prods,
     tenantAdmin, userAdmin, auditor, clarion,
     seeAccess,
     manageAccess: tenantAdmin || userAdmin,
     grantTenantAdmin: tenantAdmin,
-    seeLocations: seeAccess || clarionAdmin,
+    seeLocations: seeAccess || anyProductAdmin,
     manageLocations: tenantAdmin,
     seeSso: tenantAdmin || auditor,
     manageSso: tenantAdmin,
@@ -587,26 +644,31 @@ export function permissionsOf(personId: string): Permissions {
     deployWidget: clarionAdmin,
     rotateEnrolmentToken: tenantAdmin,
     seeClarion: !!clarion.role,
-    admin: seeAccess || clarionAdmin,
+    admin: seeAccess || anyProductAdmin,
   }
 }
 
-/** Can this person change this group's members and roles? */
+/** Can this person change this group's roles and name? */
 export function canChangeGroup(perm: Permissions, g: Group) {
-  if (!perm.manageAccess || g.source === "linked") return false
+  if (!perm.manageAccess) return false
   return perm.grantTenantAdmin || !g.assignments.some((x) => x.role === "tenant_admin")
 }
 
+/** …and its members? Not for a group linked to the IdP: its members come from there. */
+export const canChangeMembers = (perm: Permissions, g: Group) => g.source === "local" && canChangeGroup(perm, g)
+
 /** People to switch between in the prototype, one per kind of access. */
-export const viewAsPeople = ["p2", "p12", "p9", "p14", "p8", "p5", "p3", "p6"]
+export const viewAsPeople = ["p2", "p12", "p9", "p14", "p8", "p5", "p3", "p6", "p17", "p15", "p16"]
 
 /** One line of what someone holds: "Tenant Admin", "Clarion Viewer · Sydney". */
 export function accessLine(personId: string) {
   const tenant = tenantRolesOf(personId).map((r) => roleDef(r).name)
   if (tenant.includes("Tenant Admin")) return "Tenant Admin"
-  const c = clarionAccess(personId)
-  const clarion = c.role && c.role !== "tenant_admin"
-    ? `Clarion ${roleDef(c.role).name} · ${c.locations === null ? "All locations" : c.locations.map(locationName).join(", ")}`
-    : null
-  return [...tenant, clarion].filter(Boolean).join(" + ") || "No access"
+  const prods = products.map((p) => {
+    const c = productAccess(personId, p.id)
+    return c.role && c.role !== "tenant_admin"
+      ? `${p.name} ${roleDef(c.role).name} · ${c.locations === null ? "All locations" : c.locations.map(locationName).join(", ")}`
+      : null
+  })
+  return [...tenant, ...prods].filter(Boolean).join(" + ") || "No access"
 }

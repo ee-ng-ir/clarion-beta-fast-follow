@@ -12,7 +12,7 @@ export const tenant = {
 }
 
 export interface ProductPlan {
-  product: "clarion"
+  product: "clarion" | "vantage"
   productName: string
   plan: string
   cycle: "Annual" | "Monthly"
@@ -31,6 +31,17 @@ export const plans: ProductPlan[] = [
     licenses: 500,
     blurb:
       "Clarion combines endpoint monitoring and hosted analytics to provide real-time visibility into employee and agent experience, including communication platform connectivity, network quality, audio device health, endpoint performance, and other factors that may impact productivity and call quality.",
+  },
+  {
+    // Placeholder: Vantage has no plan or spec yet.
+    product: "vantage",
+    productName: "Vantage",
+    plan: "Vantage Standard",
+    cycle: "Annual",
+    expires: "30 Jun 2027",
+    licenses: 50,
+    blurb:
+      "Vantage monitors the voice and contact-centre infrastructure behind your sites: session border controllers, call managers, gateways, the contact-centre platform and call recording.",
   },
 ]
 
