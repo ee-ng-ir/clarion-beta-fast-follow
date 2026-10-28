@@ -1,0 +1,13 @@
+{
+  "name": "@ir/telemetry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulated agent telemetry shared by the Clarion widget (publishes) and the Clarion dashboard (subscribes). Same-browser feed: BroadcastChannel + localStorage.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6"
+  }
+}

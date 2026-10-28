@@ -1,0 +1,15 @@
+{
+  "name": "@ir/mock-data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "One dummy Iris tenant (Acme Contact Centre) shared by every prototype: people, groups, locations, roles, Clarion widget users.",
+  "exports": {
+    "./access": "./src/access.ts",
+    "./widget-users": "./src/widgetUsers.ts",
+    "./users": "./src/users.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6"
+  }
+}

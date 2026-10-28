@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "cd ../.. && npx turbo run build --filter=clarion",
+  "outputDirectory": "dist",
+  "ignoreCommand": "npx turbo-ignore",
+  "rewrites": [
+    {
+      "source": "/widget/(.*)",
+      "destination": "/widget/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}

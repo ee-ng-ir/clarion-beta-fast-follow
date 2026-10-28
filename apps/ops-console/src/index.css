@@ -1,0 +1,5 @@
+/* IR Ops console — internal tooling. Picasso everywhere (<html data-picasso>). */
+@import "tailwindcss";
+@import "../../../packages/picasso/picasso.css";
+@source "../../../packages/picasso/ui";
+@source "./";
