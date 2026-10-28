@@ -15,7 +15,7 @@ import {
 import { toast } from "@/components/ui/toast"
 import {
   me, access, assignmentLabel, groupScopes, productAccess, products, scopes, tenantRolesOf, type Scope, describeRole, locationName, moveTarget, siteGroupsOf, clarionAccess, clarionReach, grantsOf, groupsOf, isTenantAdmin, roleDef, roles,
-  statusLabel, tenantAdmins, wouldOrphanTenant, canChangeGroup, type Permissions, type Person, type PersonStatus,
+  statusLabel, tenantAdmins, wouldOrphanTenant, canChangeGroup, canChangeMembers, type Permissions, type Person, type PersonStatus,
 } from "@ir/mock-data/access"
 import { useViewer } from "@/lib/viewer"
 import { AddRoleDialog, PersonCell, RoleBadge, fmt, locList, plural, useAccess } from "@/components/admin/access/AccessBits"
@@ -358,7 +358,7 @@ function UserDrawer({ id, onClose, onGive, onMove }: { id: string | null; onClos
                       <span className="text-label-md text-content-neutral-emphasis">{g.name}</span>
                       <div className="flex flex-wrap gap-1">{g.assignments.length ? g.assignments.map((x) => <RoleBadge key={x.id} x={x} />) : <span className="text-body-xs text-content-neutral-subtle">No roles</span>}</div>
                     </div>
-                    {canChange && canChangeGroup(perm, g) && <Button variant="ghost" size="sm" onClick={() => leaveGroup(g.id)}>Remove</Button>}
+                    {canChange && canChangeMembers(perm, g) && <Button variant="ghost" size="sm" onClick={() => leaveGroup(g.id)}>Remove</Button>}
                   </li>
                 ))}
               </ul>
@@ -422,7 +422,7 @@ function Can({ yes, children }: { yes?: boolean; children: React.ReactNode }) {
 function JoinGroupDialog({ open, onOpenChange, person }: { open: boolean; onOpenChange: (o: boolean) => void; person: Person }) {
   const [picked, setPicked] = useState<string[]>([])
   const { perm } = useViewer()
-  const available = access.groups().filter((g) => !g.members.includes(person.id) && canChangeGroup(perm, g))
+  const available = access.groups().filter((g) => !g.members.includes(person.id) && canChangeMembers(perm, g))
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o) setPicked([]); onOpenChange(o) }}>
       <DialogContent size="md">
@@ -473,7 +473,7 @@ function InviteDialog({ open, onOpenChange, scope }: { open: boolean; onOpenChan
   const dupe = valid && access.people().some((p) => p.email.toLowerCase() === trimmed)
   const err = touched && !valid ? "Enter a valid email address." : touched && dupe ? "Someone with this email is already a user." : null
   const { perm } = useViewer()
-  const local = useMemo(() => access.groups().filter((g) => canChangeGroup(perm, g) && (scope === "tenant" || groupScopes(g).includes(scope))), [open, scope, perm.grantTenantAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
+  const local = useMemo(() => access.groups().filter((g) => canChangeMembers(perm, g) && (scope === "tenant" || groupScopes(g).includes(scope))), [open, scope, perm.grantTenantAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = () => {
     setTouched(true)
@@ -519,7 +519,7 @@ function BulkGroupDialog({ mode, people, onClose }: { mode: "add" | "remove" | n
   const [lastMode, setLastMode] = useState<typeof mode>(null)
   const { perm } = useViewer()
   if (mode !== lastMode) { setLastMode(mode); setPicked([]) }
-  const local = access.groups().filter((g) => canChangeGroup(perm, g))
+  const local = access.groups().filter((g) => canChangeMembers(perm, g))
   const groups = mode === "remove" ? local.filter((g) => people.some((id) => g.members.includes(id))) : local
   const n = people.length
 

@@ -74,7 +74,8 @@ export interface ProviderDef {
   attributes: { email: string; firstName: string; lastName: string; groups?: string }
   groupMode: GroupMode
   groupIntro: string
-  groupExamples: { value: string; label?: string; role: "admin" | "manager" }[]
+  /** IdP group → Iris group id (@ir/mock-data/access). One IdP group can give access to any product. */
+  groupExamples: { value: string; label?: string; group: string }[]
   mapTip: Tip
 }
 
@@ -159,8 +160,9 @@ export const providers: ProviderDef[] = [
     groupMode: "ids",
     groupIntro: "Entra sends groups as Object IDs, not names. Paste each group's Object ID from Entra and name it so you'll recognise it later.",
     groupExamples: [
-      { value: "3f2a9c1e-7b4d-4e0a-9c55-1d2e8f6a0b13", label: "Clarion Admins", role: "admin" },
-      { value: "b81d04c7-25e9-4f3a-8a61-6c0f9e2d7a48", label: "Contact centre managers", role: "manager" },
+      { value: "3f2a9c1e-7b4d-4e0a-9c55-1d2e8f6a0b13", label: "Clarion Admins", group: "g-clarion-admin" },
+      { value: "b81d04c7-25e9-4f3a-8a61-6c0f9e2d7a48", label: "Sydney CC managers", group: "g-syd" },
+      { value: "6c4e2a90-1f3b-4d7c-8e5a-2b9d0c7f1e34", label: "NOC Engineers", group: "g-noc" },
     ],
     mapTip: { title: "Where's the Object ID?", body: "In Entra, open **Groups**, choose the group, and copy **Object ID** from its overview. Entra leaves groups out for anyone in more than 150, so assign only Clarion's groups to the Iris app." },
   },
@@ -209,8 +211,10 @@ export const providers: ProviderDef[] = [
     groupMode: "names",
     groupIntro: "Okta sends group names, so type them exactly as they appear in Okta.",
     groupExamples: [
-      { value: "Clarion-Admins", role: "admin" },
-      { value: "Contact-Centre-Managers", role: "manager" },
+      { value: "Clarion-Admins", group: "g-clarion-admin" },
+      { value: "Sydney-CC-Managers", group: "g-syd" },
+      { value: "NOC-Engineers", group: "g-noc" },
+      { value: "Network-APAC", group: "g-apac-net" },
     ],
     mapTip: { title: "Names must match exactly", body: "Including capitals and dashes. The test in step 6 shows the group names Okta actually sent." },
   },
@@ -243,7 +247,7 @@ export const providers: ProviderDef[] = [
       foot: "Then open the app's **User access** and turn it **On** for the people who use Clarion. New custom apps start off.",
     },
     addConfirm: "I've added Iris and downloaded Google's metadata file",
-    addTip: { title: "About groups", body: "Google can send group membership, but it's more limited than Entra or Okta. You can assign roles in Clarion instead." },
+    addTip: { title: "About groups", body: "Google can send group membership, but it's more limited than Entra or Okta. You can give access in Iris instead." },
     connectDefault: "file",
     connectMethods: ["url", "file", "manual"],
     fileName: "GoogleIDPMetadata.xml",
@@ -261,8 +265,8 @@ export const providers: ProviderDef[] = [
     mapBadge: "From step 3",
     attributes: { email: "email", firstName: "firstName", lastName: "lastName" },
     groupMode: "limited",
-    groupIntro: "Google only sends groups you pick one by one under **Group membership** in the app's attribute mapping. For most teams it's simpler to keep assigning roles in Clarion.",
-    groupExamples: [{ value: "clarion-admins@acme.com", role: "admin" }],
+    groupIntro: "Google only sends groups you pick one by one under **Group membership** in the app's attribute mapping. For most teams it's simpler to keep giving access in Iris.",
+    groupExamples: [{ value: "clarion-admins@acme.com", group: "g-clarion-admin" }, { value: "noc-engineers@acme.com", group: "g-noc" }],
     mapTip: { title: "Email comes through anyway", body: "Google always sends the primary email as the user's ID, so sign-in works even if the names are blank." },
   },
   {
@@ -309,8 +313,9 @@ export const providers: ProviderDef[] = [
     groupMode: "names",
     groupIntro: "PingOne sends group names, so type them exactly as they appear in PingOne.",
     groupExamples: [
-      { value: "Clarion Admins", role: "admin" },
-      { value: "Contact Centre Managers", role: "manager" },
+      { value: "Clarion Admins", group: "g-clarion-admin" },
+      { value: "Sydney CC Managers", group: "g-syd" },
+      { value: "NOC Engineers", group: "g-noc" },
     ],
     mapTip: { title: "Names must match exactly", body: "Including capitals and spaces. The test in step 6 shows the group names PingOne actually sent." },
   },
@@ -360,7 +365,7 @@ export const providers: ProviderDef[] = [
     attributes: { email: "email", firstName: "firstName", lastName: "lastName", groups: "groups" },
     groupMode: "values",
     groupIntro: "Enter each group exactly as your provider sends it. That may be a name or an ID; the test shows which.",
-    groupExamples: [{ value: "clarion-admins", role: "admin" }],
+    groupExamples: [{ value: "clarion-admins", group: "g-clarion-admin" }, { value: "noc-engineers", group: "g-noc" }],
     mapTip: { title: "Long attribute names are normal", body: "Some providers send names like **http://schemas.xmlsoap.org/…/emailaddress**. Paste the whole thing." },
   },
   {
@@ -406,7 +411,7 @@ export const providers: ProviderDef[] = [
     attributes: { email: "email", firstName: "given_name", lastName: "family_name", groups: "groups" },
     groupMode: "values",
     groupIntro: "Enter each group exactly as it appears in the groups claim. The test in step 6 shows the values sent.",
-    groupExamples: [{ value: "clarion-admins", role: "admin" }],
+    groupExamples: [{ value: "clarion-admins", group: "g-clarion-admin" }, { value: "noc-engineers", group: "g-noc" }],
     mapTip: { title: "No groups coming through?", body: "Many providers only send groups when you add a groups claim or scope to the app. Check the app's token settings." },
   },
 ]

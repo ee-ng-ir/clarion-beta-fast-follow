@@ -8,7 +8,7 @@ import {
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import { useViewer } from "@/lib/viewer"
-import { roleLabel } from "@ir/mock-data/users"
+import { access } from "@ir/mock-data/access"
 import { providers, providerById, activeMembers, sampleEmailDomain, signInPage, setupSteps, recentSignIns, connectMethodLabel } from "@/data/sso"
 import { SsoWizard, emptyDraft, type SsoDraft, type SsoMode } from "@/components/admin/sso/SsoWizard"
 import { Callout, DetailList } from "@/components/admin/sso/parts"
@@ -403,9 +403,9 @@ function ActiveView({
             <DetailList
               mono={false}
               rows={[
-                ["New people", live.newUsers === "invited" ? "Only people invited in Clarion" : `Anyone assigned to Iris in ${p.short}, as a CC Manager with no Groups`],
-                ["Roles from groups", live.groupsEnabled && live.groupRules.length
-                  ? <span className="flex flex-col gap-1">{live.groupRules.map((r) => <span key={r.id}>{r.label || r.value} → {roleLabel[r.role]}</span>)}</span>
+                ["New people", live.newUsers === "invited" ? "Only people already invited to Iris" : `Anyone assigned to Iris in ${p.short}, with no access until a mapped group gives some`],
+                ["Access from groups", live.groupsEnabled && live.groupRules.length
+                  ? <span className="flex flex-col gap-1">{live.groupRules.map((r) => <span key={r.id}>{r.label || r.value} → {access.group(r.group)?.name ?? "No group chosen"}</span>)}</span>
                   : "Not set up. Roles are assigned on the Members page."],
                 ["Emergency access", "Admins can sign in with password and MFA if the provider is down"],
               ]}

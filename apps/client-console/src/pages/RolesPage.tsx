@@ -84,11 +84,11 @@ function ProductRoles({ product }: { product: ProductId }) {
         <AlertTitle>Using {name}</AlertTitle>
         <AlertDescription>
           {name} roles cover {name} only. Each can be given for all locations or limited to some. Tenant Admins have Product Admin here automatically.
-          {!clarion && " Vantage is the next Iris product. Its team defines what each role allows."}
+          {!clarion && " Vantage is placeholder data: these meanings are assumed until its team defines them."}
         </AlertDescription>
       </Alert>
       <RoleTable rows={roles.filter((r) => r.level === "product")} product={product}
-        third={(r) => (clarion ? <>{r.clarion}{r.open && <div className="mt-1"><Badge color="warning">To decide</Badge> <span className="text-body-xs text-content-neutral-muted">{r.open}</span></div>}</> : <span className="text-content-neutral-muted">Defined by the {name} team</span>)}
+        third={(r) => (clarion ? <>{r.clarion}{r.open && <div className="mt-1"><Badge color="warning">To decide</Badge> <span className="text-body-xs text-content-neutral-muted">{r.open}</span></div>}</> : r.vantage)}
         thirdLabel={`In ${name}`} />
       {clarion && (
         <Matrix
@@ -105,6 +105,22 @@ function ProductRoles({ product }: { product: ProductId }) {
             ] },
           ]}
           foot="“Their locations” means everywhere unless the role is limited to some — in lists, search, the map, drill-downs and exports."
+        />
+      )}
+      {!clarion && (
+        <Matrix
+          title="Permission details"
+          description="Assumed for the placeholder. Unlike Clarion, Editor means something here."
+          cols={["Product Admin", "Editor", "Viewer"]}
+          rows={[
+            { area: "Vantage", rows: [
+              ["See systems and their health", "loc", "loc", "loc"],
+              ["Acknowledge alerts and add notes", "loc", "loc", "none"],
+              ["Add systems and set their location", "loc", "none", "none"],
+              ["Alert rules", "full", "none", "none"],
+            ] },
+          ]}
+          foot="Alert rules are tenant-wide, like Clarion's thresholds: the same open question applies to a location-limited Product Admin."
         />
       )}
     </>
