@@ -8,7 +8,7 @@ import {
 import { DetailRow, Mono, StatusBadge, SyncBadge, TrialBadge, Usage } from "@/components/ui"
 import { toast } from "@/lib/toast"
 import { domainOk, emailOk, fmtDate, remaining } from "@/lib/format"
-import { productCatalog, productName, regionLabel } from "@/data/catalog"
+import { productCatalog, productDef, productName, regionLabel } from "@/data/catalog"
 import { updateTenant } from "@/data/store"
 import { tenantUrl, type Subscription, type Tenant } from "@/data/tenants"
 import { ProvisionProductDialog } from "./ProvisionProductDialog"
@@ -95,7 +95,7 @@ function ProductSummary({ sub, onOpen }: { sub: Subscription; onOpen: () => void
       </div>
       {!cancelled ? (
         <>
-          <Usage label="Widget licences" used={sub.widgetsUsed} total={sub.widgetLicenses} />
+          <Usage label={productDef(sub.product).unit.label} used={sub.unitsUsed} total={sub.units} />
           <div className="flex items-center justify-between text-body-sm">
             <span className="text-content-neutral-muted">Admin licences: <span className="text-content-neutral-emphasis">{sub.adminLicenses}</span></span>
             <Button variant="link" size="sm" onClick={onOpen}>Manage plan</Button>

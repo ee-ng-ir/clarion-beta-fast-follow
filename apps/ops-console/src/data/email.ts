@@ -18,10 +18,13 @@ export interface EmailEvent {
 const FROM = "no-reply@iris.ir.com"
 const rows: [string, EmailStatus, string, string, string?][] = [
   ["2026-10-28T11:52:10+11:00", "delivered", "james.lawson@harbourbank.com.au", "You've been invited to Iris", "Harbour Bank"],
+  ["2026-10-28T11:38:02+11:00", "delivered", "noc@orion-managed.net", "Vantage: 4 new systems found. Place them in a location", "Orion Unified Communications"],
   ["2026-10-28T11:20:44+11:00", "opened", "louis.martin@kestrelair.com", "Your Clarion trial ends in 15 days", "Kestrel Airlines"],
   ["2026-10-28T10:05:03+11:00", "delivered", "laura.bennett@meridian.co.uk", "Reset your Iris password", "Meridian Insurance"],
   ["2026-10-28T09:41:57+11:00", "bounced", "ops@summitsuper.com.au", "You've been invited to Iris", "Summit Super"],
   ["2026-10-28T08:12:30+11:00", "deferred", "it-alerts@northwindhealth.org", "3 endpoints need attention", "Northwind Health"],
+  ["2026-10-28T07:02:44+11:00", "delivered", "gareth.hughes@brightwater.com.au", "Vantage collector offline at Brightwater Utilities", "Brightwater Utilities"],
+  ["2026-10-27T18:10:09+11:00", "opened", "f.mcleod@northgate.edu.au", "Your Vantage trial ends in 21 days", "Northgate University"],
   ["2026-10-27T17:33:19+11:00", "delivered", "arief.rohman@harbourbank.com.au", "Your Clarion plan renews on 9 Nov", "Harbour Bank"],
   ["2026-10-27T16:02:48+11:00", "processed", "jay.verma@lumen.gov.au", "Reminder: finish setting up Iris", "Lumen Government Services"],
   ["2026-10-27T14:45:11+11:00", "delivered", "marco.rossi@pacificfreight.com", "Your Iris sign-in code", "Pacific Freight"],

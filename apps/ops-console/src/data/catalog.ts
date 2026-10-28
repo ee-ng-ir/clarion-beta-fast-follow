@@ -22,12 +22,40 @@ export const regionLabel = (id: string) => {
 // --------------------------------------------------------------- products --
 
 export type ProductId = "clarion" | "vantage"
-export const productCatalog: { id: ProductId; name: string; versions: string[]; available: boolean }[] = [
-  { id: "clarion", name: "Clarion", versions: ["v1.0.0-alpha.5", "v1.0.0-alpha.4", "v1.0.0-alpha.3"], available: true },
-  // Stands in for the next Iris product, as it does in the client console.
-  { id: "vantage", name: "Vantage", versions: [], available: false },
+
+export interface ProductDef {
+  id: ProductId
+  name: string
+  /** Newest first. */
+  versions: string[]
+  available: boolean
+  /** What the plan's second licence counts, beside admin licences. */
+  unit: { label: string; noun: string; plural: string }
+  plans: { full: string; trial: string }
+  /** Admin and unit licences a new plan starts with. */
+  defaults: { admins: number; units: number; trialUnits: number; step: number }
+}
+
+export const productCatalog: ProductDef[] = [
+  {
+    id: "clarion", name: "Clarion", versions: ["v1.0.0-alpha.5", "v1.0.0-alpha.4", "v1.0.0-alpha.3"], available: true,
+    unit: { label: "Widget licences", noun: "widget", plural: "widgets" },
+    plans: { full: "Clarion Enterprise", trial: "Clarion Trial" },
+    defaults: { admins: 5, units: 500, trialUnits: 50, step: 50 },
+  },
+  // Vantage — the second Iris product, as in the client console (@ir/mock-data/vantage).
+  // Assumed, not from a spec: it monitors the UC and contact-centre infrastructure
+  // (SBCs, call managers, gateways, the CC platform, recording), and is licensed
+  // per monitored system.
+  {
+    id: "vantage", name: "Vantage", versions: ["v0.9.0-beta.3", "v0.9.0-beta.2", "v0.9.0-beta.1"], available: true,
+    unit: { label: "System licences", noun: "system", plural: "systems" },
+    plans: { full: "Vantage Professional", trial: "Vantage Trial" },
+    defaults: { admins: 3, units: 100, trialUnits: 25, step: 10 },
+  },
 ]
-export const LATEST_VERSION = "v1.0.0-alpha.5"
+export const productDef = (id: ProductId) => productCatalog.find((p) => p.id === id)!
+export const latestVersion = (id: ProductId) => productDef(id).versions[0]
 export const productName = (id: ProductId) => productCatalog.find((p) => p.id === id)?.name ?? id
 
 // ---------------------------------------------------------- feature flags --
@@ -61,6 +89,14 @@ export const flagDefs: FlagDef[] = [
   { key: "clarion-model", type: "boolean", subscription: "clarion", description: "Scores endpoint health with the Clarion model." },
   { key: "clarion-model-cleanup", type: "boolean", subscription: "clarion", description: "Deletes model outputs when the plan ends." },
   { key: "clarion-transform", type: "boolean", subscription: "clarion", description: "Transforms raw telemetry into endpoint state." },
+  { key: "vantage-admin-user-max", type: "integer", subscription: "vantage", description: "Admin licences on the Vantage plan." },
+  { key: "vantage-system-max", type: "integer", subscription: "vantage", description: "Monitored systems on the Vantage plan." },
+  { key: "vantage-ui-enabled", type: "boolean", subscription: "vantage", description: "The Vantage dashboard." },
+  { key: "vantage-discovery-enabled", type: "boolean", subscription: "vantage", description: "Finds SBCs, gateways and call managers on the customer's network and lists them for placing in a location." },
+  { key: "vantage-onprem-collector", type: "boolean", subscription: "vantage", description: "Collects through a collector on the customer's network instead of cloud APIs only." },
+  { key: "vantage-alerting-enabled", type: "boolean", subscription: "vantage", description: "Raises alerts when a system breaches its thresholds." },
+  { key: "vantage-metrics-retention-days", type: "integer", subscription: "vantage", description: "Days system metrics are kept." },
+  { key: "vantage-metrics-cleanup", type: "boolean", subscription: "vantage", description: "Deletes metrics when the plan ends." },
   { key: "clarion-model-update", type: "string", description: "Model version tenants pull. \"latest\" follows each release." },
   { key: "clarion-demo-mode", type: "boolean", tenantOnly: true, description: "Generates demo endpoints and alerts. For sales and onboarding tenants only." },
   { key: "clarion-demo-use-payload-location", type: "boolean", tenantOnly: true, description: "Demo endpoints take their location from the payload instead of the widget user." },
@@ -83,34 +119,55 @@ export const seedGlobalFlags: Record<string, FlagValue> = {
   "use-databricks-pipeline": true,
 }
 
-/** The Clarion flags a subscription writes, in the order the Products tab lists them. */
-export const clarionPlanFlags = [
-  "clarion-fleet-config-enabled",
-  "clarion-fleet-enrol-enabled",
-  "clarion-fleet-ui-enabled",
-  "clarion-fleet-enrol-cleanup",
-  "clarion-fleet-config-cleanup",
-  "ingestion-api",
-  "clarion-ingest-retention-days",
-  "clarion-ingest-cleanup",
-  "clarion-model",
-  "clarion-model-cleanup",
-  "clarion-transform",
-] as const
+/** The flags each product's plan writes, in the order the Products tab lists them. */
+export const planFlags: Record<ProductId, readonly string[]> = {
+  clarion: [
+    "clarion-fleet-config-enabled",
+    "clarion-fleet-enrol-enabled",
+    "clarion-fleet-ui-enabled",
+    "clarion-fleet-enrol-cleanup",
+    "clarion-fleet-config-cleanup",
+    "ingestion-api",
+    "clarion-ingest-retention-days",
+    "clarion-ingest-cleanup",
+    "clarion-model",
+    "clarion-model-cleanup",
+    "clarion-transform",
+  ],
+  vantage: [
+    "vantage-ui-enabled",
+    "vantage-discovery-enabled",
+    "vantage-onprem-collector",
+    "vantage-alerting-enabled",
+    "vantage-metrics-retention-days",
+    "vantage-metrics-cleanup",
+  ],
+}
 
-export const defaultPlanFlags = (): Record<string, FlagValue> => ({
-  "clarion-fleet-config-enabled": true,
-  "clarion-fleet-enrol-enabled": true,
-  "clarion-fleet-ui-enabled": true,
-  "clarion-fleet-enrol-cleanup": false,
-  "clarion-fleet-config-cleanup": false,
-  "ingestion-api": true,
-  "clarion-ingest-retention-days": 183,
-  "clarion-ingest-cleanup": false,
-  "clarion-model": true,
-  "clarion-model-cleanup": false,
-  "clarion-transform": true,
-})
+const planDefaults: Record<ProductId, Record<string, FlagValue>> = {
+  clarion: {
+    "clarion-fleet-config-enabled": true,
+    "clarion-fleet-enrol-enabled": true,
+    "clarion-fleet-ui-enabled": true,
+    "clarion-fleet-enrol-cleanup": false,
+    "clarion-fleet-config-cleanup": false,
+    "ingestion-api": true,
+    "clarion-ingest-retention-days": 183,
+    "clarion-ingest-cleanup": false,
+    "clarion-model": true,
+    "clarion-model-cleanup": false,
+    "clarion-transform": true,
+  },
+  vantage: {
+    "vantage-ui-enabled": true,
+    "vantage-discovery-enabled": true,
+    "vantage-onprem-collector": false,
+    "vantage-alerting-enabled": true,
+    "vantage-metrics-retention-days": 90,
+    "vantage-metrics-cleanup": false,
+  },
+}
+export const defaultPlanFlags = (product: ProductId = "clarion"): Record<string, FlagValue> => ({ ...planDefaults[product] })
 
 // ---------------------------------------------------------------- services --
 

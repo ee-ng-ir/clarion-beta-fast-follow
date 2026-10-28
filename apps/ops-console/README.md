@@ -27,6 +27,7 @@ The live console's environment switcher, refresh button and "Internal" badge are
 - **One-of-n selects.** Picasso's `Select` is a multi-select filter with Apply, so filters use it directly. Single-choice form fields use `ChoiceSelect` (`components/ui.tsx`): Picasso's `InputButton` opening a Picasso `DropdownMenu`.
 - **Status** is always a `Badge` with a dot and a word, never colour on its own.
 - **Data.** `src/data/` holds the dummy book of business (tenants, plans, flags, services, tofu state, email) and an in-memory store. Changes last for the session and are written to the tenant's audit log; reload to reset. Acme Contact Centre's client admins come from `@ir/mock-data`, so it's the same tenant the client console and Clarion show.
+- **Products.** Clarion and Vantage. Each product's plan has admin licences plus its own unit (widget licences for Clarion, system licences for Vantage) and writes its own flags; `productCatalog` and `planFlags` in `src/data/catalog.ts` describe both. Vantage's licensing and flags are assumed, not from a spec. Several tenants run Vantage only, so screens can't assume Clarion.
 - **Naming.** The live dev stage still has old-name flags and a cancelled old-name product. Here, everything is Clarion and test-only flags are left out.
 
 ## Departures from the live console

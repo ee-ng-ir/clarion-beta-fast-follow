@@ -9,7 +9,7 @@ import {
 import { ChoiceSelect, Mono, StatusBadge, SyncBadge, TrialBadge, Usage } from "@/components/ui"
 import { toast } from "@/lib/toast"
 import { fmtDate, remaining } from "@/lib/format"
-import { LATEST_VERSION, clarionPlanFlags, flagDef, productCatalog, productName, type FlagValue, type ProductId } from "@/data/catalog"
+import { flagDef, latestVersion, planFlags, productCatalog, productDef, productName, type FlagValue, type ProductId } from "@/data/catalog"
 import { updateSubscription } from "@/data/store"
 import type { Subscription, Tenant } from "@/data/tenants"
 import { ProvisionProductDialog } from "./ProvisionProductDialog"
@@ -115,7 +115,7 @@ function SummaryCard({ tenant, sub, readOnly }: { tenant: Tenant; sub: Subscript
         ) : null}
         <div className="grid gap-6 sm:grid-cols-2 @3xl:grid-cols-4">
           <Usage label="Admin licences" used={tenant.admins.filter((a) => a.status !== "inactive").length} total={sub.adminLicenses} />
-          <Usage label="Widget licences" used={sub.widgetsUsed} total={sub.widgetLicenses} />
+          <Usage label={productDef(sub.product).unit.label} used={sub.unitsUsed} total={sub.units} />
           <Stat label="Provisioned" value={fmtDate(sub.provisioned)} />
           <Stat label={sub.status === "cancelled" ? "Ended" : "Renews"} value={fmtDate(sub.expiry)} hint={sub.status === "cancelled" ? undefined : `${remaining(sub.expiry)} left`} />
         </div>
@@ -162,7 +162,7 @@ function VersionDialog({ tenant, sub, open, onClose }: { tenant: Tenant; sub: Su
           <DialogDescription>{tenant.name} is on {sub.version}. The new version rolls out on the next sync.</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <ChoiceSelect value={v} onChange={setV} aria-label="Version" options={versions.map((x) => ({ value: x, label: x, detail: x === LATEST_VERSION ? "Latest" : x === sub.version ? "Current" : undefined }))} />
+          <ChoiceSelect value={v} onChange={setV} aria-label="Version" options={versions.map((x) => ({ value: x, label: x, detail: x === latestVersion(sub.product) ? "Latest" : x === sub.version ? "Current" : undefined }))} />
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -177,22 +177,23 @@ function VersionDialog({ tenant, sub, open, onClose }: { tenant: Tenant; sub: Su
   )
 }
 
-type Draft = Pick<Subscription, "adminLicenses" | "widgetLicenses" | "billing" | "trial" | "widgetExperience"> & { expiry: Date; flags: Record<string, FlagValue> }
+type Draft = Pick<Subscription, "adminLicenses" | "units" | "billing" | "trial" | "widgetExperience"> & { expiry: Date; flags: Record<string, FlagValue> }
 
 function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
   const initial: Draft = {
-    adminLicenses: sub.adminLicenses, widgetLicenses: sub.widgetLicenses, billing: sub.billing, trial: sub.trial,
+    adminLicenses: sub.adminLicenses, units: sub.units, billing: sub.billing, trial: sub.trial,
     widgetExperience: sub.widgetExperience, expiry: new Date(sub.expiry), flags: { ...sub.flags },
   }
   const [d, setD] = useState<Draft>(initial)
   const changes = [
-    d.adminLicenses !== initial.adminLicenses, d.widgetLicenses !== initial.widgetLicenses, d.billing !== initial.billing,
+    d.adminLicenses !== initial.adminLicenses, d.units !== initial.units, d.billing !== initial.billing,
     d.trial !== initial.trial, d.widgetExperience !== initial.widgetExperience, d.expiry.getTime() !== initial.expiry.getTime(),
-    ...clarionPlanFlags.map((k) => d.flags[k] !== initial.flags[k]),
+    ...planFlags[sub.product].map((k) => d.flags[k] !== initial.flags[k]),
   ].filter(Boolean).length
   const activeAdmins = tenant.admins.filter((a) => a.status !== "inactive").length
   const tooFewAdmins = d.adminLicenses < activeAdmins
-  const tooFewWidgets = d.widgetLicenses < sub.widgetsUsed
+  const tooFewWidgets = d.units < sub.unitsUsed
+  const def = productDef(sub.product)
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
   const setFlag = (k: string, v: FlagValue) => setD((x) => ({ ...x, flags: { ...x.flags, [k]: v } }))
 
@@ -212,9 +213,9 @@ function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
             <FieldDescription>{tooFewAdmins ? `${activeAdmins} admins are active or invited. Deactivate some first.` : `${activeAdmins} in use.`}</FieldDescription>
           </Field>
           <Field invalid={tooFewWidgets}>
-            <FieldLabel>Widget licences</FieldLabel>
-            <FieldControl><NumberInput value={d.widgetLicenses} onValueChange={(v) => set("widgetLicenses", v ?? 1)} min={1} max={100000} step={50} /></FieldControl>
-            <FieldDescription>{tooFewWidgets ? `${sub.widgetsUsed.toLocaleString()} widgets already use a licence.` : `${sub.widgetsUsed.toLocaleString()} in use.`}</FieldDescription>
+            <FieldLabel>{def.unit.label}</FieldLabel>
+            <FieldControl><NumberInput value={d.units} onValueChange={(v) => set("units", v ?? 1)} min={1} max={100000} step={def.defaults.step} /></FieldControl>
+            <FieldDescription>{tooFewWidgets ? `${sub.unitsUsed.toLocaleString()} ${def.unit.plural} already use a licence.` : `${sub.unitsUsed.toLocaleString()} in use.`}</FieldDescription>
           </Field>
           <Field>
             <FieldLabel>Billing cycle</FieldLabel>
@@ -224,6 +225,7 @@ function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
             <FieldLabel>Expiry date</FieldLabel>
             <DatePicker value={d.expiry} onValueChange={(v) => v && set("expiry", v)} />
           </Field>
+          {sub.product === "clarion" ? (
           <Field>
             <FieldLabel help="clarion-widget-ui-enabled">Widget experience</FieldLabel>
             <FieldControl>
@@ -233,6 +235,7 @@ function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
               ]} />
             </FieldControl>
           </Field>
+          ) : null}
           <div className="flex items-end pb-2">
             <FieldOption control={<Switch checked={d.trial} onCheckedChange={(c) => set("trial", c)} />}>
               Trial
@@ -247,7 +250,7 @@ function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
           <p className="text-body-sm text-content-neutral-muted">Written to this tenant on save. Tenant overrides on the Feature flags tab can't change these.</p>
         </div>
         <ul className="flex flex-col">
-          {clarionPlanFlags.map((k) => {
+          {planFlags[sub.product].map((k) => {
             const def = flagDef(k)!
             const v = d.flags[k]
             return (
@@ -282,8 +285,8 @@ function ConfigCard({ tenant, sub }: { tenant: Tenant; sub: Subscription }) {
           <Button variant="outline" disabled={!changes} onClick={() => setD(initial)}>Discard</Button>
           <Button disabled={!changes || tooFewAdmins || tooFewWidgets} onClick={() => {
             updateSubscription(tenant.id, sub.product as ProductId, {
-              adminLicenses: d.adminLicenses, widgetLicenses: d.widgetLicenses, billing: d.billing, trial: d.trial,
-              plan: d.trial ? "Clarion Trial" : "Clarion Enterprise", widgetExperience: d.widgetExperience,
+              adminLicenses: d.adminLicenses, units: d.units, billing: d.billing, trial: d.trial,
+              plan: d.trial ? def.plans.trial : def.plans.full, widgetExperience: d.widgetExperience,
               expiry: d.expiry.toISOString(), flags: d.flags, sync: "pending",
             }, "subscription.updated")
             toast({ title: "Plan saved", description: `${changes} change${changes === 1 ? "" : "s"} syncing to ${tenant.name}.` })

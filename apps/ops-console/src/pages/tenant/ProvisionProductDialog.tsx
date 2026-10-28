@@ -6,7 +6,7 @@ import {
 import { ChoiceSelect } from "@/components/ui"
 import { toast } from "@/lib/toast"
 import { NOW } from "@/lib/format"
-import { LATEST_VERSION, defaultPlanFlags, productCatalog, type ProductId } from "@/data/catalog"
+import { defaultPlanFlags, latestVersion, productCatalog, productDef, type ProductId } from "@/data/catalog"
 import { provisionProduct } from "@/data/store"
 import type { Tenant } from "@/data/tenants"
 
@@ -22,13 +22,23 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
   const first = options.find((o) => !o.disabled)?.value
   const [product, setProduct] = useState<ProductId | undefined>(first)
   const [kind, setKind] = useState<"plan" | "trial">("plan")
-  const [version, setVersion] = useState(LATEST_VERSION)
-  const [admins, setAdmins] = useState<number | null>(5)
-  const [widgets, setWidgets] = useState<number | null>(500)
+  const start = first ? productDef(first) : undefined
+  const [version, setVersion] = useState(first ? latestVersion(first) : "")
+  const [admins, setAdmins] = useState<number | null>(start?.defaults.admins ?? 5)
+  const [widgets, setWidgets] = useState<number | null>(start?.defaults.units ?? 500)
   const [billing, setBilling] = useState<"annual" | "monthly">("annual")
   const [expiry, setExpiry] = useState<Date | undefined>(addDays(NOW, 365))
 
-  const versions = productCatalog.find((p) => p.id === product)?.versions ?? []
+  /** Picking a product or a plan type resets the numbers to that plan's defaults. */
+  const applyDefaults = (p: ProductId | undefined, k: "plan" | "trial") => {
+    if (!p) return
+    const def = productDef(p)
+    setVersion(latestVersion(p))
+    if (k === "trial") { setAdmins(2); setWidgets(def.defaults.trialUnits); setBilling("monthly"); setExpiry(addDays(NOW, 30)) }
+    else { setAdmins(def.defaults.admins); setWidgets(def.defaults.units); setBilling("annual"); setExpiry(addDays(NOW, 365)) }
+  }
+  const def = product ? productDef(product) : undefined
+  const versions = def?.versions ?? []
   const ok = !!product && !!admins && !!widgets && !!expiry
 
   return (
@@ -41,7 +51,7 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
         <DialogBody className="gap-4">
           <Field>
             <FieldLabel>Product</FieldLabel>
-            <FieldControl><ChoiceSelect value={product} onChange={setProduct} options={options} placeholder="Choose a product" /></FieldControl>
+            <FieldControl><ChoiceSelect value={product} onChange={(p) => { setProduct(p); applyDefaults(p, kind) }} options={options} placeholder="Choose a product" /></FieldControl>
           </Field>
           <Field>
             <FieldLabel>Plan</FieldLabel>
@@ -50,11 +60,10 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
               aria-label="Plan"
               onValueChange={(v) => {
                 setKind(v as "plan" | "trial")
-                if (v === "trial") { setAdmins(2); setWidgets(50); setBilling("monthly"); setExpiry(addDays(NOW, 30)) }
-                else { setAdmins(5); setWidgets(500); setBilling("annual"); setExpiry(addDays(NOW, 365)) }
+                applyDefaults(product, v as "plan" | "trial")
               }}
             >
-              <SegmentedControlItem value="plan">Enterprise</SegmentedControlItem>
+              <SegmentedControlItem value="plan">{def?.plans.full.replace(`${def.name} `, "") ?? "Full plan"}</SegmentedControlItem>
               <SegmentedControlItem value="trial">Trial</SegmentedControlItem>
             </SegmentedControl>
           </Field>
@@ -64,8 +73,8 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
               <FieldControl><NumberInput value={admins} onValueChange={setAdmins} min={1} max={100} /></FieldControl>
             </Field>
             <Field>
-              <FieldLabel>Widget licences</FieldLabel>
-              <FieldControl><NumberInput value={widgets} onValueChange={setWidgets} min={1} max={100000} step={50} /></FieldControl>
+              <FieldLabel>{def?.unit.label ?? "Licences"}</FieldLabel>
+              <FieldControl><NumberInput value={widgets} onValueChange={setWidgets} min={1} max={100000} step={def?.defaults.step ?? 10} /></FieldControl>
             </Field>
             <Field>
               <FieldLabel>Billing cycle</FieldLabel>
@@ -80,7 +89,7 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
           </div>
           <Field>
             <FieldLabel>Version</FieldLabel>
-            <FieldControl><ChoiceSelect value={version} onChange={setVersion} options={versions.map((v) => ({ value: v, label: v, detail: v === LATEST_VERSION ? "Latest" : undefined }))} /></FieldControl>
+            <FieldControl><ChoiceSelect value={version} onChange={setVersion} options={versions.map((v) => ({ value: v, label: v, detail: v === versions[0] ? "Latest" : undefined }))} /></FieldControl>
           </Field>
         </DialogBody>
         <DialogFooter>
@@ -88,14 +97,15 @@ export function ProvisionProductDialog({ tenant, open, onClose, onDone }: {
           <Button
             disabled={!ok}
             onClick={() => {
-              if (!product || !admins || !widgets || !expiry) return
+              if (!product || !def || !admins || !widgets || !expiry) return
               const now = new Date().toISOString()
               provisionProduct(tenant.id, {
-                product, version, plan: kind === "trial" ? "Clarion Trial" : "Clarion Enterprise", status: "active", trial: kind === "trial",
+                product, version, plan: kind === "trial" ? def.plans.trial : def.plans.full, status: "active", trial: kind === "trial",
                 sync: "pending", provisioned: now, updated: now, expiry: expiry.toISOString(), billing,
-                adminLicenses: admins, widgetLicenses: widgets, widgetsUsed: 0, widgetExperience: "interactive", flags: defaultPlanFlags(),
+                adminLicenses: admins, units: widgets, unitsUsed: 0,
+                widgetExperience: product === "clarion" ? "interactive" : undefined, flags: defaultPlanFlags(product),
               })
-              toast({ title: "Product provisioned", description: `Clarion is syncing to ${tenant.name}.` })
+              toast({ title: "Product provisioned", description: `${def.name} is syncing to ${tenant.name}.` })
               onClose()
               onDone?.()
             }}
