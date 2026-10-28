@@ -465,7 +465,7 @@ export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {})
       </Card>
 
 
-      <AddUserDialog open={addOpen} onOpenChange={setAddOpen} proposed={proposed} location={scope?.length === 1 ? scope[0] : null} />
+      <AddUserDialog open={addOpen} onOpenChange={setAddOpen} proposed={proposed} location={scope?.length === 1 ? scope[0] : null} scope={scope} />
       <CurrentCsvDialog open={csvOpen} onOpenChange={setCsvOpen} />
       <ImportFlow open={importOpen} onOpenChange={setImportOpen} />
       <RemoveDialog open={!!removeTarget} onOpenChange={(o) => { if (!o) setRemoveTarget(null) }} target={removeTarget}

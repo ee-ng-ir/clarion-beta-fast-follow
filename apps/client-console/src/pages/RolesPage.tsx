@@ -4,7 +4,7 @@ import {
   Alert, AlertDescription, AlertTitle, Badge, Card, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, TabsTrigger,
 } from "@ir/ui"
-import { access, productName, roles, scopes, type ProductId, type RoleDef, type Scope } from "@ir/mock-data/access"
+import { access, productName, productRoleIds, roles, scopes, type ProductId, type RoleDef, type Scope } from "@ir/mock-data/access"
 import { useAccess } from "@/components/admin/access/AccessBits"
 
 /**
@@ -87,21 +87,21 @@ function ProductRoles({ product }: { product: ProductId }) {
           {!clarion && " Vantage is placeholder data: these meanings are assumed until its team defines them."}
         </AlertDescription>
       </Alert>
-      <RoleTable rows={roles.filter((r) => r.level === "product")} product={product}
+      <RoleTable rows={roles.filter((r) => productRoleIds[product].includes(r.id))} product={product}
         third={(r) => (clarion ? <>{r.clarion}{r.open && <div className="mt-1"><Badge color="warning">To decide</Badge> <span className="text-body-xs text-content-neutral-muted">{r.open}</span></div>}</> : r.vantage)}
         thirdLabel={`In ${name}`} />
       {clarion && (
         <Matrix
           title="Permission details"
           description="Proposed mapping, to agree with the Clarion team."
-          cols={["Product Admin", "Editor", "Viewer"]}
+          cols={["Product Admin", "Viewer"]}
           rows={[
             { area: "Clarion", rows: [
-              ["Overview and Endpoints", "loc", "loc", "loc"],
-              ["Search and export endpoints", "loc", "loc", "loc"],
-              ["Thresholds", "full", "none", "none"],
-              ["Add, edit and remove widget users", "loc", "none", "none"],
-              ["Set a widget user's location", "loc", "none", "none"],
+              ["Overview and Endpoints", "loc", "loc"],
+              ["Search and export endpoints", "loc", "loc"],
+              ["Thresholds", "full", "none"],
+              ["Add, edit and remove widget users", "loc", "none"],
+              ["Set a widget user's location", "loc", "none"],
             ] },
           ]}
           foot="“Their locations” means everywhere unless the role is limited to some — in lists, search, the map, drill-downs and exports."

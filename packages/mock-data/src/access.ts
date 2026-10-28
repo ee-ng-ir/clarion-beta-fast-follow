@@ -62,15 +62,21 @@ export const roles: RoleDef[] = [
     vantage: "Everything an Editor can, plus adding systems, setting their location, alert rules and cut-off times." },
   { id: "editor", name: "Editor", level: "product",
     summary: "Creates and edits content in the product, or in the given locations.",
-    clarion: "Same as Viewer today.",
+    clarion: "Not offered in Clarion: there's nothing to edit (decided 28 Oct).",
     vantage: "Everything a Viewer can, plus acknowledging payment alerts and adding notes.",
-    open: "Clarion has little to edit yet. Candidates: acknowledging alerts, notes on endpoints." },
+  },
   { id: "viewer", name: "Viewer", level: "product",
     summary: "Read-only access in the product, or in the given locations.",
     clarion: "Overview and Endpoints, read-only. No Thresholds, no Administration. This is the PO's \"CC Manager\".",
     vantage: "Payments systems, their health and payment flow, read-only." },
 ]
 export const roleDef = (id: RoleId) => roles.find((r) => r.id === id)!
+
+/** The levels each product offers. Decided 28 Oct: Clarion hides Editor (nothing to edit). */
+export const productRoleIds: Record<ProductId, RoleId[]> = {
+  clarion: ["viewer", "product_admin"],
+  vantage: ["viewer", "editor", "product_admin"],
+}
 const productRank: Record<RoleId, number> = { tenant_admin: 4, product_admin: 3, editor: 2, viewer: 1, user_admin: 0, auditor: 0 }
 
 // ---------------------------------------------------------------------- model --
@@ -410,7 +416,8 @@ export function suggestGroupName(job: Job, locations: string[], product: Product
 }
 
 /** Plain-language result of holding one role. */
-export function describeRole(role: RoleId, locations: string[], product: ProductId = "clarion") {
+/** `note`: a caveat the preview should say out loud. */
+export function describeRole(role: RoleId, locations: string[], product: ProductId = "clarion"): { sees: string; not: string; note?: string } {
   if (product === "vantage" && (role === "viewer" || role === "editor" || role === "product_admin")) {
     const where = locations.length ? locations.map(locationName).join(", ") : "all locations"
     const n = vantage.visible(locations.length ? locations : null).length
@@ -426,7 +433,11 @@ export function describeRole(role: RoleId, locations: string[], product: Product
   const where = locations.length ? locations.map(locationName).join(", ") : "all locations"
   switch (role) {
     case "viewer": case "editor":
-      return { sees: `Overview and Endpoints for ${where} (${reach.toLocaleString()} widget users)`, not: "Thresholds or Administration" }
+      return {
+        sees: `Overview and Endpoints for ${where} (${reach.toLocaleString()} widget users)`, not: "Thresholds or Administration",
+        // Decided 28 Oct: no reporting-line scoping, so a team leader sees the whole site.
+        note: locations.length ? "That's everyone in these locations, not just their own team." : undefined,
+      }
     case "product_admin":
       return { sees: `Overview, Endpoints, Thresholds and widget users for ${where} (${reach.toLocaleString()} widget users)`, not: "users, groups or sign-in settings" }
     case "user_admin":
@@ -586,7 +597,8 @@ export interface Permissions {
   widgetScope: string[] | null
   /** Resource centre: the installer and install command. */
   deployWidget: boolean
-  /** Assumed: the enrolment token is a tenant-wide secret, so Tenant Admin only. */
+  /** Decided 28 Oct: Tenant Admins and Clarion Product Admins. Open: whether a location-limited
+   *  Product Admin should, since the token covers the whole tenant. */
   rotateEnrolmentToken: boolean
   /** Can open Clarion (any Clarion role). */
   seeClarion: boolean
@@ -642,7 +654,7 @@ export function permissionsOf(personId: string): Permissions {
     manageWidgetUsers: clarionAdmin,
     widgetScope: clarionAdmin ? clarion.locations : [],
     deployWidget: clarionAdmin,
-    rotateEnrolmentToken: tenantAdmin,
+    rotateEnrolmentToken: tenantAdmin || clarionAdmin,
     seeClarion: !!clarion.role,
     admin: seeAccess || anyProductAdmin,
   }
