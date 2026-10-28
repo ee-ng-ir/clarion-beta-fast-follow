@@ -59,16 +59,16 @@ export const roles: RoleDef[] = [
   { id: "product_admin", name: "Product Admin", level: "product",
     summary: "Configures the product and manages its settings. Limited to locations, it applies to resources in those locations only.",
     clarion: "Overview, Endpoints, Thresholds and widget users. Manages widget users in their locations.",
-    vantage: "Everything an Editor can, plus adding systems, setting their location and alert rules." },
+    vantage: "Everything an Editor can, plus adding systems, setting their location, alert rules and cut-off times." },
   { id: "editor", name: "Editor", level: "product",
     summary: "Creates and edits content in the product, or in the given locations.",
     clarion: "Same as Viewer today.",
-    vantage: "Everything a Viewer can, plus acknowledging alerts and adding notes to systems.",
+    vantage: "Everything a Viewer can, plus acknowledging payment alerts and adding notes.",
     open: "Clarion has little to edit yet. Candidates: acknowledging alerts, notes on endpoints." },
   { id: "viewer", name: "Viewer", level: "product",
     summary: "Read-only access in the product, or in the given locations.",
     clarion: "Overview and Endpoints, read-only. No Thresholds, no Administration. This is the PO's \"CC Manager\".",
-    vantage: "Systems and their health, read-only." },
+    vantage: "Payments systems, their health and payment flow, read-only." },
 ]
 export const roleDef = (id: RoleId) => roles.find((r) => r.id === id)!
 const productRank: Record<RoleId, number> = { tenant_admin: 4, product_admin: 3, editor: 2, viewer: 1, user_admin: 0, auditor: 0 }
@@ -127,10 +127,10 @@ const seedLocations: Location[] = [
   { id: L.mnl, name: "Manila", description: "Ortigas outsourcer" },
   { id: L.ldn, name: "London", description: "" },
   { id: L.chi, name: "Chicago", description: "" },
-  // Only Vantage uses these: where the voice network runs, not where people sit.
-  { id: L.sydc, name: "Sydney DC (Equinix SY3)", description: "Primary voice core" },
-  { id: L.meldc, name: "Melbourne DC (Equinix ME2)", description: "Secondary voice core" },
-  { id: L.aws, name: "AWS ap-southeast-2", description: "Cloud contact centre and recording" },
+  // Only Vantage uses these: where the payments systems run, not where people sit.
+  { id: L.sydc, name: "Sydney DC (Equinix SY3)", description: "Primary payments data centre" },
+  { id: L.meldc, name: "Melbourne DC (Equinix ME2)", description: "Disaster recovery" },
+  { id: L.aws, name: "AWS ap-southeast-2", description: "Sanctions screening and the payments API" },
 ]
 
 let n = 0
@@ -167,9 +167,9 @@ const seedGroups: Group[] = [
   { id: "g-vantage", name: "Vantage analysts", description: "Read-only in Vantage", source: "local", members: ["p13", "p9"], assignments: [a("viewer", [], "vantage")] },
   { id: "g-apac", name: "APAC operations leads", description: "Their sites, in both products", source: "local", members: ["p5"], assignments: [a("viewer", [L.syd, L.mel, L.akl]), a("viewer", [L.syd, L.mel, L.akl], "vantage")] },
   // Vantage. Two of these come from the IdP, to show SSO / SCIM linking.
-  { id: "g-vantage-admin", name: "Vantage administrators", description: "Adds systems and sets alert rules", source: "local", members: ["p17"], assignments: [a("product_admin", [], "vantage")] },
-  { id: "g-noc", name: "NOC engineers", description: "Acknowledge and work Vantage alerts, every site", source: "linked", idpGroup: "NOC-Engineers", members: ["p15"], assignments: [a("editor", [], "vantage")] },
-  { id: "g-apac-net", name: "APAC network team", description: "The data centres and cloud region", source: "linked", idpGroup: "Network-APAC", members: ["p16"], assignments: [a("viewer", [L.sydc, L.meldc, L.aws], "vantage")] },
+  { id: "g-vantage-admin", name: "Vantage administrators", description: "Adds systems and sets alert rules and cut-off times", source: "local", members: ["p17"], assignments: [a("product_admin", [], "vantage")] },
+  { id: "g-payops", name: "Payments operations", description: "Work stuck and late payment alerts, every location", source: "linked", idpGroup: "Payments-Ops", members: ["p15"], assignments: [a("editor", [], "vantage")] },
+  { id: "g-apac-infra", name: "APAC infrastructure team", description: "The data centres and cloud region", source: "linked", idpGroup: "Infra-APAC", members: ["p16"], assignments: [a("viewer", [L.sydc, L.meldc, L.aws], "vantage")] },
   { id: "g-syd", name: "Sydney CC managers", description: "", source: "local", members: ["p3", "p4"], assignments: [a("viewer", [L.syd])] },
   { id: "g-mnl", name: "Manila CC managers", description: "Outsourcer team leads", source: "local", members: ["p6", "p7"], assignments: [a("viewer", [L.mnl])] },
   { id: "g-ldn", name: "London CC managers", description: "", source: "local", members: ["p11"], assignments: [a("viewer", [L.ldn])] },
@@ -384,8 +384,8 @@ export function jobsFor(scope: Scope): JobDef[] {
     ? [{ id: "view", label: "See the Clarion dashboard", hint: "Overview and Endpoints, read-only", role: "viewer", scoped: true, product: scope },
        { id: "manage", label: "Manage Clarion", hint: "Also Thresholds and widget users", role: "product_admin", scoped: true, product: scope }]
     : [{ id: "view", label: `See ${name}`, hint: "Systems and their health, read-only", role: "viewer", scoped: true, product: scope },
-       { id: "work", label: "Work Vantage alerts", hint: "Also acknowledge alerts and add notes", role: "editor", scoped: true, product: scope },
-       { id: "manage", label: `Manage ${name}`, hint: "Also add systems and set alert rules", role: "product_admin", scoped: true, product: scope }]
+       { id: "work", label: "Work payment alerts", hint: "Also acknowledge alerts and add notes", role: "editor", scoped: true, product: scope },
+       { id: "manage", label: `Manage ${name}`, hint: "Also add systems, alert rules and cut-off times", role: "product_admin", scoped: true, product: scope }]
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
@@ -401,7 +401,7 @@ export function suggestGroupName(job: Job, locations: string[], product: Product
   const name = productName(product)
   switch (job) {
     case "view": return product === "clarion" ? (locations.length ? `${where} CC managers` : "Clarion viewers (all locations)") : (locations.length ? `${name} viewers – ${where}` : `${name} viewers`)
-    case "work": return locations.length ? `${name} engineers – ${where}` : `${name} engineers`
+    case "work": return locations.length ? `Payments operations – ${where}` : "Payments operations"
     case "manage": return locations.length ? `${name} administrators – ${where}` : `${name} administrators`
     case "users": return "User administrators"
     case "review": return "Auditors"
@@ -419,7 +419,7 @@ export function describeRole(role: RoleId, locations: string[], product: Product
       ? { sees: `${systems}, and can add systems and set alert rules`, not: "users, groups or sign-in settings" }
       : role === "editor"
         ? { sees: `${systems}, and can acknowledge alerts`, not: "alert rules or Administration" }
-        : { sees: `${systems}, read-only`, not: "alerts actions, alert rules or Administration" }
+        : { sees: `${systems}, read-only`, not: "alert actions, alert rules or Administration" }
   }
   const reach = role === "user_admin" || role === "auditor" ? 0
     : locations.length ? widgetStore.all().filter((u) => u.locationId && locations.includes(u.locationId)).length : widgetStore.all().length

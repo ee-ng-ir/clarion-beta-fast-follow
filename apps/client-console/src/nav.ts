@@ -96,7 +96,7 @@ export const pageLabel = (id: PageId) =>
 export const pageSubtitle: Partial<Record<PageId, string>> = {
   resources: "Everything you and your team need to deploy the Clarion widget across your fleet. For further support, contact your IR account manager.",
   clarion: "Insights Hub – access to the fleet dashboard, recommendations, tips and training content.",
-  vantage: "The voice and contact-centre infrastructure behind your sites. Placeholder product, to show how access scales.",
+  vantage: "High-value payments monitoring: SWIFT, RTGS and the systems behind them. Placeholder product, to show how access scales.",
   users: "Everyone who can sign in to Iris, and what they can access.",
   widgetusers: "Who can run the Clarion widget, whether it has connected, and who uses a licence.",
   groups: "Give access to groups of people instead of one person at a time.",
