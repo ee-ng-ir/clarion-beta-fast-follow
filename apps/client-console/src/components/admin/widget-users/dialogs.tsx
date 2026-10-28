@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
-import { Download } from "lucide-react"
+import { Download, MapPin } from "lucide-react"
 import {
   Alert, AlertDescription, AlertTitle, Badge, Button,
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Field, FieldControl, FieldDescription, FieldError, FieldLabel, FileUpload, Input,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  Field, FieldControl, FieldDescription, FieldError, FieldLabel, FileUpload, Input, InputButton,
 } from "@ir/ui"
+import { access, locationName } from "@ir/mock-data/access"
 import { toast } from "@/components/ui/toast"
 import {
   TEMPLATE_CSV, connectionLabel, connectionOf, createUser, downloadText, emailOk, importCurrent,
@@ -16,21 +18,35 @@ const fmtN = (n: number) => n.toLocaleString()
 
 // ------------------------------------------------------------------ Add user --
 
-/** `location`: where new users land. Assumed (open question 7): a Clarion admin limited
- *  to one location adds users there, so they don't vanish from their own list. */
-export function AddUserDialog({ open, onOpenChange, proposed, location = null }: { open: boolean; onOpenChange: (o: boolean) => void; proposed: boolean; location?: string | null }) {
+/**
+ * Decided 28 Oct: in the proposal, Location is required when adding a widget user, so
+ * nobody lands unassigned and invisible to their site's managers. `scope` limits the
+ * choice to the adder's own locations; with one location it's filled in. In the
+ * as-built view (no Location field) `location` is where they land.
+ */
+export function AddUserDialog({ open, onOpenChange, proposed, location = null, scope = null }: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  proposed: boolean
+  location?: string | null
+  /** Locations the adder may use. null = every location. */
+  scope?: string[] | null
+}) {
   const [f, setF] = useState({ first: "", last: "", loginId: "", email: "", site: "" })
+  const [locId, setLocId] = useState<string>("")
   const [touched, setTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { if (open) { setF({ first: "", last: "", loginId: "", email: "", site: "" }); setTouched(false); setError(null) } }, [open])
+  useEffect(() => { if (open) { setF({ first: "", last: "", loginId: "", email: "", site: "" }); setLocId(location ?? ""); setTouched(false); setError(null) } }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  const locs = access.locations().filter((l) => scope === null || scope.includes(l.id))
 
   const loginErr = touched && !f.loginId.trim() ? "Login ID is required." : null
   const emailErr = touched && f.email.trim() && !emailOk(f.email.trim()) ? "Enter a valid email address." : null
+  const locErr = proposed && touched && !locId ? "Choose where they work." : null
 
   const submit = () => {
     setTouched(true)
-    if (!f.loginId.trim() || (f.email.trim() && !emailOk(f.email.trim()))) return
-    const r = createUser({ loginId: f.loginId, name: `${f.first} ${f.last}`.trim(), email: f.email, site: f.site, locationId: location })
+    if (!f.loginId.trim() || (f.email.trim() && !emailOk(f.email.trim())) || (proposed && !locId)) return
+    const r = createUser({ loginId: f.loginId, name: `${f.first} ${f.last}`.trim(), email: f.email, site: f.site, locationId: proposed ? locId : location })
     if (!r.ok) { setError(r.error); return }
     toast({ title: `${`${f.first} ${f.last}`.trim() || f.loginId} was added.` })
     onOpenChange(false)
@@ -60,6 +76,23 @@ export function AddUserDialog({ open, onOpenChange, proposed, location = null }:
             <FieldControl><Input type="email" placeholder="Enter email address" value={f.email} onChange={set("email")} /></FieldControl>
             <FieldError>{emailErr}</FieldError>
           </Field>
+          {proposed && (
+            <Field invalid={!!locErr}>
+              <FieldLabel required>Location</FieldLabel>
+              <DropdownMenu>
+                <FieldControl required>
+                  <DropdownMenuTrigger asChild>
+                    <InputButton icon={<MapPin />} value={locId ? locationName(locId) : undefined} placeholder="Choose a location" />
+                  </DropdownMenuTrigger>
+                </FieldControl>
+                <DropdownMenuContent align="start" className="max-h-72 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
+                  {locs.map((l) => <DropdownMenuItem key={l.id} onSelect={() => setLocId(l.id)}>{l.name}</DropdownMenuItem>)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {!locErr && <FieldDescription>Decides who can see them and their endpoints.</FieldDescription>}
+              <FieldError>{locErr}</FieldError>
+            </Field>
+          )}
           <Field>
             <FieldLabel>Site</FieldLabel>
             <FieldControl><SiteInput value={f.site} onChange={(v) => setF({ ...f, site: v })} suggest={proposed} /></FieldControl>

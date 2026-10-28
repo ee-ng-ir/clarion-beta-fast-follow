@@ -8,7 +8,7 @@ import {
 } from "@ir/ui"
 import { useViewer } from "@/lib/viewer"
 import {
-  access, assignmentLabel, describeRole, initials, locationName, productName, products, roleDef, roles, widgetUsersIn,
+  access, assignmentLabel, describeRole, productRoleIds, initials, locationName, productName, products, roleDef, roles, widgetUsersIn,
   type Assignment, type Person, type ProductId, type RoleId, type Scope,
 } from "@ir/mock-data/access"
 import { store as widgetStore } from "@ir/mock-data/widget-users"
@@ -104,7 +104,7 @@ export function AddRoleDialog({
         </DialogHeader>
         <DialogBody className="max-h-[64vh] gap-5 overflow-y-auto">
           <RadioGroup value={pick} onValueChange={setPick} className="gap-4">
-            {products.filter((p) => !scope || scope === p.id).map((p) => <RoleGroup key={p.id} scope={p.id} label={p.name} ids={["viewer", "editor", "product_admin"]} />)}
+            {products.filter((p) => !scope || scope === p.id).map((p) => <RoleGroup key={p.id} scope={p.id} label={p.name} ids={productRoleIds[p.id]} />)}
             {(!scope || scope === "tenant") && <RoleGroup scope="tenant" label="Whole tenant" ids={perm.grantTenantAdmin ? ["auditor", "user_admin", "tenant_admin"] : ["auditor", "user_admin"]} />}
           </RadioGroup>
 

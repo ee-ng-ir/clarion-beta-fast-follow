@@ -15,7 +15,7 @@ import {
 import { toast } from "@/components/ui/toast"
 import {
   me, access, assignmentLabel, groupScopes, productAccess, products, scopes, tenantRolesOf, type Scope, describeRole, locationName, moveTarget, siteGroupsOf, clarionAccess, clarionReach, grantsOf, groupsOf, isTenantAdmin, roleDef, roles,
-  statusLabel, tenantAdmins, wouldOrphanTenant, canChangeGroup, canChangeMembers, type Permissions, type Person, type PersonStatus,
+  statusLabel, tenantAdmins, wouldOrphanTenant, canChangeGroup, canChangeMembers, productRoleIds, type Permissions, type Person, type PersonStatus,
 } from "@ir/mock-data/access"
 import { useViewer } from "@/lib/viewer"
 import { AddRoleDialog, PersonCell, RoleBadge, fmt, locList, plural, useAccess } from "@/components/admin/access/AccessBits"
@@ -115,7 +115,7 @@ export function UsersRolesPage() {
             {search && <InputGroupAddon align="end"><Button variant="ghost" size="icon-xs" aria-label="Clear search" onClick={() => setSearch("")}><X aria-hidden /></Button></InputGroupAddon>}
           </InputGroup>
           <div className="w-40"><Select label="Group" options={access.groups().map((g) => ({ value: g.id, label: g.name }))} value={groupF} onValueChange={setGroupF} showDetail={false} icon={<FolderTree />} /></div>
-          <div className="w-36"><Select label="Role" options={roles.filter((r) => (tab === "tenant" ? r.level === "tenant" : r.level === "product" || r.id === "tenant_admin")).map((r) => ({ value: r.id, label: r.name }))} value={roleF} onValueChange={setRoleF} showDetail={false} icon={<ShieldCheck />} /></div>
+          <div className="w-36"><Select label="Role" options={roles.filter((r) => (tab === "tenant" ? r.level === "tenant" : productRoleIds[tab].includes(r.id) || r.id === "tenant_admin")).map((r) => ({ value: r.id, label: r.name }))} value={roleF} onValueChange={setRoleF} showDetail={false} icon={<ShieldCheck />} /></div>
           {isProduct && <div className="w-40"><Select label="Location" options={access.locations().map((l) => ({ value: l.id, label: l.name }))} value={locF} onValueChange={setLocF} showDetail={false} icon={<MapPin />} /></div>}
           <div className="w-36"><Select label="Status" options={(Object.keys(statusLabel) as PersonStatus[]).map((s) => ({ value: s, label: statusLabel[s] }))} value={statusF} onValueChange={setStatusF} showDetail={false} /></div>
         </div>

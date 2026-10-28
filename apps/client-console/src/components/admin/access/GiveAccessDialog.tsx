@@ -185,6 +185,7 @@ export function GiveAccessDialog({
                 ? <span className="text-body-md text-content-neutral-muted">Pick a location to see what they&apos;ll get.</span>
                 : <span className="text-body-md text-content-neutral-emphasis">{who.length > 1 ? "They'll each see" : `${subject} will see`} {d.sees}.</span>}
               {!needLocs && d.not && <span className="text-body-sm text-content-neutral-muted">Not {d.not}.</span>}
+              {!needLocs && d.note && <span className="text-body-sm text-content-neutral-muted">{d.note}</span>}
               {hasOther && <span className="text-body-sm text-content-neutral-muted">Any access they already have from other groups stays.</span>}
             </div>
           </section>
