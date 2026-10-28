@@ -6,7 +6,7 @@ import {
 import {
   Alert, AlertDescription, AlertTitle, Badge, Button, Card, Checkbox,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-  EmptyState, InputGroup, InputGroupAddon, InputGroupInput, Progress, SegmentedControl, SegmentedControlItem, Select,
+  EmptyState, InputGroup, InputGroupAddon, InputGroupInput, SegmentedControl, SegmentedControlItem, Select,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
@@ -23,6 +23,7 @@ import { SetLocationDialog } from "@/components/admin/widget-users/SetLocationDi
 import { access, locationName, planMatch } from "@ir/mock-data/access"
 import { MatchLocationsDialog, WhoCanSeeDialog } from "@/components/admin/access/LocationTools"
 import { useAccess } from "@/components/admin/access/AccessBits"
+import { LicenseUsage } from "@/components/admin/portal/parts"
 
 type View = "current" | "proposed"
 // Module-level so the prototype remembers the view while you move between pages.
@@ -34,11 +35,15 @@ const displayName = (u: WidgetUser) => u.name.trim() || u.loginId
 
 const sortLabel: Record<SortKey, string> = { hash: "Default order", name: "Name", added: "Recently added" }
 
-export function WidgetUsersPage() {
+/**
+ * `asBuilt`: the list as the live portal has it (User management → Clarion),
+ * without the prototype controls. Without it, the page can switch to the proposal.
+ */
+export function WidgetUsersPage({ asBuilt = false }: { asBuilt?: boolean } = {}) {
   const version = useSyncExternalStore(store.subscribe, store.version)
   useAccess()
   const size = store.size()
-  const [view, setViewState] = useState<View>(rememberedView)
+  const [view, setViewState] = useState<View>(asBuilt ? "current" : rememberedView)
   const setView = (v: View) => { rememberedView = v; setViewState(v); clearSelection() }
   const proposed = view === "proposed"
 
@@ -229,12 +234,11 @@ export function WidgetUsersPage() {
   }
 
   const s = stats()
-  const pct = s.limit ? Math.min(100, (s.active / s.limit) * 100) : 0
 
   return (
     <div className="flex flex-col gap-4">
       {/* Prototype controls — not part of the design */}
-      <Card className="flex flex-row flex-wrap items-center gap-x-6 gap-y-3 border-dashed px-4 py-3">
+      {!asBuilt && <Card className="flex flex-row flex-wrap items-center gap-x-6 gap-y-3 border-dashed px-4 py-3">
         <Badge color="info" className="gap-1"><FlaskConical className="size-3.5" /> Prototype</Badge>
         <Ctl label="View">
           <SegmentedControl value={view} onValueChange={(v: string) => setView(v as View)} size="sm">
@@ -251,9 +255,9 @@ export function WidgetUsersPage() {
           {proposed && <Button variant="ghost" size="sm" onClick={simulateOtherAdmin}><UserRoundPlus /> Another admin adds 3</Button>}
           <Button variant="ghost" size="sm" onClick={() => { store.reset(); clearSelection() }}><RotateCcw /> Reset data</Button>
         </div>
-      </Card>
+      </Card>}
 
-      <Progress label="Clarion licenses in use" value={pct} valueLabel={`${fmt(s.active)}/${fmt(s.limit)}`} />
+      <LicenseUsage label="Clarion licenses in use" used={s.active} limit={s.limit} />
 
       {matchable > 0 && (
         <Alert variant="info" action={<Button variant="outline" size="xs" onClick={() => setMatchOpen(true)}><MapPin aria-hidden /> Match from site</Button>}>

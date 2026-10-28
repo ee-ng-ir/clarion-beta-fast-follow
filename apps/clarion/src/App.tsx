@@ -21,7 +21,7 @@ import { useStreaming } from "@/hooks/useStreaming"
 import { DEFAULT_LOCATION, locationById } from "@/data/dashboard"
 import type { Endpoint, Rollup } from "@/data/endpoints"
 import { rollupsAll, queryEndpoints, endpointById } from "@/data/endpoints"
-import { pageLabel, pageSubtitle, pageFromPath, pagePath, buildPath, readDrawerParams, experienceOf, defaultPageFor, type PageId, type Experience } from "@/nav"
+import { pageLabel, pageSubtitle, pageFromPath, buildPath, readDrawerParams, experienceOf, defaultPageFor, type PageId, type Experience } from "@/nav"
 
 type DeviceDrawer = { rows: Endpoint[]; index: number }
 let feedApplies = 0
@@ -138,7 +138,7 @@ export default function App() {
   // Administration lives in the Iris client console now (its own app and Vercel
   // project). The account menu and any old /admin/* link go there.
   const switchExperience = (e: Experience) =>
-    e === "admin" ? window.location.assign(`${CLIENT_CONSOLE_URL}${pagePath[defaultPageFor.admin]}`) : navigate(defaultPageFor[e])
+    e === "admin" ? window.location.assign(`${CLIENT_CONSOLE_URL}/`) : navigate(defaultPageFor[e])
 
   if (experienceOf(page) === "admin") {
     window.location.replace(`${CLIENT_CONSOLE_URL}${window.location.pathname}${window.location.search}`)

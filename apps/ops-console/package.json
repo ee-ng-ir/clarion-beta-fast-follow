@@ -11,10 +11,11 @@
     "preview": "vite preview --port 5175"
   },
   "dependencies": {
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "@ir/mock-data": "*",
+    "@ir/ui": "*",
     "lucide-react": "^1.17.0",
-    "@ir/ui": "*"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
