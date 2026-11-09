@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import { Badge } from "@ir/ui"
 
 /**
@@ -20,8 +21,8 @@ export function NewTag({ className }: { className?: string }) {
 /** Quiet "new" marker for tabs, sections and controls: a blue dot. The sidebar keeps the "New" badge. */
 export function NewDot({ className }: { className?: string }) {
   return (
-    <span className={className}>
-      <span className="inline-block size-2 rounded-full bg-status-info align-middle" aria-hidden />
+    <span className={cn("inline-flex items-center self-center", className)}>
+      <span className="size-2 shrink-0 rounded-full bg-status-info" aria-hidden />
       <span className="sr-only">New</span>
     </span>
   )
