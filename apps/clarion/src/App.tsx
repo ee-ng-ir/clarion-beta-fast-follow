@@ -156,7 +156,10 @@ export default function App() {
 
   return (
     <FeedVersion.Provider value={feedVersion}>
-    <div className="flex h-screen w-full items-start overflow-hidden" style={{ background: "var(--bg-app)" }}>
+    {/* Fast Follow: the preview banner spans the whole window, above the nav, page and Iris */}
+    <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: "var(--bg-app)" }}>
+    <PreviewMarker />
+    <div className="flex min-h-0 w-full flex-1 items-start overflow-hidden">
       {!isMobile && sidebarOpen && (
         <Sidebar active={page} onNavigate={navigate} lastRefreshAt={live.lastRefreshAt} />
       )}
@@ -181,7 +184,6 @@ export default function App() {
           borderRight: "1px solid var(--border-neutral-muted)",
         }}
       >
-        <PreviewMarker />
         <Topbar
           page={page}
           dark={dark}
@@ -210,6 +212,8 @@ export default function App() {
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
+          {/* Picasso App shell width="standard": cap at 1280, left-aligned with the rail (never centred) */}
+          <div className="flex w-full max-w-[var(--size-content-standard,1280px)] flex-col">
           {page === "overview" && (
             <OverviewPage
               live={live}
@@ -240,6 +244,7 @@ export default function App() {
           {page === "issuesdoc" && <IssuesDocPage />}
           {page === "scopedoc" && <ScopePage />}
           {page === "components" && <ComponentsPage />}
+          </div>
         </div>
       </div>
 
@@ -270,6 +275,7 @@ export default function App() {
 
       {/* transient toasts (save confirmations, etc.) */}
       <Toaster />
+    </div>
     </div>
     </FeedVersion.Provider>
   )

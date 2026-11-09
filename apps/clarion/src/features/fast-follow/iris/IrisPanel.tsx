@@ -13,8 +13,9 @@ import type { Answer, Basis, IrisContext, IrisLink, Message } from "./types"
 const MAX_CHARS = 500
 
 /**
- * Iris side panel. Docked beside the page (not a modal), so IT can keep working
- * while it answers. Built on the Iris UX investigation (Nov 2026): context is
+ * Iris side panel. Docked beside the page (not a modal), so IT can keep working.
+ * On phones it fills the screen below the 32px Fast Follow preview banner,
+ * Built on the Iris UX investigation (Nov 2026): context is
  * always attached and shown, every answer states its basis, sources and time,
  * and a change of context is marked in the thread.
  */
@@ -56,7 +57,7 @@ export function IrisPanel({
       aria-label="Iris"
       className={cn(
         "flex flex-col",
-        isMobile ? "fixed inset-0 z-50" : "h-full w-[400px] shrink-0",
+        isMobile ? "fixed inset-x-0 bottom-0 top-8 z-50" : "h-full w-[400px] shrink-0",
       )}
       style={{ background: "var(--bg-card)", borderLeft: isMobile ? undefined : "1px solid var(--border-neutral-muted)" }}
     >
