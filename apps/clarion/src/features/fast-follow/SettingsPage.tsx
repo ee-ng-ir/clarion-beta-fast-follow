@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
-import { ThresholdsPage } from "@/pages/ThresholdsPage"
 import { NewDot } from "./ExploringTag"
 import { setLeaveGuard } from "./navigator"
 import { AlertTypesSection } from "./settings/AlertTypesSection"
@@ -12,8 +11,9 @@ import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
  * Settings: the top-level home for everything an IT Admin configures in Clarion.
  * One pattern throughout (D9): each tab is a form — change things, then Save.
  * On/off choices are checkboxes, never switches next to Save. Leaving a tab, or
- * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2). Thresholds is the
- * existing Clarion page (not yet on Picasso: P2).
+ * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2).
+ * No Thresholds tab: custom thresholds are not part of Fast Follow (D10); every
+ * alert uses IR's thresholds.
  */
 export function SettingsPage() {
   const [tab, setTab] = useState("types")
@@ -57,13 +57,11 @@ export function SettingsPage() {
       <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
         <TabsList aria-label="Settings sections">
           <TabsTrigger value="types">Alert types <NewDot className="ms-1.5" /></TabsTrigger>
-          <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
           <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="devices">Approved headsets <NewDot className="ms-1.5" /></TabsTrigger>
         </TabsList>
-        <TabsContent value="types"><AlertTypesSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="thresholds"><ThresholdsPage /></TabsContent>
+        <TabsContent value="types"><AlertTypesSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="stability"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>

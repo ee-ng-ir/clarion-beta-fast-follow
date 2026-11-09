@@ -51,7 +51,7 @@ export function EndpointAlertsTab({ endpoint, onCloseDrawer }: { endpoint: Endpo
         <EmptyState size="sm" illustration="issue-alerts" title="No alerts" description={filter === "active" ? "Nothing is wrong on this endpoint right now." : "No alerts on this endpoint in the last 7 days."} />
       )}
       <p className="pt-1 text-body-xs text-content-neutral-subtle">
-        Evidence is kept for {RETENTION_DAYS} days (to confirm). Each alert shows what tripped it, the threshold in force at the time, and how long it lasted.
+        Evidence is kept for {RETENTION_DAYS} days (to confirm). Each alert shows what tripped it, the threshold it crossed, and how long it lasted.
       </p>
     </div>
   )
@@ -169,10 +169,9 @@ function AlertDetail({ a, endpoint, offlineSinceMin, onBack, onCloseDrawer }: {
 
       {a.reading && (
         <Card size="sm">
-          <CardHeader><CardTitle>Threshold in force</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Threshold</CardTitle></CardHeader>
           <CardContent className="text-body-md text-content-neutral-emphasis">
             {a.reading.name} was {a.reading.value} against a {a.reading.threshold} {a.severity} threshold when the alert was raised.
-            {a.reading.changedSince ? ` The threshold has since changed to ${a.reading.thresholdNow}; this record keeps the one in force at the time.` : " The threshold hasn't changed since."}
           </CardContent>
         </Card>
       )}
