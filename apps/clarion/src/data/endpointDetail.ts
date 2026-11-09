@@ -2,6 +2,7 @@
 // Seeded by the endpoint id so the same endpoint always shows the same detail.
 
 import type { Endpoint, Platform } from "./endpoints"
+import { headsetFor } from "@/features/fast-follow/headsets/headsets"
 
 export type MetricStatus = "good" | "warn" | "crit" | "none"
 export type PlatformStatus = "ok" | "degraded" | "disconnected"
@@ -115,7 +116,11 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
   // Reflect the endpoint's actual alerts in the drilldown so the list and the
   // drilldown agree: device alerts mark the matching device, memory/Wi-Fi/CPU
   // alerts push the corresponding reading into the bad range.
-  const audioOut: DeviceRow = { name: pick(headsets), meta: `Bluetooth · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
+  // Fast Follow: the same headset the approved-headset check sees
+  const hs = headsetFor(e)
+  const audioOut: DeviceRow = hs
+    ? { name: hs.model, meta: `${hs.connection} · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
+    : { name: pick(headsets), meta: `Bluetooth · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
   const audioIn: DeviceRow = { name: "Realtek HD Audio (built-in)", meta: `Driver v6.0.${r(9000, 9300)}.1 · Fallback device`, state: "Active", stateTone: "muted", kind: "audio-in" }
   const camera: DeviceRow = { name: pick(cams), meta: "USB · 1080p · Driver up-to-date", state: "In-use", stateTone: "good", kind: "video" }
   for (const ev of e.events) {

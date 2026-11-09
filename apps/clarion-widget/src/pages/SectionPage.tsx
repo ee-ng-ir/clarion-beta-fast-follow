@@ -3,6 +3,10 @@ import { FixCard } from "@/components/widget/FixCard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { animatedComponentIcon, type AnimatedIconHandle } from "@/components/icons"
 import { scenarios, sectionMeta, componentsInSection, type SectionId, type Scenario, type Status } from "@/data/widget"
+// Fast Follow: approved headsets
+import { agentById, complianceOf, headsetById, HEADSET_CATALOGUE, useAgentHeadsets, useApprovedHeadsets } from "@ir/telemetry"
+import { useWidgetAgent } from "@/lib/agent"
+import { HeadsetNote } from "@/components/widget/HeadsetNote"
 
 type Reading = ReturnType<typeof componentsInSection>[number]
 
@@ -45,6 +49,12 @@ export function SectionPage({
 }) {
   const meta = sectionMeta[section]
   const components = componentsInSection(section, scenario)
+  // Fast Follow: this agent's headset, and whether IT has approved it
+  const agentId = useWidgetAgent()
+  const approved = useApprovedHeadsets()
+  const agentHeadsets = useAgentHeadsets()
+  const agent = agentId ? agentById(agentId) : undefined
+  const headset = agent ? headsetById(agentHeadsets[agent.id] ?? HEADSET_CATALOGUE.find((h) => h.model === agent.headset)?.id) : null
 
   return (
     <div className={`mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 ${dense ? "py-2" : "py-6"}`}>
@@ -55,9 +65,13 @@ export function SectionPage({
         className="flex flex-col rounded-xl"
         style={{ background: "var(--bg-card)", border: "1px solid var(--border-neutral-muted)", boxShadow: "var(--shadow-xs)" }}
       >
-        {components.map((c, i) => (
-          <SectionRow key={c.id} reading={c} fix={scenario.fixes[c.id]} brand={brand} first={i === 0} />
-        ))}
+        {components.map((c, i) => {
+          const isHeadphones = c.id === "headphones" && agent && c.status !== "syncing"
+          const reading = isHeadphones && c.status === "healthy" ? { ...c, detail: headset ? `${headset.model} · ${headset.connection} · Connected` : "No headphones connected" } : c
+          const note = isHeadphones && headset && complianceOf(headset, approved) === "not-approved"
+            ? <HeadsetNote agentId={agent.id} headsetId={headset.id} /> : null
+          return <SectionRow key={c.id} reading={reading} fix={scenario.fixes[c.id]} brand={brand} first={i === 0} note={note} />
+        })}
       </div>
     </div>
   )
@@ -69,11 +83,14 @@ function SectionRow({
   fix,
   brand,
   first,
+  note,
 }: {
   reading: Reading
   fix?: { title: string; description: string }
   brand: boolean
   first: boolean
+  /** Fast Follow: an advisory note under the row (approved headsets) */
+  note?: React.ReactNode
 }) {
   const Icon = animatedComponentIcon[reading.id]
   const iconRef = useRef<AnimatedIconHandle>(null)
@@ -103,6 +120,7 @@ function SectionRow({
           ? <Skeleton className="size-2.5 shrink-0 rounded-full" />
           : <span className="size-2.5 shrink-0 rounded-full" style={{ background: dotColor[reading.status], boxShadow: "0 0 0 3px var(--bg-card)" }} />}
       </div>
+      {note && <div className="px-4 pb-3">{note}</div>}
       {showFix && fix && (
         <div className="px-4 pb-3">
           <FixCard status={reading.status} title={fix.title} description={fix.description} />

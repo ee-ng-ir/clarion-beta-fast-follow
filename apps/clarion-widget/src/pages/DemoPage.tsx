@@ -22,6 +22,9 @@ import { StatusBadge } from "@/components/widget/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { scenarios, componentOrder, type ScenarioId, type SectionId, type Status } from "@/data/widget"
 import { agentById, agents, endpointView, feed, useFeed, type AgentReading, type ComponentId as FeedComponent } from "@ir/telemetry"
+// Fast Follow: approved headsets
+import { agentHeadsets, complianceOf, headsetById, HEADSET_CATALOGUE, useAgentHeadsets, useApprovedHeadsets } from "@ir/telemetry"
+import { WidgetAgent } from "@/lib/agent"
 
 // Where the Clarion dashboard is. Empty = same origin (the widget is served
 // under Clarion at /widget), which is what makes the shared feed work.
@@ -272,6 +275,7 @@ export function DemoPage({ version = "A" }: { version?: "A" | "B" | "C" | "D" | 
   const callHeight = Math.round((callWidth * 2) / 3)
 
   return (
+    <WidgetAgent.Provider value={agentId}>
     <div
       ref={screenRef}
       className="relative flex h-full w-full items-center justify-center overflow-hidden"
@@ -341,6 +345,9 @@ export function DemoPage({ version = "A" }: { version?: "A" | "B" | "C" | "D" | 
               )
             })}
           </div>
+          {/* Fast Follow: change this agent's headset to show each approved-headset state */}
+          <span className="text-[11px] font-semibold uppercase" style={{ color: "var(--fg-neutral-subtle)", letterSpacing: "0.06em" }}>Headset</span>
+          <HeadsetPicker agentId={agentId} defaultModel={agent.headset} />
           <span className="text-[11px] font-semibold uppercase" style={{ color: "var(--fg-neutral-subtle)", letterSpacing: "0.06em" }}>Simulate issue</span>
           {triggerGroups.map((g) => (
             <div key={g.label} className="flex flex-col gap-1.5">
@@ -652,6 +659,7 @@ export function DemoPage({ version = "A" }: { version?: "A" | "B" | "C" | "D" | 
       </div>
       </div>
     </div>
+    </WidgetAgent.Provider>
   )
 }
 
@@ -815,5 +823,34 @@ function TrayIcon({ children, label }: { children: React.ReactNode; label: strin
     >
       {children}
     </button>
+  )
+}
+
+
+/** Fast Follow demo control: which headset the current agent is using, and how IT's approved list sees it. */
+const HEADSET_CHOICES = ["jabra-evolve2-75", "poly-voyager-4320", "yealink-uh37", "usb-generic", "airpods-pro"]
+const verdict = { approved: "approved", "not-approved": "not approved", "not-checked": "can't be checked", none: "none", "no-list": "no list set" } as const
+function HeadsetPicker({ agentId, defaultModel }: { agentId: string; defaultModel: string }) {
+  const map = useAgentHeadsets()
+  const approved = useApprovedHeadsets()
+  const current = map[agentId] ?? HEADSET_CATALOGUE.find((h) => h.model === defaultModel)?.id ?? HEADSET_CHOICES[0]
+  return (
+    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Agent's headset">
+      {HEADSET_CHOICES.map((id) => {
+        const h = headsetById(id)!
+        const active = id === current
+        return (
+          <button key={id} type="button" role="radio" aria-checked={active}
+            onClick={() => agentHeadsets.set({ ...map, [agentId]: id })}
+            title={`${h.model} · ${h.connection} · ${verdict[complianceOf(h, approved)]}`}
+            className="rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors"
+            style={active
+              ? { background: "var(--fg-neutral-emphasis)", color: "var(--bg-card)" }
+              : { background: "var(--bg-card)", color: "var(--fg-neutral-muted)", border: "1px solid var(--border-neutral-muted)" }}>
+            {h.model.replace(" (unbranded)", "")} <span style={{ opacity: 0.7 }}>· {verdict[complianceOf(h, approved)]}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }

@@ -12,6 +12,8 @@ import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
 import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
 import { CountBadge } from "@/features/fast-follow/CountBadge"
+import { HeadsetCompliance } from "@/features/fast-follow/headsets/HeadsetBits"
+import { useHeadsetsVersion } from "@/features/fast-follow/headsets/headsets"
 import { activeAlertCount } from "@/features/fast-follow/evidence/evidence"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
@@ -90,8 +92,9 @@ export function EndpointDrawer({
   const [tab, setTab] = useState("network")
   const e = rows[index]
   const feedVersion = useFeedVersion()
+  const { approved, version: headsetsVersion } = useHeadsetsVersion() // Fast Follow
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const detail = useMemo(() => (e ? getEndpointDetail(e) : null), [e, feedVersion])
+  const detail = useMemo(() => (e ? getEndpointDetail(e) : null), [e, feedVersion, headsetsVersion])
 
   // on open: reset to the side drawer and land on the tab that explains the event
   useEffect(() => { if (open) { setExpanded(false); setTab(eventTab(rows[index])) } }, [open])
@@ -220,7 +223,7 @@ export function EndpointDrawer({
               <TabsContent value="alerts"><EndpointAlertsTab key={e.id} endpoint={e} onCloseDrawer={() => onOpenChange(false)} /></TabsContent>
               <TabsContent value="network">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <NetworkTab d={detail} />}</TabsContent>
               <TabsContent value="platforms">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <PlatformsTab d={detail} />}</TabsContent>
-              <TabsContent value="devices">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <DevicesTab d={detail} />}</TabsContent>
+              <TabsContent value="devices"><HeadsetCompliance e={e} approved={approved} />{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <DevicesTab d={detail} />}</TabsContent>
               <TabsContent value="system">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <SystemTab d={detail} />}</TabsContent>
             </Tabs>
           </div>

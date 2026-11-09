@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
 import { ThresholdsPage } from "@/pages/ThresholdsPage"
-import { ComingSoon } from "./ComingSoon"
 import { NewDot } from "./ExploringTag"
 import { setLeaveGuard } from "./navigator"
 import { AlertTypesSection } from "./settings/AlertTypesSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
 import { StabilitySection } from "./settings/StabilitySection"
+import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
 
 /**
  * Settings: the top-level home for everything an IT Admin configures in Clarion.
@@ -66,11 +66,7 @@ export function SettingsPage() {
         <TabsContent value="thresholds"><ThresholdsPage /></TabsContent>
         <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="stability"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="devices">
-          <ComingSoon illustration="call-readiness" title="Approved headsets"
-            body="Choose the headset models your company approves. Endpoints on other headsets are flagged for review; agents can keep using them."
-            questions={["H1", "H2", "H5", "H6"]} />
-        </TabsContent>
+        <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
       </Tabs>
 
       <Dialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null) }}>

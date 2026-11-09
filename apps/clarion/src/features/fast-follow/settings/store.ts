@@ -25,7 +25,7 @@ interface State {
   notify: NotifySettings
   itReports: string
   stability: Record<AlertCategory, Stability>
-  saved: Partial<Record<"types" | "notify" | "stability", Saved>>
+  saved: Partial<Record<"types" | "notify" | "stability" | "headsets", Saved>>
   version: number
 }
 
@@ -34,7 +34,7 @@ let state: State = {
   notify: IR_DEFAULT_NOTIFY,
   itReports: "it-reports@acme.com",
   stability: IR_DEFAULT_STABILITY,
-  saved: { notify: { by: "Marcus Reyes", at: new Date(Date.now() - 3 * 86400000) } },
+  saved: { notify: { by: "Marcus Reyes", at: new Date(Date.now() - 3 * 86400000) }, headsets: { by: "Alex Kim", at: new Date(Date.now() - 19 * 86400000) } },
   version: 0,
 }
 const subs = new Set<() => void>()
@@ -46,6 +46,8 @@ export const getSettings = () => state
 export const saveTypes = (disabledTypes: string[], by: string) => set({ disabledTypes, saved: { ...state.saved, types: { by, at: new Date() } } })
 export const saveNotify = (notify: NotifySettings, itReports: string, by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
 export const saveStability = (stability: Record<AlertCategory, Stability>, by: string) => set({ stability, saved: { ...state.saved, stability: { by, at: new Date() } } })
+
+export const markHeadsetsSaved = (by: string) => set({ saved: { ...state.saved, headsets: { by, at: new Date() } } })
 
 export const isTypeOn = (typeId: string) => !state.disabledTypes.includes(typeId)
 

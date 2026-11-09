@@ -9,6 +9,9 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { countries, citiesInCountry } from "@/data/dashboard"
 import { queryEndpoints, type Endpoint, type EndpointStatus, type SortKey, type SortDir } from "@/data/endpoints"
 import { StatusFilter, statusVar, statusBadge, cap, initials, CountBadge, filterTriggerCls } from "./status"
+// Fast Follow: approved headsets
+import { HeadsetCell, HeadsetFilter } from "@/features/fast-follow/headsets/HeadsetBits"
+import { complianceFor, useHeadsetsVersion } from "@/features/fast-follow/headsets/headsets"
 import { useIsMobile } from "@/components/dashboard/MobileNav"
 import {
   BottomSheet, BottomSheetTrigger, BottomSheetContent, BottomSheetHeader, BottomSheetTitle, BottomSheetClose,
@@ -419,10 +422,17 @@ export function EndpointsTable({
     setStatuses((xs) => (xs.includes(s) ? xs.filter((x) => x !== s) : [...xs, s]))
 
   const feedVersion = useFeedVersion()
+  // Fast Follow: headset compliance filter (only once an approved list exists)
+  const [headsetFilter, setHeadsetFilter] = useState<string[]>([])
+  const { approved, version: headsetsVersion } = useHeadsetsVersion()
+  const showHeadset = approved.length > 0
   const rows = useMemo(
-    () => queryEndpoints({ search, locationIds, statuses, sortKey, sortDir }),
+    () => {
+      const r = queryEndpoints({ search, locationIds, statuses, sortKey, sortDir })
+      return showHeadset && headsetFilter.length ? r.filter((e) => headsetFilter.includes(complianceFor(e, approved))) : r
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [search, locationIds, statuses, sortKey, sortDir, feedVersion]
+    [search, locationIds, statuses, sortKey, sortDir, feedVersion, headsetFilter, headsetsVersion]
   )
 
   // Freeze the highlight on the row that OPENED the drawer — it doesn't follow the
@@ -440,7 +450,7 @@ export function EndpointsTable({
     const extraWarn = warnN - (critN > 0 ? 0 : 1)
     return [extraCrit ? `${extraCrit} critical` : "", extraWarn ? `${extraWarn} warning` : ""].filter(Boolean).join(" · ")
   }
-  const colCount = 2 + (showLocation ? 1 : 0) + 1 + 1 + 1
+  const colCount = 2 + (showLocation ? 1 : 0) + 1 + (showHeadset ? 1 : 0) + 1 + 1
 
   const resetPage = () => setVisible(CHUNK)
   const onSort = (c: SortKey) => {
@@ -529,6 +539,7 @@ export function EndpointsTable({
           <span className="mx-0.5 hidden h-5 w-px sm:block" style={{ background: "var(--border-neutral-muted)" }} aria-hidden />
           <LocationFilter value={locationIds} onChange={(ids) => { onLocationsChange(ids); resetPage() }} />
           <StatusFilter value={statuses} onToggle={(s) => { toggleStatus(s); resetPage() }} onClear={() => { setStatuses([]); resetPage() }} />
+          {showHeadset && <HeadsetFilter value={headsetFilter} onChange={(v) => { setHeadsetFilter(v); resetPage() }} />}
         </div>
       </div>
 
@@ -564,6 +575,7 @@ export function EndpointsTable({
               <SortHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="text-left" />
               {showLocation && <SortHeader label="Location" col="location" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="text-left" />}
               <SortHeader label="Clarion Network Score" col="score" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="text-left" />
+              {showHeadset && <th className="h-10 px-4 text-left align-middle text-xs font-medium" style={{ color: "var(--fg-neutral-muted)" }}>Headset</th>}
               <SortHeader label="Alert" col="event" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="text-left" />
               <th className="w-10" />
             </tr>
@@ -623,6 +635,7 @@ export function EndpointsTable({
                       {e.score === null ? "—" : e.score}
                     </span>
                   </td>
+                  {showHeadset && <td className="max-w-56 px-4 py-3"><HeadsetCell e={e} approved={approved} /></td>}
                   <td className="px-4 py-3">
                     {e.event ? (
                       <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
