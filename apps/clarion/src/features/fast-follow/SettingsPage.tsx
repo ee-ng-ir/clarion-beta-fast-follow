@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
 import { NewDot } from "./ExploringTag"
-import { setLeaveGuard } from "./navigator"
+import { setLeaveGuard, takeSettingsTab } from "./navigator"
 import { AlertTypesSection } from "./settings/AlertTypesSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
 import { StabilitySection } from "./settings/StabilitySection"
@@ -12,11 +12,11 @@ import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
  * One pattern throughout (D9): each tab is a form — change things, then Save.
  * On/off choices are checkboxes, never switches next to Save. Leaving a tab, or
  * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2).
- * No Thresholds tab: custom thresholds are not part of Fast Follow (D10); every
- * alert uses IR's thresholds.
+ * No Thresholds tab: custom thresholds aren't in this release, so every alert
+ * uses IR's thresholds. If they come in, where they sit is an IA question (X2).
  */
 export function SettingsPage() {
-  const [tab, setTab] = useState("types")
+  const [tab, setTab] = useState(() => takeSettingsTab() ?? "types")
   const [dirty, setDirty] = useState(false)
   // what's waiting on "Discard unsaved changes?": another tab, or another page
   const [pending, setPending] = useState<{ tab: string } | { proceed: () => void } | null>(null)

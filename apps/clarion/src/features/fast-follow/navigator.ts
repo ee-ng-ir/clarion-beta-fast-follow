@@ -12,3 +12,8 @@ type LeaveGuard = (proceed: () => void) => boolean
 let guard: LeaveGuard | null = null
 export const setLeaveGuard = (g: LeaveGuard | null) => { guard = g }
 export const guarded = (navigate: () => void) => { if (guard?.(navigate)) return; navigate() }
+
+// Fast Follow: open Settings on a given tab (e.g. Dashboards → Approved headsets)
+let settingsTab: string | null = null
+export const goToSettings = (tab: string) => { settingsTab = tab; goTo("settings") }
+export const takeSettingsTab = () => { const t = settingsTab; settingsTab = null; return t }

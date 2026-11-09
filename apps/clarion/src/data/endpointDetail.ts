@@ -3,6 +3,7 @@
 
 import type { Endpoint, Platform } from "./endpoints"
 import { headsetFor } from "@/features/fast-follow/headsets/headsets"
+import { inventoryFor, LATEST_WIDGET } from "@/features/fast-follow/dashboards/data"
 
 export type MetricStatus = "good" | "warn" | "crit" | "none"
 export type PlatformStatus = "ok" | "degraded" | "disconnected"
@@ -111,7 +112,6 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
       : `${e.primaryPlatform} is degraded while the others are healthy, which suggests the issue is specific to that platform's media path.`
 
   const headsets = ["Jabra Evolve2 75", "Poly Voyager 4320", "Logitech Zone Vibe 100", "Jabra Evolve2 65"]
-  const cams = ["Logitech C920 HD Pro", "Logitech Brio 4K", "Poly Studio P5", "Dell UltraSharp WB7022"]
 
   // Reflect the endpoint's actual alerts in the drilldown so the list and the
   // drilldown agree: device alerts mark the matching device, memory/Wi-Fi/CPU
@@ -122,7 +122,9 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
     ? { name: hs.model, meta: `${hs.connection} · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
     : { name: pick(headsets), meta: `Bluetooth · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
   const audioIn: DeviceRow = { name: "Realtek HD Audio (built-in)", meta: `Driver v6.0.${r(9000, 9300)}.1 · Fallback device`, state: "Active", stateTone: "muted", kind: "audio-in" }
-  const camera: DeviceRow = { name: pick(cams), meta: "USB · 1080p · Driver up-to-date", state: "In-use", stateTone: "good", kind: "video" }
+  // Fast Follow: the same camera, Windows and widget version the Device inventory dashboard counts
+  const inv = inventoryFor(e)
+  const camera: DeviceRow = { name: inv.camera, meta: inv.camera === "Integrated webcam" ? "Built-in · 720p · Driver up-to-date" : "USB · 1080p · Driver up-to-date", state: "In-use", stateTone: "good", kind: "video" }
   for (const ev of e.events) {
     const l = ev.label.toLowerCase()
     if (/camera/.test(l)) { camera.state = "Not detected"; camera.stateTone = "bad"; camera.meta = "USB · No signal" }
@@ -157,8 +159,8 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
       cpu: { label: "CPU utilisation", value: String(cpuUsed), unit: "%", fill: 0, meta: "Intel Core i7-1265U · 12 cores · 4.8 GHz" },
       memory: { label: "Memory", value: String(memUsed), unit: "/ 16 GB", fill: memUsed / 16, meta: `${Math.round((memUsed / 16) * 100)}% utilised` },
       disk: (() => { const used = r(180, 420); return { label: "Disk", value: String(used), unit: "/ 512 GB", fill: used / 512, meta: `${Math.round((used / 512) * 100)}% used · NVMe SSD` } })(),
-      os: { name: "Windows 11 Pro", detail: "Build 23H2 · Patch 2026.04" },
-      agent: { name: "v2.4.1", detail: `Last heartbeat ${r(1, 9)}s ago · Up-to-date` },
+      os: { name: inv.windows.replace(/ \S+$/, " Pro"), detail: `Version ${inv.windows.split(" ").pop()} · Patch 2026.10` },
+      agent: { name: `v${inv.widget}`, detail: `Last heartbeat ${r(1, 9)}s ago · ${inv.widget === LATEST_WIDGET ? "Up-to-date" : `Update to v${LATEST_WIDGET} available`}` },
     },
   }
 }

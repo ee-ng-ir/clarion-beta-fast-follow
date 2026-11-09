@@ -12,6 +12,8 @@ import { ScopePage } from "@/pages/ScopePage"
 import { ComponentsPage } from "@/pages/ComponentsPage"
 import { SettingsPage } from "@/features/fast-follow/SettingsPage"
 import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
+import { DashboardsSubtitle, DashboardsTitle } from "@/features/fast-follow/dashboards/DashboardsChrome"
+import { showDashboard } from "@/features/fast-follow/dashboards/store"
 import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
 import { openGroup } from "@/features/fast-follow/alerts/store"
 import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
@@ -128,7 +130,7 @@ export default function App() {
   // Navigating to another page closes any open drawer (a drilldown belongs to
   // the page it was opened from).
   // Fast Follow: a page with unsaved changes (Settings) can hold the change of page
-  const navigate = (p: PageId) => guarded(() => { setDrawer(null); setAlertDrawer(null); setPage(p) })
+  const navigate = (p: PageId) => guarded(() => { setDrawer(null); setAlertDrawer(null); if (p === "dashboards") showDashboard("home"); setPage(p) })
   setNavigator(navigate) // Fast Follow: lets drawers and Iris change page
 
   const handleViewEndpoints = (loc?: string | string[]) => {
@@ -204,12 +206,14 @@ export default function App() {
                   — {endpointFilters.length === 1 ? locationById(endpointFilters[0])?.name : `${endpointFilters.length} locations`}
                 </span>
               </>
+            ) : page === "dashboards" ? (
+              <DashboardsTitle />
             ) : (
               pageLabel(page)
             )}
           </h1>
           {pageSubtitle[page] && (
-            <p className="mt-1 text-sm" style={{ color: "var(--fg-neutral-muted)" }}>{pageSubtitle[page]}</p>
+            <p className="mt-1 text-sm" style={{ color: "var(--fg-neutral-muted)" }}>{page === "dashboards" ? <DashboardsSubtitle /> : pageSubtitle[page]}</p>
           )}
         </div>
 
@@ -240,7 +244,7 @@ export default function App() {
           {page === "alerts" && <AlertGroupsPage onOpenEndpoint={(rows, index) => setDrawer({ rows, index })} />}
           {page === "thresholds" && allowed && <ThresholdsPage />}
           {page === "settings" && allowed && <SettingsPage />}
-          {page === "dashboards" && <DashboardsPage />}
+          {page === "dashboards" && <DashboardsPage onOpenEndpoint={(rows, index) => setDrawer({ rows, index })} />}
           {page === "glossary" && <GlossaryPage />}
           {page === "devicesdoc" && <DevicesModelPage />}
           {page === "issuesdoc" && <IssuesDocPage />}

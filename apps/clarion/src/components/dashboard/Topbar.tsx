@@ -5,6 +5,7 @@ import { pageLabel, type PageId, type Experience } from "@/nav"
 import { Button } from "@/components/ui/button"
 import { ExperienceMenu } from "./ExperienceMenu"
 import { AskIrisButton } from "@/features/fast-follow/iris/AskIrisButton"
+import { DashboardsCrumb } from "@/features/fast-follow/dashboards/DashboardsChrome"
 
 function IconButton({ children, label, onClick }: { children: ReactNode; label: string; onClick?: () => void }) {
   return (
@@ -59,7 +60,7 @@ export function Topbar({
         <nav aria-label="Breadcrumb" className="flex min-w-px items-center gap-1.5 text-sm md:gap-2.5">
           <span className="min-w-px truncate whitespace-nowrap md:shrink-0" style={{ color: "var(--fg-neutral-muted)" }} title={fleet.workspace}>{fleet.workspace}</span>
           <ChevronRight className="size-4 shrink-0" style={{ color: "var(--fg-neutral-subtle)" }} />
-          <span className="shrink-0 whitespace-nowrap font-medium md:font-normal" style={{ color: "var(--fg-neutral-emphasis)" }} aria-current="page">{pageLabel(page)}</span>
+          {page === "dashboards" ? <DashboardsCrumb /> : <span className="shrink-0 whitespace-nowrap font-medium md:font-normal" style={{ color: "var(--fg-neutral-emphasis)" }} aria-current="page">{pageLabel(page)}</span>}
         </nav>
       </div>
 
