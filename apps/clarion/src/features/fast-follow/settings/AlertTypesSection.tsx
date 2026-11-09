@@ -83,7 +83,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                   >
                     {t.warning} · {t.critical}
                   </FieldOption>
-                  {n > 0 && <Badge className="ms-auto shrink-0">{on ? `${n} alerting now` : `${n} would alert`}</Badge>}
+                  <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={n} />
                 </div>
               )
             })}
@@ -102,4 +102,14 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
       />
     </div>
   )
+}
+
+/**
+ * What the row says on its right: context when on, the consequence while an
+ * unsaved change would turn it off, and just "Off" once it's off.
+ */
+function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
+  if (on) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
+  if (wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-label-sm text-content-warning-emphasis">Saving stops {active} active alert{active === 1 ? "" : "s"}</span> : null
+  return <Badge className="ms-auto shrink-0">Off</Badge>
 }
