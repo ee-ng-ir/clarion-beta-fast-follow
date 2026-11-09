@@ -215,7 +215,7 @@ export default function App() {
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
           {/* Picasso App shell width="standard": cap at 1280, left-aligned with the rail (never centred) */}
-          <div className="flex w-full max-w-[var(--size-content-standard,1280px)] flex-col">
+          <div className="flex w-full max-w-content-standard flex-col">
           {page === "overview" && (
             <OverviewPage
               live={live}

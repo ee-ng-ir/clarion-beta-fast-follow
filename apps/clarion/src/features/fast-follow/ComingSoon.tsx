@@ -1,12 +1,11 @@
-import type { LucideIcon } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, EmptyState, type IllustrationName } from "@ir/ui"
 import { ExploringTag } from "./ExploringTag"
 
 /** Placeholder for a Fast Follow section that is designed but not built yet in the demo. */
 export function ComingSoon({
-  icon: Icon, title, body, exploring = false, questions = [],
+  illustration, title, body, exploring = false, questions = [],
 }: {
-  icon: LucideIcon
+  illustration: IllustrationName
   title: string
   body: string
   exploring?: boolean
@@ -14,20 +13,22 @@ export function ComingSoon({
   questions?: string[]
 }) {
   return (
-    <Card className="w-full items-start gap-3 rounded-xl p-6">
-      <div className="flex size-9 items-center justify-center rounded-lg" style={{ background: "var(--bg-neutral-subtle)" }}>
-        <Icon className="size-4" style={{ color: "var(--fg-neutral-muted)" }} />
-      </div>
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{title}</h2>
-        {exploring && <ExploringTag />}
-      </div>
-      <p className="max-w-prose text-sm" style={{ color: "var(--fg-neutral-muted)" }}>{body}</p>
-      {questions.length > 0 && (
-        <p className="text-xs" style={{ color: "var(--fg-neutral-subtle)" }}>
-          Open questions: {questions.join(", ")}
-        </p>
-      )}
+    <Card>
+      <CardContent>
+        <EmptyState
+          illustration={illustration}
+          title={title}
+          description={body}
+          action={
+            exploring || questions.length ? (
+              <span className="flex flex-wrap items-center justify-center gap-2 text-body-xs text-content-neutral-muted">
+                {exploring && <ExploringTag />}
+                {questions.length > 0 && <>Open questions: {questions.join(", ")}</>}
+              </span>
+            ) : undefined
+          }
+        />
+      </CardContent>
     </Card>
   )
 }

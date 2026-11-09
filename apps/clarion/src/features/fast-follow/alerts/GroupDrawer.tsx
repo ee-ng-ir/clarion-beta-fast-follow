@@ -1,25 +1,24 @@
 import { useState } from "react"
-import * as Dialog from "@radix-ui/react-dialog"
-import { BellOff, BellRing, ChevronRight, Lightbulb, Sparkles, X } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { openIris } from "../iris/store"
-import type { Endpoint, EndpointStatus } from "@/data/endpoints"
+import { BellOff, BellRing, Lightbulb, Sparkles } from "lucide-react"
+import {
+  Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle,
+  Drawer, DrawerActions, DrawerBody, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader,
+  DrawerHeading, DrawerIcon, DrawerTitle, DrawerTitleGroup,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@ir/ui"
+import type { Endpoint } from "@/data/endpoints"
 import { ExploringTag } from "../ExploringTag"
+import { openIris } from "../iris/store"
 import { categoryLabel } from "./catalogue"
 import { NOTIFY_RULES, type AlertGroup } from "./groups"
 import { ago, duration } from "./format"
-import { EnergySaverChip, NotifiedChip, SeveritySplit } from "./bits"
-import { sevTone } from "./tone"
+import { AlertIcon, EnergySaverBadge, NotifiedBadge, SeveritySplit } from "./bits"
+import { sevBadge, sevLabel } from "./tone"
 
-const statusVar: Record<EndpointStatus, string> = {
-  healthy: "var(--status-healthy)", warning: "var(--status-warning)", critical: "var(--status-critical)", offline: "var(--status-unknown)",
-}
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 const ENDPOINTS_SHOWN = 8
 
-/** Alert group detail: where it is, who's affected and what the evidence suggests. */
+/** Alert group detail: where it is, who's affected and what the evidence suggests. Picasso Drawer, wide. */
 export function GroupDrawer({
   group, onClose, onOpenEndpoint,
 }: {
@@ -29,17 +28,11 @@ export function GroupDrawer({
 }) {
   const [showAll, setShowAll] = useState(false)
   return (
-    <Dialog.Root open={!!group} onOpenChange={(o) => { if (!o) { onClose(); setShowAll(false) } }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 data-[state=open]:animate-in data-[state=open]:fade-in-0" style={{ background: "var(--bg-scrim)" }} />
-        <Dialog.Content
-          className="fixed right-0 top-0 z-50 flex h-full w-full flex-col overflow-hidden shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-right sm:w-[640px] sm:max-w-[95vw]"
-          style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--border-neutral-muted)" }}
-        >
-          {group && <Body g={group} showAll={showAll} setShowAll={setShowAll} onClose={onClose} onOpenEndpoint={onOpenEndpoint} />}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Drawer open={!!group} onOpenChange={(o) => { if (!o) { onClose(); setShowAll(false) } }}>
+      <DrawerContent size="wide">
+        {group && <Body g={group} showAll={showAll} setShowAll={setShowAll} onClose={onClose} onOpenEndpoint={onOpenEndpoint} />}
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -47,161 +40,157 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
   g: AlertGroup; showAll: boolean; setShowAll: (v: boolean) => void; onClose: () => void
   onOpenEndpoint: (rows: Endpoint[], index: number) => void
 }) {
-  const Icon = g.type.icon
-  const tone = sevTone[g.severity]
   const closed = !!g.closed
   const shown = showAll ? g.endpoints : g.endpoints.slice(0, ENDPOINTS_SHOWN)
-  const maxLoc = g.locations[0]?.count ?? 1
 
   return (
     <>
-      <div className="flex shrink-0 items-start gap-3 px-5 pb-4 pt-5" style={{ borderBottom: "1px solid var(--border-neutral-muted)" }}>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-          style={closed ? { background: "var(--bg-neutral-subtle)", color: "var(--fg-neutral-muted)" } : { background: tone.bg, color: tone.fg }}>
-          <Icon className="size-5" aria-hidden />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Dialog.Title className="text-lg font-semibold" style={{ color: "var(--fg-neutral-emphasis)" }}>{g.title}</Dialog.Title>
-            {closed
-              ? <Badge variant="success">Closed</Badge>
-              : <Badge variant={g.severity === "critical" ? "danger" : "warning"}>{g.severity === "critical" ? "Critical" : "Warning"}</Badge>}
-          </div>
-          <Dialog.Description className="text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
-            {categoryLabel[g.type.category]} alert group · {closed ? `peaked at ${g.closed!.peak} endpoints` : `${g.endpoints.length} endpoints affected`}
-          </Dialog.Description>
-          {(g.notifiedMinAgo !== null && !closed) || g.energySaverOn > 0 ? (
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {g.notifiedMinAgo !== null && !closed && <NotifiedChip />}
-              {g.energySaverOn > 0 && <EnergySaverChip count={g.energySaverOn} of={g.endpoints.length} />}
-            </div>
-          ) : null}
-        </div>
-        <button type="button" aria-label="Close" onClick={onClose} className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-[var(--bg-neutral-subtle-hovered)]" style={{ color: "var(--fg-neutral-muted)" }}>
-          <X className="size-4" />
-        </button>
-      </div>
+      <DrawerHeader type="title">
+        <DrawerHeading>
+          <DrawerIcon><AlertIcon icon={g.type.icon} severity={g.severity} closed={closed} size="lg" /></DrawerIcon>
+          <DrawerTitleGroup>
+            <DrawerTitle className="flex flex-wrap items-center gap-2">
+              {g.title}
+              {closed ? <Badge color="success">Closed</Badge> : <Badge color={sevBadge[g.severity]}>{sevLabel[g.severity]}</Badge>}
+            </DrawerTitle>
+            <DrawerDescription>
+              {categoryLabel[g.type.category]} alert group · {closed ? `peaked at ${g.closed!.peak} endpoints` : `${g.endpoints.length} endpoints affected`}
+            </DrawerDescription>
+          </DrawerTitleGroup>
+          <DrawerActions><DrawerCloseButton /></DrawerActions>
+        </DrawerHeading>
+      </DrawerHeader>
 
-      <div className="min-h-0 flex-1 overflow-y-auto" style={{ background: "var(--bg-app)" }}>
-        <div className="flex flex-col gap-4 p-5">
-          {closed ? (
-            <Section title="Summary">
-              <p className="text-sm" style={{ color: "var(--fg-neutral-emphasis)" }}>
-                All {g.closed!.peak} endpoints recovered {ago(g.closed!.minutesAgo)}. The issue lasted {duration(g.closed!.lastedMin)} and peaked at {g.closed!.peak} endpoints in {g.locations[0]?.name}.
-              </p>
-            </Section>
-          ) : (
-            <>
-              <Section title="At a glance">
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-                  <Stat label="Endpoints">{g.endpoints.length}</Stat>
+      <DrawerBody className="@container flex flex-col gap-4">
+        {(g.notifiedMinAgo !== null && !closed) || g.energySaverOn > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {g.notifiedMinAgo !== null && !closed && <NotifiedBadge />}
+            {g.energySaverOn > 0 && <EnergySaverBadge count={g.energySaverOn} of={g.endpoints.length} />}
+          </div>
+        ) : null}
+
+        {closed ? (
+          <Card size="sm">
+            <CardHeader><CardTitle>Summary</CardTitle></CardHeader>
+            <CardContent className="text-body-md text-content-neutral-emphasis">
+              All {g.closed!.peak} endpoints recovered {ago(g.closed!.minutesAgo)}. The issue lasted {duration(g.closed!.lastedMin)} and peaked at {g.closed!.peak} endpoints in {g.locations[0]?.name}.
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card size="sm">
+              <CardHeader><CardTitle>At a glance</CardTitle></CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 @lg:grid-cols-3">
+                  <Stat label="Endpoints"><span className="text-metric-md">{g.endpoints.length}</span></Stat>
                   <Stat label="Severity"><SeveritySplit critical={g.counts.critical} warning={g.counts.warning} /></Stat>
                   <Stat label="Recovered so far">{g.recoveredSoFar} endpoint{g.recoveredSoFar === 1 ? "" : "s"}</Stat>
                   <Stat label="First seen">{ago(g.firstSeenMinAgo)}</Stat>
                   <Stat label="Last seen">{ago(g.lastSeenMinAgo)}</Stat>
                   <Stat label="Recurrence">{g.recurrenceThisWeek === 1 ? "First time this week" : `${g.recurrenceThisWeek} times this week`}</Stat>
                 </dl>
-              </Section>
+              </CardContent>
+            </Card>
 
-              <section className="flex flex-col gap-3 rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-neutral-muted)" }}>
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="size-4" style={{ color: "var(--fg-primary-emphasis)" }} aria-hidden />
-                  <h3 className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>What the evidence suggests</h3>
-                </div>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--fg-neutral-emphasis)" }}>{g.evidence}</p>
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Lightbulb className="size-4 text-content-primary-emphasis" aria-hidden />What the evidence suggests</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-body-md text-content-neutral-emphasis">{g.evidence}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => {
+                  <Button variant="outline" size="sm" onClick={() => {
                     onClose()
                     openIris({ kind: "group", groupId: g.id, label: `${g.title} · ${g.endpoints.length} endpoints` }, { id: "summary", label: "What's happening?", auto: true })
                   }}>
-                    <Sparkles className="size-4" aria-hidden /> Investigate with Iris
+                    <Sparkles aria-hidden /> Investigate with Iris
                   </Button>
                   <ExploringTag />
                 </div>
-              </section>
+              </CardContent>
+            </Card>
 
-              <Section title="Notification">
+            <Card size="sm">
+              <CardHeader><CardTitle>Notification</CardTitle></CardHeader>
+              <CardContent>
                 {g.notifiedMinAgo !== null ? (
-                  <p className="flex items-start gap-2 text-sm" style={{ color: "var(--fg-neutral-emphasis)" }}>
-                    <BellRing className="mt-0.5 size-4 shrink-0" style={{ color: "var(--fg-info-emphasis)" }} aria-hidden />
+                  <p className="flex items-start gap-2 text-body-md text-content-neutral-emphasis">
+                    <BellRing className="mt-0.5 size-4 shrink-0 text-content-info-emphasis" aria-hidden />
                     <span>Emailed the service desk {ago(g.notifiedMinAgo)} ({g.notifiedReason}). No more emails about this group for {NOTIFY_RULES.cooldownMin} minutes, however much it grows.</span>
                   </p>
                 ) : (
-                  <p className="flex items-start gap-2 text-sm" style={{ color: "var(--fg-neutral-muted)" }}>
+                  <p className="flex items-start gap-2 text-body-md text-content-neutral-muted">
                     <BellOff className="mt-0.5 size-4 shrink-0" aria-hidden />
                     <span>Not emailed. {g.severity === "warning" ? "Only Critical groups send emails in this release." : `It hasn't reached ${NOTIFY_RULES.minEndpoints} endpoints or lasted ${NOTIFY_RULES.minMinutes} minutes.`}</span>
                   </p>
                 )}
-              </Section>
-            </>
-          )}
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-          <Section title="By location" hint="Where Clarion places each endpoint by its network address, as on the map.">
-            <ul className="flex flex-col gap-2">
-              {g.locations.slice(0, 8).map((l) => (
-                <li key={l.id} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
-                  <span className="truncate" style={{ color: "var(--fg-neutral-emphasis)" }}>{l.name}</span>
-                  <span className="h-2 overflow-hidden rounded-full" style={{ background: "var(--bg-neutral-muted)" }} aria-hidden>
-                    <span className="block h-full rounded-full" style={{ width: `${(l.count / maxLoc) * 100}%`, background: closed ? "var(--fg-neutral-subtle)" : tone.bar }} />
-                  </span>
-                  <span className="font-mono text-xs tabular-nums" style={{ color: "var(--fg-neutral-muted)" }}>{l.count}</span>
-                </li>
-              ))}
-              {g.locations.length > 8 && <li className="text-xs" style={{ color: "var(--fg-neutral-muted)" }}>+{g.locations.length - 8} more locations</li>}
-            </ul>
-          </Section>
-
-          {!closed && (
-            <Section title={`Affected endpoints · ${g.endpoints.length}`}>
-              <ul className="-mx-2 flex flex-col">
-                {shown.map((e, i) => (
-                  <li key={e.id}>
-                    <button type="button" onClick={() => { onClose(); onOpenEndpoint(g.endpoints, i) }}
-                      className="group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[var(--bg-neutral-subtle-hovered)]">
-                      <Avatar className="size-8"><AvatarFallback>{initials(e.user)}</AvatarFallback></Avatar>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{e.user}</span>
-                        <span className="truncate font-mono text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{e.machine} · {e.locationName} · {e.connection}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--fg-neutral-muted)" }}>
-                        <span className="size-1.5 rounded-full" style={{ background: statusVar[e.status] }} aria-hidden />
-                        {e.status === "critical" ? "Critical" : "Warning"}
-                      </span>
-                      <ChevronRight className="size-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" style={{ color: "var(--fg-neutral-subtle)" }} aria-hidden />
-                    </button>
-                  </li>
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>By location</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-body-sm text-content-neutral-muted">Where Clarion places each endpoint by its network address, as on the map.</p>
+            <Table size="sm">
+              <TableHeader><TableRow><TableHead align="start">Location</TableHead><TableHead numeric>Endpoints</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {g.locations.map((l) => (
+                  <TableRow key={l.id}><TableCell align="start">{l.name}</TableCell><TableCell numeric>{l.count}</TableCell></TableRow>
                 ))}
-              </ul>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {!closed && (
+          <Card size="sm">
+            <CardHeader><CardTitle>Affected endpoints · {g.endpoints.length}</CardTitle></CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Table size="sm">
+                <TableHeader><TableRow><TableHead align="start">User / machine</TableHead><TableHead align="start">Location</TableHead><TableHead align="start">Severity</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {shown.map((e, i) => (
+                    <TableRow key={e.id} className="cursor-pointer" onClick={() => { onClose(); onOpenEndpoint(g.endpoints, i) }}>
+                      <TableCell align="start">
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm"><AvatarFallback>{initials(e.user)}</AvatarFallback></Avatar>
+                          <div className="flex min-w-0 flex-col">
+                            <button type="button" onClick={(ev) => { ev.stopPropagation(); onClose(); onOpenEndpoint(g.endpoints, i) }}
+                              className="truncate rounded-xs text-start text-label-md text-content-neutral-emphasis outline-none hover:underline focus-visible:ring-2 focus-visible:ring-line-focused">
+                              {e.user}
+                            </button>
+                            <span className="truncate font-mono text-body-xs text-content-neutral-muted">{e.machine}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell align="start" className="text-content-neutral-muted">{e.locationName} · {e.connection}</TableCell>
+                      <TableCell align="start"><Badge color={e.status === "critical" ? "danger" : "warning"} dot>{e.status === "critical" ? "Critical" : "Warning"}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
               {g.endpoints.length > ENDPOINTS_SHOWN && (
                 <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(!showAll)}>
                   {showAll ? "Show fewer" : `Show all ${g.endpoints.length}`}
                 </Button>
               )}
-            </Section>
-          )}
-        </div>
-      </div>
+            </CardContent>
+          </Card>
+        )}
+      </DrawerBody>
     </>
-  )
-}
-
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3 rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-neutral-muted)" }}>
-      <div className="flex flex-col gap-0.5">
-        <h3 className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{title}</h3>
-        {hint && <p className="text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{hint}</p>}
-      </div>
-      {children}
-    </section>
   )
 }
 
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <dt className="text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{label}</dt>
-      <dd className="text-sm font-medium tabular-nums" style={{ color: "var(--fg-neutral-emphasis)" }}>{children}</dd>
+      <dt className="text-label-sm text-content-neutral-muted">{label}</dt>
+      <dd className="text-body-md text-content-neutral-emphasis tabular-nums">{children}</dd>
     </div>
   )
 }

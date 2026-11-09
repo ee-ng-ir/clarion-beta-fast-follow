@@ -1,11 +1,9 @@
 import { ArrowRight } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, Button, Card, CardAction, CardDescription, CardHeader, CardHeaderText, CardTitle, Table, TableBody, TableCell, TableRow } from "@ir/ui"
 import { useFeedVersion } from "@/data/agentFeed"
 import { activeGroups } from "./groups"
-import { NotifiedChip } from "./bits"
-import { sevTone } from "./tone"
+import { AlertIcon, NotifiedBadge } from "./bits"
+import { sevBadge, sevLabel } from "./tone"
 
 /**
  * Top issues: the top 5 alert groups by a fixed, rule-based score (severity,
@@ -16,41 +14,43 @@ export function TopIssuesCard({ onOpenGroup, onViewAll }: { onOpenGroup: (id: st
   const version = useFeedVersion()
   const top = activeGroups(version).slice(0, 5)
   return (
-    <Card className="w-full gap-0 overflow-hidden rounded-xl p-0">
-      <div className="flex flex-wrap items-start gap-2 px-4 py-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 className="text-base font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>Top issues</h2>
-          <p className="text-sm" style={{ color: "var(--fg-neutral-muted)" }}>Alert groups ranked by severity, endpoints affected and how often they recur.</p>
-        </div>
-        <Button variant="ghost" size="sm" className="ml-auto" onClick={onViewAll}>View all alerts <ArrowRight className="size-4" aria-hidden /></Button>
-      </div>
-      <ol style={{ borderTop: "1px solid var(--border-neutral-subtle)" }}>
-        {top.map((g, i) => {
-          const Icon = g.type.icon
-          const tone = sevTone[g.severity]
-          return (
-            <li key={g.id} style={{ borderBottom: i < top.length - 1 ? "1px solid var(--border-neutral-subtle)" : undefined }}>
-              <button type="button" onClick={() => onOpenGroup(g.id)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-neutral-subtle-hovered)]">
-                <span className="w-4 shrink-0 text-center font-mono text-xs" style={{ color: "var(--fg-neutral-subtle)" }}>{i + 1}</span>
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: tone.bg, color: tone.fg }}><Icon className="size-4" aria-hidden /></span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{g.title}</span>
-                    {g.notifiedMinAgo !== null && <NotifiedChip />}
-                  </span>
-                  <span className="truncate text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{g.reason}</span>
-                </span>
-                <Badge variant={g.severity === "critical" ? "danger" : "warning"} className="hidden sm:inline-flex">{g.severity === "critical" ? "Critical" : "Warning"}</Badge>
-                <span className="w-12 shrink-0 text-right">
-                  <span className="block font-mono text-sm tabular-nums" style={{ color: "var(--fg-neutral-emphasis)" }}>{g.endpoints.length}</span>
-                  <span className="block text-[11px]" style={{ color: "var(--fg-neutral-subtle)" }}>endpoints</span>
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ol>
+    <Card className="@container">
+      <CardHeader>
+        <CardHeaderText>
+          <CardTitle>Top issues</CardTitle>
+          <CardDescription>Alert groups ranked by severity, endpoints affected and how often they recur.</CardDescription>
+        </CardHeaderText>
+        <CardAction><Button variant="ghost" size="sm" onClick={onViewAll}>View all alerts <ArrowRight aria-hidden /></Button></CardAction>
+      </CardHeader>
+      <Table size="sm" aria-label="Top issues">
+        <TableBody>
+          {top.map((g, i) => (
+            <TableRow key={g.id} className="cursor-pointer" onClick={() => onOpenGroup(g.id)}>
+              <TableCell numeric className="w-8 text-content-neutral-subtle">{i + 1}</TableCell>
+              <TableCell align="start">
+                <div className="flex items-center gap-3">
+                  <AlertIcon icon={g.type.icon} severity={g.severity} />
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); onOpenGroup(g.id) }}
+                        className="rounded-xs text-start text-label-lg text-content-neutral-emphasis outline-none hover:underline focus-visible:ring-2 focus-visible:ring-line-focused">
+                        {g.title}
+                      </button>
+                      {g.notifiedMinAgo !== null && <NotifiedBadge />}
+                    </span>
+                    <span className="truncate text-body-sm text-content-neutral-muted">{g.reason}</span>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell align="start" className="hidden @lg:table-cell"><Badge color={sevBadge[g.severity]}>{sevLabel[g.severity]}</Badge></TableCell>
+              <TableCell align="end">
+                <span className="block text-metric-sm tabular-nums text-content-neutral-emphasis">{g.endpoints.length}</span>
+                <span className="block text-body-xs text-content-neutral-subtle">endpoints</span>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </Card>
   )
 }

@@ -1,41 +1,39 @@
+import type { LucideIcon } from "lucide-react"
 import { BellRing, Leaf } from "lucide-react"
-import { sevTone } from "./tone"
+import { Badge } from "@ir/ui"
+import { cn } from "@/lib/utils"
+import type { Severity } from "./groups"
+import { sevTile } from "./tone"
 
-
-/** Critical/Warning split as a thin two-colour bar with counts. */
-export function SeveritySplit({ critical, warning, compact = false }: { critical: number; warning: number; compact?: boolean }) {
-  const total = critical + warning || 1
+/** Critical / Warning counts as Picasso badges, so the split reads as text, not just colour. */
+export function SeveritySplit({ critical, warning }: { critical: number; warning: number }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <div className="flex h-1.5 w-full max-w-40 overflow-hidden rounded-full" style={{ background: "var(--bg-neutral-muted)" }} aria-hidden>
-        <span style={{ width: `${(critical / total) * 100}%`, background: sevTone.critical.bar }} />
-        <span style={{ width: `${(warning / total) * 100}%`, background: sevTone.warning.bar }} />
-      </div>
-      {!compact && (
-        <span className="text-xs tabular-nums" style={{ color: "var(--fg-neutral-muted)" }}>
-          {critical > 0 && `${critical} Critical`}{critical > 0 && warning > 0 && " · "}{warning > 0 && `${warning} Warning`}
-        </span>
-      )}
-    </div>
-  )
-}
-
-/** "IT notified" — a proactive email went out for this group. */
-export function NotifiedChip() {
-  return (
-    <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium"
-      style={{ background: "var(--bg-info-subtle)", color: "var(--fg-on-info-subtle)" }}>
-      <BellRing className="size-3" aria-hidden /> IT notified
+    <span className="flex flex-wrap gap-1">
+      {critical > 0 && <Badge color="danger" dot>{critical} Critical</Badge>}
+      {warning > 0 && <Badge color="warning" dot>{warning} Warning</Badge>}
     </span>
   )
 }
 
-/** Energy saver is context, never an alert: neutral styling, no severity colour. */
-export function EnergySaverChip({ count, of }: { count: number; of?: number }) {
+/** "IT notified": a proactive email went out for this group. */
+export function NotifiedBadge() {
+  return <Badge color="info"><BellRing aria-hidden />IT notified</Badge>
+}
+
+/** Energy saver is context, never an alert: neutral, never a severity colour. */
+export function EnergySaverBadge({ count, of }: { count: number; of?: number }) {
+  return <Badge variant="outline"><Leaf aria-hidden />Energy saver on{of ? ` · ${count} of ${of}` : ""}</Badge>
+}
+
+/** The alert type's icon on a severity-tinted tile (or neutral once closed). */
+export function AlertIcon({ icon: Icon, severity, closed = false, size = "md" }: { icon: LucideIcon; severity: Severity; closed?: boolean; size?: "md" | "lg" }) {
   return (
-    <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium"
-      style={{ borderColor: "var(--border-neutral-muted)", color: "var(--fg-neutral-muted)" }}>
-      <Leaf className="size-3" aria-hidden /> Energy saver on{of ? ` · ${count} of ${of}` : ""}
+    <span className={cn(
+      "flex shrink-0 items-center justify-center rounded-md",
+      size === "lg" ? "size-10" : "size-8",
+      closed ? "bg-surface-neutral-subtle text-content-neutral-muted" : sevTile[severity],
+    )}>
+      <Icon className={size === "lg" ? "size-5" : "size-4"} aria-hidden />
     </span>
   )
 }

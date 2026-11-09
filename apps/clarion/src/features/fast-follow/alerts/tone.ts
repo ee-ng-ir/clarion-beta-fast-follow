@@ -1,6 +1,9 @@
 import type { Severity } from "./groups"
 
-export const sevTone: Record<Severity, { bg: string; fg: string; bar: string }> = {
-  critical: { bg: "var(--bg-danger-subtle)", fg: "var(--fg-on-danger-subtle)", bar: "var(--status-critical)" },
-  warning: { bg: "var(--bg-warning-subtle)", fg: "var(--fg-on-warning-subtle)", bar: "var(--status-warning)" },
+/** Severity → Picasso Badge colour and the icon tile's semantic utilities. */
+export const sevBadge: Record<Severity, "danger" | "warning"> = { critical: "danger", warning: "warning" }
+export const sevTile: Record<Severity, string> = {
+  critical: "bg-surface-danger-subtle text-content-on-danger-subtle",
+  warning: "bg-surface-warning-subtle text-content-on-warning-subtle",
 }
+export const sevLabel: Record<Severity, string> = { critical: "Critical", warning: "Warning" }

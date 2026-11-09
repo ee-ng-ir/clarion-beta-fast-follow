@@ -11,6 +11,7 @@ import { formatLastSeen } from "@/lib/utils"
 import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
 import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
+import { Badge } from "@ir/ui"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 
@@ -203,7 +204,7 @@ export function EndpointDrawer({
                   >
                     {t.label}
                     {t.id === "alerts" && (e.status === "critical" || e.status === "warning") && (
-                      <span className="ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[10px] font-semibold" style={{ background: e.status === "critical" ? "var(--bg-danger-emphasis)" : "var(--bg-warning-emphasis)", color: "var(--fg-on-danger-emphasis)" }} aria-label="1 active alert">1</span>
+                      <Badge color={e.status === "critical" ? "danger" : "warning"} variant="emphasis" className="ms-1.5" aria-label="1 active alert">1</Badge>
                     )}
                   </TabsTrigger>
                 ))}
