@@ -1,7 +1,7 @@
 import { Monitor, Siren, Tally5 } from "lucide-react"
 import { KpiCard } from "./KpiCard"
 import { SegmentedBar, LegendItem } from "./primitives"
-import { rollupsAll } from "@/data/endpoints"
+import { activeGroups } from "@/features/fast-follow/alerts/groups"
 import type { LiveFleet } from "@/hooks/useStreaming"
 
 // Clarion Network Score (0–100) quality band.
@@ -13,7 +13,8 @@ function cnsBand(v: number) {
 }
 
 export function StatsStrip({ live }: { live: LiveFleet }) {
-  const issues = rollupsAll()
+  // Fast Follow: count alert groups (one per alert type), matching the Alerts page
+  const issues = activeGroups()
   const warnIssues = issues.filter((r) => r.severity === "warning").length
   const critIssues = issues.filter((r) => r.severity === "critical").length
   const issueSegments = [

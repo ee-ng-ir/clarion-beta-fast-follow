@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { StatsStrip } from "@/components/dashboard/StatsStrip"
 import { MapAndLocations } from "@/components/dashboard/MapAndLocations"
-import { EndpointsAttentionCard } from "@/components/dashboard/ActiveAlertsCard"
+import { TopIssuesCard } from "@/features/fast-follow/alerts/TopIssuesCard"
 import { locationById } from "@/data/dashboard"
 import type { LiveFleet } from "@/hooks/useStreaming"
 import type { Endpoint } from "@/data/endpoints"
@@ -11,8 +11,8 @@ export function OverviewPage({
   selectedId,
   onSelect,
   onViewEndpoints,
-  onOpenEndpoint,
-  openEndpointId,
+  onOpenAlertGroup,
+  onViewAlerts,
 }: {
   live: LiveFleet
   selectedId: string
@@ -20,6 +20,8 @@ export function OverviewPage({
   onViewEndpoints: (loc?: string | string[]) => void
   onOpenEndpoint?: (rows: Endpoint[], index: number) => void
   openEndpointId?: string | null
+  onOpenAlertGroup: (id: string) => void
+  onViewAlerts: () => void
 }) {
   // The drilled-into country is the map's scope (used only by the map now).
   const [country, setCountry] = useState<string | null>(() => {
@@ -37,8 +39,8 @@ export function OverviewPage({
         onCountryChange={setCountry}
         onViewEndpoints={onViewEndpoints}
       />
-      {/* coupled to the map: a specific location scopes the list to it (else whole fleet) */}
-      <EndpointsAttentionCard selectedLocationId={selectedId} onViewEndpoints={onViewEndpoints} onOpenEndpoint={onOpenEndpoint} openEndpointId={openEndpointId} />
+      {/* Fast Follow: Top issues replaces "Endpoints needing attention" */}
+      <TopIssuesCard onOpenGroup={onOpenAlertGroup} onViewAll={onViewAlerts} />
     </div>
   )
 }

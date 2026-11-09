@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useFeedVersion } from "@/data/agentFeed"
 import { activeGroups } from "./groups"
-import { NotifiedChip, sevTone } from "./bits"
+import { NotifiedChip } from "./bits"
+import { sevTone } from "./tone"
 
 /**
  * Top issues: the top 5 alert groups by a fixed, rule-based score (severity,

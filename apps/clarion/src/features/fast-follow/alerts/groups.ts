@@ -42,14 +42,20 @@ export interface AlertGroup {
 
 function classify(e: Endpoint): string {
   const issue = (e.primaryIssue ?? "").toLowerCase()
-  const firstEvent = (e.events[0]?.label ?? "").toLowerCase()
+  const labels = e.events.map((ev) => ev.label.toLowerCase()).join(" | ")
   if (issue.endsWith("down")) return `platform:${e.primaryPlatform}`
-  if (/headset|audio|usb audio/.test(firstEvent)) return "audio-device"
+  if (e.status === "critical" && /headset disconnected|audio device|usb audio/.test(labels)) return "audio-device"
+  // The generated data only carries network causes, so a stable ~30% of warning
+  // endpoints are given system alerts (CPU, storage, memory, battery) for the demo.
+  if (e.status === "warning") {
+    const h = hash(e.id) % 20
+    if (h < 3) return "cpu"
+    if (h < 5) return "storage"
+    if (h < 6) return "memory"
+  }
   if (issue.startsWith("wi-fi")) return "wifi"
   if (/latency|jitter|packet loss/.test(issue)) return "call-quality"
-  // stable spread of the remaining device/system alerts across system types
-  const h = hash(e.id) % 10
-  return h < 4 ? "cpu" : h < 7 ? "storage" : h < 9 ? "memory" : "battery"
+  return "call-quality"
 }
 
 function hash(s: string) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) } return h >>> 0 }

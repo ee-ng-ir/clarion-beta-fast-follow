@@ -4,7 +4,6 @@ import { Topbar } from "@/components/dashboard/Topbar"
 import { MobileNav, useIsMobile } from "@/components/dashboard/MobileNav"
 import { OverviewPage } from "@/pages/OverviewPage"
 import { EndpointsPage } from "@/pages/EndpointsPage"
-import { AlertsPage } from "@/pages/AlertsPage"
 import { ThresholdsPage } from "@/pages/ThresholdsPage"
 import { GlossaryPage } from "@/pages/GlossaryPage"
 import { IssuesDocPage } from "@/pages/IssuesDocPage"
@@ -13,6 +12,8 @@ import { ScopePage } from "@/pages/ScopePage"
 import { ComponentsPage } from "@/pages/ComponentsPage"
 import { SettingsPage } from "@/features/fast-follow/SettingsPage"
 import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
+import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
+import { openGroup } from "@/features/fast-follow/alerts/store"
 import { PreviewMarker } from "@/features/fast-follow/PreviewMarker"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
@@ -57,7 +58,6 @@ export default function App() {
   const [page, setPage] = useState<PageId>(() => pageFromPath(window.location.pathname))
   const [selectedId, setSelectedId] = useState<string>(DEFAULT_LOCATION)
   const [endpointFilters, setEndpointFilters] = useState<string[]>([])
-  const [alertFilter, setAlertFilter] = useState<string>("all")
   // Desktop/tablet: the rail sits inline and the toggle collapses it.
   // Phones (< md): the rail becomes an off-canvas drawer over the page (MobileNav).
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -137,7 +137,6 @@ export default function App() {
   }
 
   const openEndpointId = drawer ? drawer.rows[drawer.index]?.id ?? null : null
-  const openAlertId = alertDrawer ? alertDrawer.rows[alertDrawer.index]?.id ?? null : null
 
   // Administration lives in the Iris client console now (its own app and Vercel
   // project). The account menu and any old /admin/* link go there.
@@ -218,6 +217,8 @@ export default function App() {
               onViewEndpoints={handleViewEndpoints}
               onOpenEndpoint={(rows, index) => setDrawer({ rows, index })}
               openEndpointId={openEndpointId}
+              onOpenAlertGroup={(id) => { openGroup(id); navigate("alerts") }}
+              onViewAlerts={() => navigate("alerts")}
             />
           )}
           {page === "endpoints" && (
@@ -228,14 +229,8 @@ export default function App() {
               openEndpointId={openEndpointId}
             />
           )}
-          {page === "alerts" && (
-            <AlertsPage
-              locationId={alertFilter}
-              onLocationChange={setAlertFilter}
-              onOpenAlert={(rollups, index) => setAlertDrawer({ rows: rollups, index })}
-              openAlertId={openAlertId}
-            />
-          )}
+          {/* Fast Follow: alert groups replace the per-location rollups (old AlertsPage kept for upstream merges) */}
+          {page === "alerts" && <AlertGroupsPage onOpenEndpoint={(rows, index) => setDrawer({ rows, index })} />}
           {page === "thresholds" && allowed && <ThresholdsPage />}
           {page === "settings" && allowed && <SettingsPage />}
           {page === "dashboards" && <DashboardsPage />}

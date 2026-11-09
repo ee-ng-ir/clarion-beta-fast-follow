@@ -1,10 +1,6 @@
 import { BellRing, Leaf } from "lucide-react"
-import type { Severity } from "./groups"
+import { sevTone } from "./tone"
 
-export const sevTone: Record<Severity, { bg: string; fg: string; bar: string }> = {
-  critical: { bg: "var(--bg-danger-subtle)", fg: "var(--fg-on-danger-subtle)", bar: "var(--status-critical)" },
-  warning: { bg: "var(--bg-warning-subtle)", fg: "var(--fg-on-warning-subtle)", bar: "var(--status-warning)" },
-}
 
 /** Critical/Warning split as a thin two-colour bar with counts. */
 export function SeveritySplit({ critical, warning, compact = false }: { critical: number; warning: number; compact?: boolean }) {
