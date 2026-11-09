@@ -14,6 +14,7 @@ import { SettingsPage } from "@/features/fast-follow/SettingsPage"
 import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
 import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
 import { openGroup } from "@/features/fast-follow/alerts/store"
+import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
 import { PreviewMarker } from "@/features/fast-follow/PreviewMarker"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
@@ -241,6 +242,9 @@ export default function App() {
           {page === "components" && <ComponentsPage />}
         </div>
       </div>
+
+      {/* Fast Follow: Iris side panel, docked beside the page */}
+      <IrisPanel page={page} onNavigate={navigate} onOpenEndpoint={(rows, index) => setDrawer({ rows, index })} />
 
       {/* global endpoint drilldown */}
       <EndpointDrawer

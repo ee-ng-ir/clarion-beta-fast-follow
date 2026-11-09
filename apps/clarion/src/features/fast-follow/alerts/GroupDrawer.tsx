@@ -4,7 +4,7 @@ import { BellOff, BellRing, ChevronRight, Lightbulb, Sparkles, X } from "lucide-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/toast"
+import { openIris } from "../iris/store"
 import type { Endpoint, EndpointStatus } from "@/data/endpoints"
 import { ExploringTag } from "../ExploringTag"
 import { categoryLabel } from "./catalogue"
@@ -110,7 +110,10 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                 </div>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--fg-neutral-emphasis)" }}>{g.evidence}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toast({ variant: "info", title: "Iris investigation is next in the demo", description: "It will open with this group's evidence already loaded." })}>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    onClose()
+                    openIris({ kind: "group", groupId: g.id, label: `${g.title} · ${g.endpoints.length} endpoints` }, { id: "summary", label: "What's happening?", auto: true })
+                  }}>
                     <Sparkles className="size-4" aria-hidden /> Investigate with Iris
                   </Button>
                   <ExploringTag />
