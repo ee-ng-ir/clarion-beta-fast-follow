@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
+import { useCallback, useEffect, useState } from "react"
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
 import { ThresholdsPage } from "@/pages/ThresholdsPage"
 import { ComingSoon } from "./ComingSoon"
 import { NewDot } from "./ExploringTag"
@@ -9,31 +9,66 @@ import { StabilitySection } from "./settings/StabilitySection"
 
 /**
  * Settings: the top-level home for everything an IT Admin configures in Clarion.
- * Thresholds used to be the dumping ground; it's now one section. Sections are
- * sibling views of the same object, so they're Picasso Tabs. Hierarchy is still
- * a draft (questions log X2). Thresholds is the existing Clarion page (not yet
- * on Picasso: questions log P2).
+ * One pattern throughout (D9): each tab is a form — change things, then Save.
+ * On/off choices are checkboxes, never switches next to Save. Leaving a tab with
+ * unsaved changes asks first. Hierarchy is still a draft (X2). Thresholds is the
+ * existing Clarion page (not yet on Picasso: P2).
  */
 export function SettingsPage() {
   const [tab, setTab] = useState("types")
+  const [dirty, setDirty] = useState(false)
+  const [pending, setPending] = useState<string | null>(null)
+  const onDirtyChange = useCallback((d: boolean) => setDirty(d), [])
+
+  // closing the browser tab with unsaved changes asks too
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
+
+  const go = (next: string) => {
+    if (next === tab) return
+    if (dirty) setPending(next)
+    else setTab(next)
+  }
+  // leaving a tab unmounts its form, which drops its draft
+  const discardAndGo = () => { if (pending) { setDirty(false); setTab(pending) } setPending(null) }
+
   return (
-    <Tabs value={tab} onValueChange={setTab} className="flex w-full flex-col gap-4">
-      <TabsList aria-label="Settings sections">
-        <TabsTrigger value="types">Alert types <NewDot className="ms-1.5" /></TabsTrigger>
-        <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
-        <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>
-        <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
-        <TabsTrigger value="devices">Approved headsets <NewDot className="ms-1.5" /></TabsTrigger>
-      </TabsList>
-      <TabsContent value="types"><AlertTypesSection onEditThresholds={() => setTab("thresholds")} /></TabsContent>
-      <TabsContent value="thresholds"><ThresholdsPage /></TabsContent>
-      <TabsContent value="notifications"><NotificationsSection /></TabsContent>
-      <TabsContent value="stability"><StabilitySection /></TabsContent>
-      <TabsContent value="devices">
-        <ComingSoon illustration="call-readiness" title="Approved headsets"
-          body="Choose the headset models your company approves. Endpoints on other headsets are flagged for review; agents can keep using them."
-          questions={["H1", "H2", "H5", "H6"]} />
-      </TabsContent>
-    </Tabs>
+    <>
+      <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
+        <TabsList aria-label="Settings sections">
+          <TabsTrigger value="types">Alert types <NewDot className="ms-1.5" /></TabsTrigger>
+          <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>
+          <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
+          <TabsTrigger value="devices">Approved headsets <NewDot className="ms-1.5" /></TabsTrigger>
+        </TabsList>
+        <TabsContent value="types"><AlertTypesSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="thresholds"><ThresholdsPage /></TabsContent>
+        <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="stability"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="devices">
+          <ComingSoon illustration="call-readiness" title="Approved headsets"
+            body="Choose the headset models your company approves. Endpoints on other headsets are flagged for review; agents can keep using them."
+            questions={["H1", "H2", "H5", "H6"]} />
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard unsaved changes?</DialogTitle>
+            <DialogDescription>You've changed settings on this tab without saving. Leaving now discards those changes.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPending(null)}>Keep editing</Button>
+            <Button variant="destructive" onClick={discardAndGo}>Discard changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

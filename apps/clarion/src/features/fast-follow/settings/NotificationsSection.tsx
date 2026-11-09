@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Mail } from "lucide-react"
 import {
   Alert, AlertDescription, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
-  Field, FieldControl, FieldDescription, FieldLabel, FieldOption, Input, NumberInput, Switch, TagsInput,
+  Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption, Input, NumberInput, TagsInput,
 } from "@ir/ui"
 import { useViewer } from "@/lib/viewer"
 import { activeGroups } from "../alerts/groups"
@@ -18,7 +18,7 @@ const clock = (minAgo: number) => new Date(Date.now() - minAgo * 60000).toLocale
  * notifications (new): opt-in, a recipient list, rules for what's significant
  * enough to email, and a cooldown. Works for Telemetry-only tenants too.
  */
-export function NotificationsSection() {
+export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
   const { person } = useViewer()
   const [draft, setDraft] = useState<NotifySettings>(settings.notify)
@@ -26,7 +26,9 @@ export function NotificationsSection() {
   const [preview, setPreview] = useState(false)
   const [testSent, setTestSent] = useState<string | null>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || itReports !== settings.itReports
-  const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setTestSent(null) }
+  const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setTestSent(null); setConfirmation(null) }
+  const [confirmation, setConfirmation] = useState<string | null>(null)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   // what these rules would have done today — the rule made concrete
   const example = useMemo(() => {
@@ -49,7 +51,7 @@ export function NotificationsSection() {
         <CardContent>
           <Field invalid={!!itReports && !isEmail(itReports)}>
             <FieldLabel>Report address</FieldLabel>
-            <FieldControl><Input type="email" value={itReports} onChange={(e) => setItReports(e.target.value)} /></FieldControl>
+            <FieldControl><Input type="email" value={itReports} onChange={(e) => { setItReports(e.target.value); setConfirmation(null) }} /></FieldControl>
             <FieldDescription>One address, usually your service desk's.</FieldDescription>
           </Field>
         </CardContent>
@@ -63,7 +65,7 @@ export function NotificationsSection() {
           </CardHeaderText>
         </CardHeader>
         <CardContent className="flex flex-col gap-gutter">
-          <FieldOption control={<Switch checked={draft.enabled} onCheckedChange={(v) => set({ enabled: v })} />}
+          <FieldOption control={<Checkbox checked={draft.enabled} onCheckedChange={(v) => set({ enabled: v === true })} />}
             description="Nothing is emailed until at least one recipient is added.">
             Send proactive notifications
           </FieldOption>
@@ -135,8 +137,14 @@ export function NotificationsSection() {
         saved={savedLine(settings.saved.notify)}
         dirty={dirty}
         onDiscard={() => { setDraft(settings.notify); setItReports(settings.itReports) }}
-        onSave={() => saveNotify(draft, itReports, person.name)}
+        onSave={() => {
+          saveNotify(draft, itReports, person.name)
+          setConfirmation(draft.enabled && draft.recipients.length
+            ? `Saved. Critical groups that meet these rules will email ${draft.recipients.length} recipient${draft.recipients.length === 1 ? "" : "s"}.`
+            : "Saved. Proactive notifications are off; nothing will be emailed.")
+        }}
         saveLabel="Save notifications"
+        confirmation={confirmation}
       />
 
       <EmailPreview group={example.biggest} rules={draft} open={preview} onOpenChange={setPreview} />

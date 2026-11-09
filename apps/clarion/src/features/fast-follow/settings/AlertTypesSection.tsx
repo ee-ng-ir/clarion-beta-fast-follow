@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react"
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, FieldOption, Switch } from "@ir/ui"
+import { useEffect, useMemo, useState } from "react"
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
 import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
@@ -16,16 +16,25 @@ function thresholdLine(t: AlertType) {
 }
 
 /**
- * Settings › Alert types. Every alert type has a switch, for the whole tenancy.
+ * Settings › Alert types. Every alert type can be on or off, for the whole tenancy.
+ * Settings are forms (D9): checkboxes, then Save — never switches next to Save.
  * All on by default. Turning one off stops the alert, its group, the Send to IT
  * prompt and notifications; readings still show in endpoint detail, and the
  * thresholds are kept for when it's turned back on.
  */
-export function AlertTypesSection({ onEditThresholds }: { onEditThresholds: () => void }) {
+export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
   const { person } = useViewer()
   const [off, setOff] = useState<string[]>(settings.disabledTypes)
   const dirty = off.slice().sort().join() !== settings.disabledTypes.slice().sort().join()
+  const [confirmation, setConfirmation] = useState<string | null>(null)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
+  const save = () => {
+    const turnedOff = off.filter((x) => !settings.disabledTypes.includes(x)).length
+    const turnedOn = settings.disabledTypes.filter((x) => !off.includes(x)).length
+    saveTypes(off, person.name)
+    setConfirmation(`Saved. ${[turnedOff && `${turnedOff} alert type${turnedOff === 1 ? "" : "s"} turned off`, turnedOn && `${turnedOn} turned back on`].filter(Boolean).join(", ")}. Alerts, Top issues and the widget now follow this.`)
+  }
 
   // endpoints each type would alert on right now, so turning one off isn't a blind choice
   const affected = useMemo(() => {
@@ -34,7 +43,7 @@ export function AlertTypesSection({ onEditThresholds }: { onEditThresholds: () =
     return m
   }, [])
 
-  const toggle = (id: string, on: boolean) => setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id]))
+  const toggle = (id: string, on: boolean) => { setConfirmation(null); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
 
   return (
     <div className="flex w-full max-w-content-reading flex-col gap-gutter">
@@ -55,7 +64,7 @@ export function AlertTypesSection({ onEditThresholds }: { onEditThresholds: () =
           <CardHeader>
             <CardHeaderText>
               <CardTitle>{categoryLabel[c]}</CardTitle>
-              {c === "platform" && <CardDescription>One switch for each platform, so Teams and Zoom can be set separately.</CardDescription>}
+              {c === "platform" && <CardDescription>Each platform is set separately, so Teams can stay on while Zoom is off.</CardDescription>}
             </CardHeaderText>
           </CardHeader>
           <CardContent className="flex flex-col divide-y divide-line-neutral-subtle">
@@ -66,7 +75,7 @@ export function AlertTypesSection({ onEditThresholds }: { onEditThresholds: () =
                 <div key={t.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                   <FieldOption
                     className="min-w-0 flex-1"
-                    control={<Switch checked={on} onCheckedChange={(v) => toggle(t.id, v)} />}
+                    control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
                     description={thresholdLine(t)}
                   >
                     {t.warning} · {t.critical}
@@ -83,8 +92,9 @@ export function AlertTypesSection({ onEditThresholds }: { onEditThresholds: () =
         saved={savedLine(settings.saved.types)}
         dirty={dirty}
         onDiscard={() => setOff(settings.disabledTypes)}
-        onSave={() => saveTypes(off, person.name)}
+        onSave={save}
         saveLabel="Save alert types"
+        confirmation={confirmation}
         extra={<Button variant="ghost" onClick={onEditThresholds}>Edit thresholds</Button>}
       />
     </div>

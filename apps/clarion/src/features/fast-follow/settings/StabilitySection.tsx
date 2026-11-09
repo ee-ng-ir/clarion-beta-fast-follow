@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Field, FieldDescription, FieldLabel, SegmentedControl, SegmentedControlItem, TimeSeriesChart,
@@ -25,11 +25,13 @@ const X = HOVER.map((_, i) => {
   return d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })
 })
 
-export function StabilitySection() {
+export function StabilitySection({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
   const { person } = useViewer()
   const [draft, setDraft] = useState(settings.stability)
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings.stability)
+  const [confirmation, setConfirmation] = useState<string | null>(null)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
   const counts = useMemo(() => Object.fromEntries((Object.keys(PRESETS) as Stability[]).map((k) => [k, countAlerts(HOVER, PRESETS[k])])) as Record<Stability, number>, [])
   const network = draft.network
 
@@ -80,7 +82,7 @@ export function StabilitySection() {
           {categories.map((c) => (
             <Field key={c}>
               <FieldLabel id={`stability-${c}`}>{categoryLabel[c]}</FieldLabel>
-              <SegmentedControl aria-labelledby={`stability-${c}`} value={draft[c]} onValueChange={(v) => v && setDraft((d) => ({ ...d, [c]: v as Stability }))} className="self-start">
+              <SegmentedControl aria-labelledby={`stability-${c}`} value={draft[c]} onValueChange={(v) => { if (!v) return; setConfirmation(null); setDraft((d) => ({ ...d, [c]: v as Stability })) }} className="self-start">
                 {(Object.keys(PRESETS) as Stability[]).map((k) => <SegmentedControlItem key={k} value={k}>{PRESETS[k].label}</SegmentedControlItem>)}
               </SegmentedControl>
               <FieldDescription>{PRESETS[draft[c]].words}</FieldDescription>
@@ -93,8 +95,9 @@ export function StabilitySection() {
         saved={savedLine(settings.saved.stability)}
         dirty={dirty}
         onDiscard={() => setDraft(settings.stability)}
-        onSave={() => saveStability(draft, person.name)}
+        onSave={() => { saveStability(draft, person.name); setConfirmation("Saved. The widget and Fleet-view now raise and clear alerts with these settings.") }}
         saveLabel="Save alert stability"
+        confirmation={confirmation}
       />
     </div>
   )
