@@ -22,7 +22,7 @@ function thresholdLine(t: AlertType) {
  * prompt and notifications; readings still show in endpoint detail, and the
  * thresholds are kept for when it's turned back on.
  */
-export function AlertTypesSection({ onViewThresholds, onDirtyChange }: { onViewThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
+export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
   const { person } = useViewer()
   const [off, setOff] = useState<string[]>(settings.disabledTypes)
@@ -48,7 +48,7 @@ export function AlertTypesSection({ onViewThresholds, onDirtyChange }: { onViewT
   return (
     <div className="flex w-full max-w-content-reading flex-col gap-gutter">
       <p className="text-body-md text-content-neutral-muted">
-        Applies to every endpoint. All alert types are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail.
+        Applies to every endpoint. All alert types are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail, and its thresholds are kept for when you turn it back on.
       </p>
 
       {off.length > 0 && (
@@ -95,7 +95,7 @@ export function AlertTypesSection({ onViewThresholds, onDirtyChange }: { onViewT
         onSave={save}
         saveLabel="Save alert types"
         confirmation={confirmation}
-        extra={<Button variant="ghost" onClick={onViewThresholds}>View thresholds</Button>}
+        extra={<Button variant="ghost" onClick={onEditThresholds}>Edit thresholds</Button>}
       />
     </div>
   )

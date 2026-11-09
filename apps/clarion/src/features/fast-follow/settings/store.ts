@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from "react"
 import type { AlertCategory } from "../alerts/catalogue"
+import { applyThresholds, IR_THRESHOLDS, type Policy } from "./thresholds"
 
 // Tenancy-wide alert settings for the Fast Follow demo (Settings › Alert types,
-// Notifications, Alert stability). Saved values only: each section keeps its own
+// Thresholds, Notifications, Alert stability). Saved values only: each section keeps its own
 // draft until Save. Turning an alert type off stops the alert, its group, the
 // Send to IT prompt and notifications — not the data (epic rules 4 and 5).
 
@@ -25,7 +26,8 @@ interface State {
   notify: NotifySettings
   itReports: string
   stability: Record<AlertCategory, Stability>
-  saved: Partial<Record<"types" | "notify" | "stability" | "headsets", Saved>>
+  thresholds: Policy
+  saved: Partial<Record<"types" | "thresholds" | "notify" | "stability" | "headsets", Saved>>
   version: number
 }
 
@@ -34,6 +36,7 @@ let state: State = {
   notify: IR_DEFAULT_NOTIFY,
   itReports: "it-reports@acme.com",
   stability: IR_DEFAULT_STABILITY,
+  thresholds: IR_THRESHOLDS,
   saved: { notify: { by: "Marcus Reyes", at: new Date(Date.now() - 3 * 86400000) }, headsets: { by: "Alex Kim", at: new Date(Date.now() - 19 * 86400000) } },
   version: 0,
 }
@@ -46,6 +49,8 @@ export const getSettings = () => state
 export const saveTypes = (disabledTypes: string[], by: string) => set({ disabledTypes, saved: { ...state.saved, types: { by, at: new Date() } } })
 export const saveNotify = (notify: NotifySettings, itReports: string, by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
 export const saveStability = (stability: Record<AlertCategory, Stability>, by: string) => set({ stability, saved: { ...state.saved, stability: { by, at: new Date() } } })
+
+export const saveThresholds = (thresholds: Policy, by: string) => { applyThresholds(thresholds); set({ thresholds, saved: { ...state.saved, thresholds: { by, at: new Date() } } }) }
 
 export const markHeadsetsSaved = (by: string) => set({ saved: { ...state.saved, headsets: { by, at: new Date() } } })
 

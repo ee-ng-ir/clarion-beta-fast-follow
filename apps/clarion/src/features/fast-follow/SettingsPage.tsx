@@ -13,8 +13,8 @@ import { ThresholdsSection } from "./settings/ThresholdsSection"
  * One pattern throughout (D9): each tab is a form — change things, then Save.
  * On/off choices are checkboxes, never switches next to Save. Leaving a tab, or
  * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2).
- * Thresholds is read-only: every alert uses IR's thresholds. Custom thresholds
- * aren't in this release; if they come in, where they sit is an IA question (X2).
+ * Thresholds is the original page minus custom thresholds by location (not in
+ * Fast Follow); if they come in, where they sit is an IA question (X2).
  */
 export function SettingsPage() {
   const [tab, setTab] = useState(() => takeSettingsTab() ?? "types")
@@ -63,8 +63,8 @@ export function SettingsPage() {
           <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="devices">Approved headsets <NewDot className="ms-1.5" /></TabsTrigger>
         </TabsList>
-        <TabsContent value="types"><AlertTypesSection onViewThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="thresholds"><ThresholdsSection /></TabsContent>
+        <TabsContent value="types"><AlertTypesSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="thresholds"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="stability"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>

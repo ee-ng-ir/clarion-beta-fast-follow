@@ -153,12 +153,13 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
     const v = sev === "critical" ? (m.lowerIsWorse ? r1(m.crit * (0.4 + r() * 0.5)) : Math.round(m.crit + r() * (100 - m.crit))) : (m.lowerIsWorse ? r1(m.crit + (m.warn - m.crit) * (0.2 + r() * 0.7)) : Math.round(m.warn + r() * (m.crit - m.warn)))
     const threshold = sev === "critical" ? m.crit : m.warn
     // demo agents only get a CPU alert from the widget's "Computer busy" scenario, which has energy saver on
+    const changed = t.id === "cpu" && !isActive
     const energy = t.id === "cpu" && (!!agentByEndpoint(e.id) || rng(e.id + "es")() < 0.8)
     return { ...common,
       summary: `${m.name} at ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold.${energy ? " Energy saver was on." : ""}`,
       whatHappened: `${m.name} reached ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold${isActive ? ` and has stayed there for ${startedMinAgo} minutes` : ""}.${energy ? " Windows energy saver was on when the alert was raised, which throttles the CPU." : ""}`,
       likelyCauseShort: energy ? "energy saver was on" : null,
-      reading: { name: m.name, value: `${v}${m.unit}`, threshold: `${threshold}${m.unit}`, thresholdNow: `${threshold}${m.unit}`, changedSince: false },
+      reading: { name: m.name, value: `${v}${m.unit}`, threshold: `${threshold}${m.unit}`, thresholdNow: changed ? `${threshold + 5}${m.unit}` : `${threshold}${m.unit}`, changedSince: changed },
       main: series(common.id, startedMinAgo, m.lowerIsWorse ? Math.min(60, m.warn * 4) : 42, v, { name: `${m.name} (${m.unit})`, unit: m.unit, warn: m.warn, crit: m.crit, lowerIsWorse: m.lowerIsWorse, min: 0, max: 100 }),
       contributor: null, drivers: [], where: { label: "This PC", detail: "Local to the endpoint. No shared network cause." },
       causes: energy
