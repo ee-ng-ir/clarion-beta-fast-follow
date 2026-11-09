@@ -40,7 +40,7 @@ export interface AlertGroup {
 
 // ---- classify each unhealthy endpoint into one alert type --------------------
 
-function classify(e: Endpoint): string {
+export function classify(e: Endpoint): string {
   const issue = (e.primaryIssue ?? "").toLowerCase()
   const labels = e.events.map((ev) => ev.label.toLowerCase()).join(" | ")
   if (issue.endsWith("down")) return `platform:${e.primaryPlatform}`

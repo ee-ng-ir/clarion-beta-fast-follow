@@ -10,6 +10,7 @@ import { getEndpointDetail } from "@/data/endpointDetail"
 import { formatLastSeen } from "@/lib/utils"
 import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
+import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 
@@ -36,7 +37,9 @@ function IconBtn({ children, label, onClick, disabled }: { children: React.React
   )
 }
 
+// Fast Follow: Alerts (with evidence) comes first
 const TABS = [
+  { id: "alerts", label: "Alerts" },
   { id: "network", label: "Network" },
   { id: "platforms", label: "UC/CC platforms" },
   { id: "devices", label: "Devices" },
@@ -45,6 +48,7 @@ const TABS = [
 
 // Open the drilldown on the tab that gives the device's event its context.
 function eventTab(e?: Endpoint): string {
+  if (e && e.status !== "healthy") return "alerts" // Fast Follow: land on the alert's evidence
   const s = (e?.event ?? e?.primaryIssue ?? "").toLowerCase()
   if (!s) return "network"
   if (/(unreachable|genesys|teams|zoom|webex|cxone|platform)/.test(s)) return "platforms"
@@ -198,6 +202,9 @@ export function EndpointDrawer({
                     className="relative rounded-none border-b-2 border-transparent bg-transparent px-0.5 pb-2.5 text-sm font-medium data-[state=active]:border-[var(--border-focused)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--fg-neutral-emphasis)] data-[state=active]:shadow-none"
                   >
                     {t.label}
+                    {t.id === "alerts" && (e.status === "critical" || e.status === "warning") && (
+                      <span className="ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[10px] font-semibold" style={{ background: e.status === "critical" ? "var(--bg-danger-emphasis)" : "var(--bg-warning-emphasis)", color: "var(--fg-on-danger-emphasis)" }} aria-label="1 active alert">1</span>
+                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -207,6 +214,7 @@ export function EndpointDrawer({
           {/* body */}
           <div className="min-h-px flex-1 overflow-y-auto px-5 py-5" style={{ background: "var(--bg-app)" }}>
             <Tabs value={tab} onValueChange={setTab}>
+              <TabsContent value="alerts"><EndpointAlertsTab key={e.id} endpoint={e} onCloseDrawer={() => onOpenChange(false)} /></TabsContent>
               <TabsContent value="network">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <NetworkTab d={detail} />}</TabsContent>
               <TabsContent value="platforms">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <PlatformsTab d={detail} />}</TabsContent>
               <TabsContent value="devices">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <DevicesTab d={detail} />}</TabsContent>

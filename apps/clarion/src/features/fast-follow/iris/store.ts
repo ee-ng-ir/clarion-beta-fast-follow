@@ -11,8 +11,8 @@ const set = (patch: Partial<State>) => { state = { ...state, ...patch }; subs.fo
 
 export const useIris = () => useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f) } }, () => state)
 
-const sameContext = (a: IrisContext | null, b: IrisContext) =>
-  !!a && a.kind === b.kind && (a.kind === "group" ? a.groupId === (b as typeof a).groupId : a.page === (b as Extract<IrisContext, { kind: "page" }>).page)
+const key = (c: IrisContext) => (c.kind === "group" ? `g:${c.groupId}` : c.kind === "alert" ? `a:${c.alertId}` : `p:${c.page}`)
+const sameContext = (a: IrisContext | null, b: IrisContext) => !!a && key(a) === key(b)
 
 /**
  * Point Iris at something. A change of context is marked in the thread with a

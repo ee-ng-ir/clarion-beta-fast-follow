@@ -109,7 +109,7 @@ export function IrisPanel({
             id="iris-input" ref={inputRef} rows={1} value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder={context?.kind === "group" ? "Ask about this alert group…" : "Ask about your fleet…"}
+            placeholder={context?.kind === "group" ? "Ask about this alert group…" : context?.kind === "alert" ? "Ask about this alert…" : "Ask about your fleet…"}
             aria-describedby="iris-hint" aria-invalid={over}
             className="max-h-32 min-h-9 flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focused)]"
             style={{ background: "var(--bg-input-default)", border: `1px solid ${over ? "var(--border-input-invalid)" : "var(--border-input-default)"}`, color: "var(--fg-neutral-emphasis)" }}
@@ -134,7 +134,7 @@ function ContextBar({ context, page }: { context: IrisContext; page: PageId }) {
       <Layers className="size-3.5 shrink-0" style={{ color: "var(--fg-neutral-muted)" }} aria-hidden />
       <span className="shrink-0 whitespace-nowrap" style={{ color: "var(--fg-neutral-muted)" }}>Looking at</span>
       <span className="min-w-0 truncate font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{context.label}</span>
-      {context.kind === "group" && (
+      {context.kind !== "page" && (
         <button type="button" aria-label="Ask about the whole fleet instead" onClick={() => setContext({ kind: "page", page, label: pageLabel(page) })}
           className="ml-auto shrink-0 rounded px-1.5 py-0.5 underline-offset-2 hover:underline" style={{ color: "var(--fg-link-default)" }}>
           Whole fleet

@@ -7,6 +7,8 @@ import { activeGroups, groupById, NOTIFY_RULES, type AlertGroup } from "../alert
 import { categoryLabel } from "../alerts/catalogue"
 import { ago } from "../alerts/format"
 import type { Answer, IrisContext } from "./types"
+import { endpointById } from "@/data/endpoints"
+import { clockTime, evidenceFor, type EndpointAlert } from "../evidence/evidence"
 
 export type IntentId =
   | "summary" | "check-first" | "elsewhere" | "before" | "worst" | "note"
@@ -21,6 +23,11 @@ const SRC_CATALOGUE = "Clarion alert catalogue"
 
 export function suggestionsFor(ctx: IrisContext | null): Intent[] {
   if (!ctx) return []
+  if (ctx.kind === "alert") return [
+    { id: "check-first", label: "What should I check first?" },
+    { id: "elsewhere", label: "Is this happening elsewhere?" },
+    { id: "before", label: "Has this endpoint had this before?" },
+  ]
   if (ctx.kind === "group") return [
     { id: "check-first", label: "What should I check first?" },
     { id: "elsewhere", label: "Is this happening elsewhere?" },
@@ -40,7 +47,7 @@ function matchText(text: string, ctx: IrisContext): IntentId | "howto-alerts" | 
   if (/productiv|performance review|best agent|worst agent|lazy|monitor (the )?agent/.test(t)) return "out-of-scope"
   if (/(turn|switch) (off|on)|disable|mute|threshold/.test(t)) return "howto-alerts"
   if (/email|notif|told|alert me/.test(t)) return "howto-notify"
-  if (ctx.kind === "group") {
+  if (ctx.kind === "group" || ctx.kind === "alert") {
     if (/first|start|fix|do now|next step|recommend/.test(t)) return "check-first"
     if (/elsewhere|other (site|location)|spread|where/.test(t)) return "elsewhere"
     if (/before|history|again|recur|last week|happened/.test(t)) return "before"
@@ -56,6 +63,13 @@ function matchText(text: string, ctx: IrisContext): IntentId | "howto-alerts" | 
 
 export function answer(ctx: IrisContext, q: Intent | { text: string }): { answer: Answer; thinking: string } {
   const id = "text" in q ? matchText(q.text, ctx) : q.id
+  if (ctx.kind === "alert") {
+    const e = endpointById(ctx.endpointId)
+    const ev = e ? evidenceFor(e) : null
+    const a = ev ? [...ev.active, ...ev.cleared].find((x) => x.id === ctx.alertId) : undefined
+    if (!e || !ev || !a) return { answer: missing(), thinking: "Looking for this alert…" }
+    return { answer: alertAnswer(id, a, e.user, ev.cleared, ev.offlineSinceMin), thinking: `Reading the evidence for ${e.user}'s alert…` }
+  }
   if (ctx.kind === "group") {
     const g = groupById(ctx.groupId)
     if (!g) return { answer: missing(), thinking: "Looking for this alert group…" }
@@ -105,8 +119,8 @@ function groupAnswer(id: string, g: AlertGroup, ctx: IrisContext): Answer {
       const past = pastOccurrences(g)
       return { ...base, basis: "data",
         paragraphs: g.recurrenceThisWeek > 1
-          ? [`Yes. This is the ${ordinal(g.recurrenceThisWeek)} time ${g.type.warning.toLowerCase()} has opened a group this week. Earlier ones:`]
-          : [`Not this week. It's the first ${g.type.warning.toLowerCase()} group in the last 7 days. Clarion keeps ${RETENTION_DAYS} days of alert history (to confirm), and history starts from the day Fast Follow is switched on.`],
+          ? [`Yes. This is the ${ordinal(g.recurrenceThisWeek)} time a “${g.type.warning}” group has opened this week. Earlier ones:`]
+          : [`Not this week. It's the first “${g.type.warning}” group in the last 7 days. Clarion keeps ${RETENTION_DAYS} days of alert history (to confirm), and history starts from the day Fast Follow is switched on.`],
         facts: past }
     }
     case "worst": {
@@ -163,6 +177,52 @@ function pastOccurrences(g: AlertGroup) {
     const seed = (g.id.length * 7 + i * 13) % 50
     return { label: `${days[(i * 2) % 5]} ${8 + (seed % 9)}:${String((seed * 7) % 60).padStart(2, "0")} am`, value: `${4 + (seed % 20)} endpoints · lasted ${10 + (seed % 40)} min · ${g.locations[i % g.locations.length]?.name ?? "—"}` }
   })
+}
+
+// ---- one endpoint's alert ----------------------------------------------------------
+
+function alertAnswer(id: string, a: EndpointAlert, user: string, cleared: EndpointAlert[], offlineSince: number | null): Answer {
+  const base = { asOf: now(), sources: [SRC_ALERTS] }
+  const group = a.groupId ? groupById(a.groupId) : undefined
+  switch (id) {
+    case "summary": {
+      const top = a.causes[0]
+      return { ...base, basis: "data",
+        paragraphs: [
+          a.whatHappened,
+          top ? `Most likely cause: ${top.title}. ${top.why}` : "",
+          offlineSince !== null ? "The endpoint has since stopped reporting, so nothing after that is captured." : "",
+        ].filter(Boolean),
+        facts: [
+          ...(a.reading ? [{ label: a.reading.name, value: `${a.reading.value} (threshold ${a.reading.threshold} at the time)` }] : []),
+          { label: "Started", value: clockTime(a.startedMinAgo) },
+          ...(a.where ? [{ label: "Where", value: `${a.where.label}: ${a.where.detail}` }] : []),
+        ] }
+    }
+    case "check-first":
+      return { ...base, basis: "catalogue", sources: [SRC_ALERTS, SRC_CATALOGUE],
+        paragraphs: [`For ${user}'s “${a.title}” alert, start here. Steps come from the alert catalogue, matched to this alert's evidence.`],
+        steps: a.steps }
+    case "elsewhere":
+      return group
+        ? { ...base, basis: "data",
+            paragraphs: [`Yes. ${user} is one of ${group.endpoints.length} endpoints in the ${group.title} group, across ${group.locations.length} location${group.locations.length === 1 ? "" : "s"}.`],
+            facts: group.locations.slice(0, 4).map((l) => ({ label: l.name, value: `${l.count} endpoints` })),
+            links: [{ label: `Open ${group.title}`, link: { kind: "group", id: group.id } }] }
+        : { ...base, basis: "data", paragraphs: [a.active ? "No. This alert is only on this endpoint right now." : "This alert has cleared, so there's no live group to compare with."] }
+    case "before": {
+      const same = cleared.filter((c) => c.type.id === a.type.id && c.id !== a.id)
+      return { ...base, basis: "data",
+        paragraphs: same.length
+          ? [`Yes, ${same.length} time${same.length === 1 ? "" : "s"} in the last 7 days:`]
+          : [`Not in the last 7 days. ${cleared.length ? `This endpoint did have ${cleared.length} other alert${cleared.length === 1 ? "" : "s"}:` : "It had no other alerts either."}`],
+        facts: (same.length ? same : cleared).map((c) => ({ label: `${c.title} · ${clockTime(c.startedMinAgo)}`, value: `lasted ${c.lastedMin} min` })) }
+    }
+    case "howto-alerts": return howTo("alerts")
+    case "howto-notify": return howTo("notify")
+    case "out-of-scope": return outOfScope()
+    default: return unknown(null)
+  }
 }
 
 // ---- page context ----------------------------------------------------------------

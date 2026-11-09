@@ -15,6 +15,7 @@ import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
 import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
 import { openGroup } from "@/features/fast-follow/alerts/store"
 import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
+import { setNavigator } from "@/features/fast-follow/navigator"
 import { PreviewMarker } from "@/features/fast-follow/PreviewMarker"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
@@ -127,6 +128,7 @@ export default function App() {
   // Navigating to another page closes any open drawer (a drilldown belongs to
   // the page it was opened from).
   const navigate = (p: PageId) => { setDrawer(null); setAlertDrawer(null); setPage(p) }
+  setNavigator(navigate) // Fast Follow: lets drawers and Iris change page
 
   const handleViewEndpoints = (loc?: string | string[]) => {
     if (Array.isArray(loc)) setEndpointFilters(loc)

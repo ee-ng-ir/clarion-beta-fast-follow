@@ -4,6 +4,7 @@ import type { PageId } from "@/nav"
 export type IrisContext =
   | { kind: "group"; groupId: string; label: string }
   | { kind: "page"; page: PageId; label: string }
+  | { kind: "alert"; endpointId: string; alertId: string; label: string }
 
 /** "product" = about Clarion itself (where a setting lives), not about the customer's data */
 export type Basis = "data" | "catalogue" | "product" | "none"
