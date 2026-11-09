@@ -3,6 +3,7 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogH
 import { ThresholdsPage } from "@/pages/ThresholdsPage"
 import { ComingSoon } from "./ComingSoon"
 import { NewDot } from "./ExploringTag"
+import { setLeaveGuard } from "./navigator"
 import { AlertTypesSection } from "./settings/AlertTypesSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
 import { StabilitySection } from "./settings/StabilitySection"
@@ -10,15 +11,22 @@ import { StabilitySection } from "./settings/StabilitySection"
 /**
  * Settings: the top-level home for everything an IT Admin configures in Clarion.
  * One pattern throughout (D9): each tab is a form — change things, then Save.
- * On/off choices are checkboxes, never switches next to Save. Leaving a tab with
- * unsaved changes asks first. Hierarchy is still a draft (X2). Thresholds is the
+ * On/off choices are checkboxes, never switches next to Save. Leaving a tab, or
+ * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2). Thresholds is the
  * existing Clarion page (not yet on Picasso: P2).
  */
 export function SettingsPage() {
   const [tab, setTab] = useState("types")
   const [dirty, setDirty] = useState(false)
-  const [pending, setPending] = useState<string | null>(null)
+  // what's waiting on "Discard unsaved changes?": another tab, or another page
+  const [pending, setPending] = useState<{ tab: string } | { proceed: () => void } | null>(null)
   const onDirtyChange = useCallback((d: boolean) => setDirty(d), [])
+
+  // leaving Settings for another page with unsaved changes asks first
+  useEffect(() => {
+    setLeaveGuard(dirty ? (proceed) => { setPending({ proceed }); return true } : null)
+    return () => setLeaveGuard(null)
+  }, [dirty])
 
   // closing the browser tab with unsaved changes asks too
   useEffect(() => {
@@ -30,11 +38,19 @@ export function SettingsPage() {
 
   const go = (next: string) => {
     if (next === tab) return
-    if (dirty) setPending(next)
+    if (dirty) setPending({ tab: next })
     else setTab(next)
   }
   // leaving a tab unmounts its form, which drops its draft
-  const discardAndGo = () => { if (pending) { setDirty(false); setTab(pending) } setPending(null) }
+  const discardAndGo = () => {
+    const p = pending
+    setPending(null)
+    setDirty(false)
+    setLeaveGuard(null)
+    if (!p) return
+    if ("tab" in p) setTab(p.tab)
+    else p.proceed()
+  }
 
   return (
     <>

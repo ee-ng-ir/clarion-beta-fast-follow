@@ -4,3 +4,11 @@ import type { PageId } from "@/nav"
 let go: ((p: PageId) => void) | null = null
 export const setNavigator = (fn: (p: PageId) => void) => { go = fn }
 export const goTo = (p: PageId) => go?.(p)
+
+// A page with unsaved changes can hold a page change: the guard gets the
+// navigation to run later and returns true if it's holding it (e.g. showing a
+// "Discard unsaved changes?" dialog). Settings uses this (D9).
+type LeaveGuard = (proceed: () => void) => boolean
+let guard: LeaveGuard | null = null
+export const setLeaveGuard = (g: LeaveGuard | null) => { guard = g }
+export const guarded = (navigate: () => void) => { if (guard?.(navigate)) return; navigate() }
