@@ -39,7 +39,7 @@ export function TrendsDashboard() {
   const lines = st.locations.slice(0, MAX_LINES)
 
   const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? ALERT_TYPES.find((t) => t.id === st.types[0])!.warning : `${st.types.length} alerts`
-  const summary = series.map((s) => { const d = direction(s.points); return d ? `${s.label}: ${d}` : null }).filter(Boolean).join(" · ")
+  const summary = series.map((s) => { const d = direction(s.points); return d ? (s.id === "all" ? d : `${s.label}: ${d}`) : null }).filter(Boolean).join(" · ")
 
   const exportCsv = () => downloadCsv(`Alert-trends_${what}_last-${st.days}-days`,
     ["Alert trends", `${what} · ${MEASURE_LABEL[st.measure]} per week`, `Last ${wk.length} weeks (${fmtWeeks(st.days)})`, COUNTING_NOTE],
@@ -64,7 +64,7 @@ export function TrendsDashboard() {
         <CardHeader>
           <CardHeaderText>
             <CardTitle>{what}</CardTitle>
-            <CardDescription>{summary ? `Over ${st.days} days, ${summary}.` : `Over ${st.days} days.`}</CardDescription>
+            <CardDescription>{summary ? `Over ${st.days} days${lines.length ? ", " : ": "}${summary}.` : `Over ${st.days} days.`}</CardDescription>
           </CardHeaderText>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

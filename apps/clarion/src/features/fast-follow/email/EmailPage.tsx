@@ -15,7 +15,7 @@ const WIDTH = { desktop: 600, phone: 375 } as const
  */
 export function EmailPage() {
   const [rules] = useState(() => readPreviewRules() ?? getSettings().notify)
-  const [width, setWidth] = useState<keyof typeof WIDTH>("desktop")
+  const [width, setWidth] = useState<keyof typeof WIDTH>(() => (window.innerWidth < 640 ? "phone" : "desktop"))
   const [height, setHeight] = useState(900)
   const frame = useRef<HTMLIFrameElement>(null)
   const group = useMemo(() => activeGroups().filter((g) => g.severity === "critical").sort((a, b) => b.endpoints.length - a.endpoints.length)[0] ?? null, [])
