@@ -15,9 +15,9 @@ import { RETENTION_DAYS } from "../iris/answers"
 import { clockTime, evidenceFor, type EndpointAlert, type Likelihood } from "./evidence"
 import { TrendChart } from "./TrendChart"
 
-type Filter = "all" | "active" | "cleared"
+type Filter = "all" | "active" | "history"
 
-/** Endpoint › Alerts: active and recently cleared alerts, each opening its evidence. */
+/** Endpoint › Alerts: active alerts and the history of ones that have ended, each opening its evidence. */
 export function EndpointAlertsTab({ endpoint, onCloseDrawer }: { endpoint: Endpoint; onCloseDrawer: () => void }) {
   const ev = useMemo(() => evidenceFor(endpoint), [endpoint])
   const [filter, setFilter] = useState<Filter>("all")
@@ -27,7 +27,7 @@ export function EndpointAlertsTab({ endpoint, onCloseDrawer }: { endpoint: Endpo
 
   if (current) return <AlertDetail a={current} endpoint={endpoint} offlineSinceMin={ev.offlineSinceMin} onBack={() => setOpenId(null)} onCloseDrawer={onCloseDrawer} />
 
-  const active = filter !== "cleared" ? ev.active : []
+  const active = filter !== "history" ? ev.active : []
   const cleared = filter !== "active" ? ev.cleared : []
   return (
     <div className="flex flex-col gap-3">
@@ -40,12 +40,12 @@ export function EndpointAlertsTab({ endpoint, onCloseDrawer }: { endpoint: Endpo
       <SegmentedControl aria-label="Filter alerts" size="sm" value={filter} onValueChange={(v) => v && setFilter(v as Filter)} className="self-start">
         <SegmentedControlItem value="all">All</SegmentedControlItem>
         <SegmentedControlItem value="active">Active · {ev.active.length}</SegmentedControlItem>
-        <SegmentedControlItem value="cleared">Cleared · {ev.cleared.length}</SegmentedControlItem>
+        <SegmentedControlItem value="history">History · {ev.cleared.length}</SegmentedControlItem>
       </SegmentedControl>
 
       {active.length > 0 && <ListHeading>Active</ListHeading>}
       {active.map((a) => <AlertCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />)}
-      {cleared.length > 0 && <ListHeading>Cleared · last 7 days</ListHeading>}
+      {cleared.length > 0 && <ListHeading>History · last 7 days</ListHeading>}
       {cleared.map((a) => <AlertCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />)}
       {active.length + cleared.length === 0 && (
         <EmptyState size="sm" illustration="issue-alerts" title="No alerts" description={filter === "active" ? "Nothing is wrong on this endpoint right now." : "No alerts on this endpoint in the last 7 days."} />
@@ -72,7 +72,7 @@ function AlertCard({ a, onOpen }: { a: EndpointAlert; onOpen: () => void }) {
             className="rounded-xs text-start text-label-lg text-content-neutral-emphasis outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-line-focused">
             {a.title}
           </button>
-          {!a.active && <Badge>Cleared</Badge>}
+          {!a.active && <Badge>Ended</Badge>}
           <ChevronRight className="ms-auto size-4 text-content-neutral-muted" aria-hidden />
         </span>
         <span className="text-body-md text-content-neutral-emphasis">{a.summary}</span>
@@ -106,7 +106,7 @@ function AlertDetail({ a, endpoint, offlineSinceMin, onBack, onCloseDrawer }: {
           <CardTitle className="flex flex-wrap items-center gap-2">
             <Badge color={sevBadge[a.severity]}>{sevLabel[a.severity]}</Badge>
             {a.title}
-            {!a.active && <Badge>Cleared</Badge>}
+            {!a.active && <Badge>Ended</Badge>}
           </CardTitle>
           <CardAction className="flex items-center gap-2">
             <Button size="sm" onClick={investigate}><Sparkles aria-hidden /> Investigate with Iris</Button>

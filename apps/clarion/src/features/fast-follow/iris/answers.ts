@@ -209,7 +209,7 @@ function alertAnswer(id: string, a: EndpointAlert, user: string, cleared: Endpoi
             paragraphs: [`Yes. ${user} is one of ${group.endpoints.length} endpoints in the ${group.title} group, across ${group.locations.length} location${group.locations.length === 1 ? "" : "s"}.`],
             facts: group.locations.slice(0, 4).map((l) => ({ label: l.name, value: `${l.count} endpoints` })),
             links: [{ label: `Open ${group.title}`, link: { kind: "group", id: group.id } }] }
-        : { ...base, basis: "data", paragraphs: [a.active ? "No. This alert is only on this endpoint right now." : "This alert has cleared, so there's no live group to compare with."] }
+        : { ...base, basis: "data", paragraphs: [a.active ? "No. This alert is only on this endpoint right now." : "This alert has ended, so there's no live group to compare with."] }
     case "before": {
       const same = cleared.filter((c) => c.type.id === a.type.id && c.id !== a.id)
       return { ...base, basis: "data",
