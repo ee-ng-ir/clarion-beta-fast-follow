@@ -3,7 +3,7 @@
 // the page (Iris finding E1, E2, F1). When Iris doesn't have the data, it says so
 // instead of guessing (F2, F3) or widening the scope (E7).
 
-import { activeGroups, groupById, NOTIFY_RULES, type AlertGroup } from "../alerts/groups"
+import { activeGroups, groupById, notifyRules, type AlertGroup } from "../alerts/groups"
 import { categoryLabel } from "../alerts/catalogue"
 import { ago } from "../alerts/format"
 import type { Answer, IrisContext } from "./types"
@@ -260,7 +260,7 @@ function howTo(which: "alerts" | "notify"): Answer {
         paragraphs: ["Alert types are turned on or off, and their thresholds set, in Settings › Alerts and thresholds. Turning one off stops the alert, not the data: readings still show in endpoint detail."],
         links: [{ label: "Open Settings", link: { kind: "page", page: "settings" } }] }
     : { basis: "product", asOf: now(), sources: [],
-        paragraphs: [`Proactive emails are set in Settings › Notifications. By default a Critical group emails your list when it reaches ${NOTIFY_RULES.minEndpoints} endpoints or lasts ${NOTIFY_RULES.minMinutes} minutes, at most once every ${NOTIFY_RULES.cooldownMin} minutes.`],
+        paragraphs: [`Proactive emails are set in Settings › Notifications. Right now a Critical group emails your list when it reaches ${notifyRules().minEndpoints} endpoints or lasts ${notifyRules().minMinutes} minutes, at most once every ${notifyRules().cooldownMin} minutes.`],
         links: [{ label: "Open Settings", link: { kind: "page", page: "settings" } }] }
 }
 

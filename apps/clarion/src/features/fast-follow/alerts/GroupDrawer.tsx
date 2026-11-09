@@ -10,7 +10,7 @@ import type { Endpoint } from "@/data/endpoints"
 import { ExploringTag } from "../ExploringTag"
 import { openIris } from "../iris/store"
 import { categoryLabel } from "./catalogue"
-import { NOTIFY_RULES, type AlertGroup } from "./groups"
+import { notifyRules, type AlertGroup } from "./groups"
 import { ago, duration } from "./format"
 import { AlertIcon, EnergySaverBadge, NotifiedBadge, SeveritySplit } from "./bits"
 import { sevBadge, sevLabel } from "./tone"
@@ -116,12 +116,12 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                 {g.notifiedMinAgo !== null ? (
                   <p className="flex items-start gap-2 text-body-md text-content-neutral-emphasis">
                     <BellRing className="mt-0.5 size-4 shrink-0 text-content-info-emphasis" aria-hidden />
-                    <span>Emailed the service desk {ago(g.notifiedMinAgo)} ({g.notifiedReason}). No more emails about this group for {NOTIFY_RULES.cooldownMin} minutes, however much it grows.</span>
+                    <span>Emailed the service desk {ago(g.notifiedMinAgo)} ({g.notifiedReason}). No more emails about this group for {notifyRules().cooldownMin} minutes, however much it grows.</span>
                   </p>
                 ) : (
                   <p className="flex items-start gap-2 text-body-md text-content-neutral-muted">
                     <BellOff className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    <span>Not emailed. {g.severity === "warning" ? "Only Critical groups send emails in this release." : `It hasn't reached ${NOTIFY_RULES.minEndpoints} endpoints or lasted ${NOTIFY_RULES.minMinutes} minutes.`}</span>
+                    <span>Not emailed. {g.severity === "warning" ? "Only Critical groups send emails in this release." : !notifyRules().enabled || !notifyRules().recipients.length ? "Proactive notifications are off for this tenancy." : `It hasn't reached ${notifyRules().minEndpoints} endpoints or lasted ${notifyRules().minMinutes} minutes.`}</span>
                   </p>
                 )}
               </CardContent>

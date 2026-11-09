@@ -7,6 +7,7 @@
 import type { Endpoint } from "@/data/endpoints"
 import { alertType, type AlertType } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
+import { isTypeOn } from "../settings/store"
 
 export type Severity = "critical" | "warning"
 export type Likelihood = "Most likely" | "Possible" | "Less likely"
@@ -70,7 +71,8 @@ const platforms = ["Genesys Cloud", "Microsoft Teams", "Zoom", "Webex", "Nice CX
 export function evidenceFor(e: Endpoint): { active: EndpointAlert[]; cleared: EndpointAlert[]; offlineSinceMin: number | null } {
   const offline = e.status === "offline"
   const active: EndpointAlert[] = []
-  if (e.status === "critical" || e.status === "warning") active.push(build(e, classify(e), e.status, true, e.eventAgo ?? 12))
+  // a turned-off alert type raises nothing; its readings still show in the other tabs
+  if ((e.status === "critical" || e.status === "warning") && isTypeOn(classify(e))) active.push(build(e, classify(e), e.status, true, e.eventAgo ?? 12))
   // cleared alerts from the last 7 days (seeded)
   const r = rng(e.id + "hist")
   const n = Math.floor(r() * 3) + (offline ? 1 : 0)
@@ -206,6 +208,9 @@ function snapshot(e: Endpoint, signal: number, r: () => number, at: number): End
     ],
   }
 }
+
+/** Active alerts on an endpoint (0 or 1 in the demo), respecting turned-off types. */
+export const activeAlertCount = (e: Endpoint) => ((e.status === "critical" || e.status === "warning") && isTypeOn(classify(e)) ? 1 : 0)
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 const ssid = (e: Endpoint) => (e.site === "Office" ? `${e.locationName.split(" ")[0].toUpperCase()}-CORP` : `HOME-${e.machine.slice(-4)}`)

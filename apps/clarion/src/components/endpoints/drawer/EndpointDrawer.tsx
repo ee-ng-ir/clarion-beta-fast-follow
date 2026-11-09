@@ -12,6 +12,7 @@ import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
 import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
 import { Badge } from "@ir/ui"
+import { activeAlertCount } from "@/features/fast-follow/evidence/evidence"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 
@@ -203,7 +204,7 @@ export function EndpointDrawer({
                     className="relative rounded-none border-b-2 border-transparent bg-transparent px-0.5 pb-2.5 text-sm font-medium data-[state=active]:border-[var(--border-focused)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--fg-neutral-emphasis)] data-[state=active]:shadow-none"
                   >
                     {t.label}
-                    {t.id === "alerts" && (e.status === "critical" || e.status === "warning") && (
+                    {t.id === "alerts" && activeAlertCount(e) > 0 && (
                       <Badge color={e.status === "critical" ? "danger" : "warning"} variant="emphasis" className="ms-1.5" aria-label="1 active alert">1</Badge>
                     )}
                   </TabsTrigger>

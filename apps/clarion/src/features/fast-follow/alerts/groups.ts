@@ -5,6 +5,7 @@
 
 import { endpoints, type Endpoint } from "@/data/endpoints"
 import { ALERT_TYPES, alertType, type AlertType } from "./catalogue"
+import { getSettings, isTypeOn } from "../settings/store"
 
 export type Severity = "critical" | "warning"
 
@@ -63,12 +64,14 @@ const seeded = (key: string, min: number, max: number) => min + (hash(key) % (ma
 
 // ---- significance rule for proactive notifications (A7 defaults, to confirm) --
 
-export const NOTIFY_RULES = { minEndpoints: 20, minMinutes: 15, cooldownMin: 60 }
+/** The tenancy's saved notification rules (Settings › Notifications). */
+export const notifyRules = () => getSettings().notify
 
 function notification(sev: Severity, n: number, firstSeen: number): { at: number | null; why: string | null } {
-  if (sev !== "critical") return { at: null, why: null }
-  if (n >= NOTIFY_RULES.minEndpoints) return { at: Math.max(1, firstSeen - 7), why: `${NOTIFY_RULES.minEndpoints} or more endpoints affected` }
-  if (firstSeen > NOTIFY_RULES.minMinutes) return { at: firstSeen - NOTIFY_RULES.minMinutes, why: `Critical for longer than ${NOTIFY_RULES.minMinutes} minutes` }
+  const r = notifyRules()
+  if (sev !== "critical" || !r.enabled || r.recipients.length === 0) return { at: null, why: null }
+  if (n >= r.minEndpoints) return { at: Math.max(1, firstSeen - 7), why: `${r.minEndpoints} or more endpoints affected` }
+  if (firstSeen > r.minMinutes) return { at: firstSeen - r.minMinutes, why: `Critical for longer than ${r.minMinutes} minutes` }
   return { at: null, why: null }
 }
 
@@ -121,11 +124,13 @@ let cacheKey = -1
 
 /** Active alert groups, highest Top-issues score first. Pass the feed version to rebuild on live changes. */
 export function activeGroups(version = 0): AlertGroup[] {
-  if (cache && cacheKey === version) return cache
+  const key = version * 100000 + getSettings().version
+  if (cache && cacheKey === key) return cache
   const byType = new Map<string, Endpoint[]>()
   for (const e of endpoints) {
     if (e.status !== "critical" && e.status !== "warning") continue
     const id = classify(e)
+    if (!isTypeOn(id)) continue // turned off: no alert, no group, no email (the data still shows)
     if (!byType.has(id)) byType.set(id, [])
     byType.get(id)!.push(e)
   }
@@ -157,7 +162,7 @@ export function activeGroups(version = 0): AlertGroup[] {
     groups.push(g)
   }
   cache = groups.sort((a, b) => b.score - a.score)
-  cacheKey = version
+  cacheKey = key
   return cache
 }
 
@@ -169,7 +174,7 @@ export function closedGroups(): AlertGroup[] {
       id: `grp-closed-${typeId}`, type, title: type.critical, severity: "critical", counts: { critical: 0, warning: 0 },
       endpoints: [], locations: [{ id: loc.toLowerCase(), name: loc, count: peak }], firstSeenMinAgo: minutesAgo + lastedMin,
       lastSeenMinAgo: minutesAgo, recurrenceThisWeek: 1, recoveredSoFar: peak, energySaverOn: 0, notifiedMinAgo: minutesAgo + lastedMin - 7,
-      notifiedReason: `${NOTIFY_RULES.minEndpoints} or more endpoints affected`, evidence: "", score: 0,
+      notifiedReason: `${notifyRules().minEndpoints} or more endpoints affected`, evidence: "", score: 0,
       reason: `Peaked at ${peak} endpoints · lasted ${lastedMin} min`, closed: { minutesAgo, lastedMin, peak },
     }
   }
