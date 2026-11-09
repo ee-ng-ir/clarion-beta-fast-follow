@@ -36,7 +36,8 @@ export function ThresholdsSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
         <Alert variant="info"><AlertDescription>Read-only. Thresholds are set by administrators with access to every location.</AlertDescription></Alert>
       )}
       <Card className="@container gap-0 overflow-hidden">
-        <CardHeader>
+        {/* the card's gap is off so the rows run edge to edge; the header needs its own bottom padding back */}
+        <CardHeader className="items-center pb-6">
           <CardHeaderText>
             <CardTitle>Threshold settings</CardTitle>
             <CardDescription>Applies to every endpoint</CardDescription>

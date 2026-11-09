@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
+import { Alert, AlertDescription, Badge, Button, Card, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
 import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
@@ -46,11 +46,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
   const toggle = (id: string, on: boolean) => { setConfirmation(null); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
 
   return (
-    <div className="flex w-full max-w-content-reading flex-col gap-gutter">
-      <p className="text-body-md text-content-neutral-muted">
-        Applies to every endpoint. All alert types are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail, and its thresholds are kept for when you turn it back on.
-      </p>
-
+    <div className="flex w-full flex-col gap-gutter">
       {off.length > 0 && (
         <Alert variant="warning">
           <AlertDescription>
@@ -59,20 +55,27 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
         </Alert>
       )}
 
-      {categories.map((c) => (
-        <Card key={c} size="sm">
-          <CardHeader>
-            <CardHeaderText>
-              <CardTitle>{categoryLabel[c]}</CardTitle>
-              {c === "platform" && <CardDescription>Each platform is set separately, so Teams can stay on while Zoom is off.</CardDescription>}
-            </CardHeaderText>
-          </CardHeader>
-          <CardContent className="flex flex-col divide-y divide-line-neutral-subtle">
+      {/* same structure as Thresholds: one card, category rows, edge-to-edge rows */}
+      <Card className="@container gap-0 overflow-hidden">
+        <CardHeader className="pb-6">
+          <CardHeaderText>
+            <CardTitle>Alert types</CardTitle>
+            <CardDescription>
+              Applies to every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail, and its thresholds are kept for when you turn it back on.
+            </CardDescription>
+          </CardHeaderText>
+        </CardHeader>
+        {categories.map((c) => (
+          <section key={c} aria-label={categoryLabel[c]}>
+            <div className="flex flex-col gap-0.5 border-t border-line-neutral-subtle px-6 py-3">
+              <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
+              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">Each platform is set separately, so Teams can stay on while Zoom is off.</p>}
+            </div>
             {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
               const on = !off.includes(t.id)
               const n = affected.get(t.id) ?? 0
               return (
-                <div key={t.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                <div key={t.id} className="flex items-center gap-4 border-t border-line-neutral-subtle px-6 py-4">
                   <FieldOption
                     className="min-w-0 flex-1"
                     control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
@@ -80,13 +83,13 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                   >
                     {t.warning} · {t.critical}
                   </FieldOption>
-                  {n > 0 && <Badge color={on ? "warning" : "neutral"} className="shrink-0">{on ? `${n} alerting now` : `${n} would alert`}</Badge>}
+                  {n > 0 && <Badge className="ms-auto shrink-0">{on ? `${n} alerting now` : `${n} would alert`}</Badge>}
                 </div>
               )
             })}
-          </CardContent>
-        </Card>
-      ))}
+          </section>
+        ))}
+      </Card>
 
       <SectionFooter
         saved={savedLine(settings.saved.types)}
