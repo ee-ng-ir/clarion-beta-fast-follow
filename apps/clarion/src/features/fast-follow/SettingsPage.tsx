@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
 import { NewDot } from "./ExploringTag"
-import { setLeaveGuard, takeSettingsTab } from "./navigator"
+import { clearSettingsTab, setLeaveGuard, takeSettingsTab } from "./navigator"
 import { AlertTypesSection } from "./settings/AlertTypesSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
 import { StabilitySection } from "./settings/StabilitySection"
@@ -19,6 +19,7 @@ import { ThresholdsSection } from "./settings/ThresholdsSection"
 export function SettingsPage() {
   const [tab, setTab] = useState(() => takeSettingsTab() ?? "types")
   const [dirty, setDirty] = useState(false)
+  useEffect(() => clearSettingsTab(), [])
   // what's waiting on "Discard unsaved changes?": another tab, or another page
   const [pending, setPending] = useState<{ tab: string } | { proceed: () => void } | null>(null)
   const onDirtyChange = useCallback((d: boolean) => setDirty(d), [])

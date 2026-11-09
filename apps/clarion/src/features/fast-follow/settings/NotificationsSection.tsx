@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Mail } from "lucide-react"
+import { ArrowUpRight, Mail } from "lucide-react"
 import {
   Alert, AlertDescription, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption, Input, NumberInput, TagsInput,
@@ -8,7 +8,7 @@ import { useViewer } from "@/lib/viewer"
 import { activeGroups } from "../alerts/groups"
 import { IR_DEFAULT_NOTIFY, saveNotify, savedLine, useSettings, type NotifySettings } from "./store"
 import { SectionFooter } from "./SectionFooter"
-import { EmailPreview } from "./EmailPreview"
+import { stashPreviewRules } from "../email/template"
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
 const clock = (minAgo: number) => new Date(Date.now() - minAgo * 60000).toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })
@@ -23,7 +23,6 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
   const { person } = useViewer()
   const [draft, setDraft] = useState<NotifySettings>(settings.notify)
   const [itReports, setItReports] = useState(settings.itReports)
-  const [preview, setPreview] = useState(false)
   const [testSent, setTestSent] = useState<string | null>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || itReports !== settings.itReports
   const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setTestSent(null); setConfirmation(null) }
@@ -83,7 +82,9 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
               onClick={() => setTestSent(draft.recipients.join(", "))}>
               <Mail aria-hidden /> Send test email
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setPreview(true)}>Preview the email</Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/email" target="_blank" rel="noopener" onClick={() => stashPreviewRules(draft)}>Preview the email <ArrowUpRight aria-hidden /></a>
+            </Button>
           </div>
           {testSent && (
             <Alert variant="success" onDismiss={() => setTestSent(null)} dismissLabel="Dismiss">
@@ -147,7 +148,6 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
         confirmation={confirmation}
       />
 
-      <EmailPreview group={example.biggest} rules={draft} open={preview} onOpenChange={setPreview} />
     </div>
   )
 }

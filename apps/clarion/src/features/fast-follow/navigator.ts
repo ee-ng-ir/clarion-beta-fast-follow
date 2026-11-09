@@ -16,4 +16,7 @@ export const guarded = (navigate: () => void) => { if (guard?.(navigate)) return
 // Fast Follow: open Settings on a given tab (e.g. Dashboards → Approved headsets)
 let settingsTab: string | null = null
 export const goToSettings = (tab: string) => { settingsTab = tab; goTo("settings") }
-export const takeSettingsTab = () => { const t = settingsTab; settingsTab = null; return t }
+/** On page load (a ?tab= link), without navigating. */
+export const goToSettingsOnLoad = (tab: string) => { settingsTab = tab }
+export const takeSettingsTab = () => settingsTab
+export const clearSettingsTab = () => { settingsTab = null }
