@@ -46,6 +46,10 @@ export function classify(e: Endpoint): string {
   const labels = e.events.map((ev) => ev.label.toLowerCase()).join(" | ")
   if (issue.endsWith("down")) return `platform:${e.primaryPlatform}`
   if (e.status === "critical" && /headset disconnected|audio device|usb audio/.test(labels)) return "audio-device"
+  // live widget agents report what the widget saw, in its own words
+  if (/\bcpu\b/.test(labels)) return "cpu"
+  if (/memory/.test(labels)) return "memory"
+  if (/disk|storage/.test(labels)) return "storage"
   // The generated data only carries network causes, so a stable ~30% of warning
   // endpoints are given system alerts (CPU, storage, memory, battery) for the demo.
   if (e.status === "warning") {

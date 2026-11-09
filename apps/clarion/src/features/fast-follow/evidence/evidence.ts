@@ -4,6 +4,7 @@
 // alert was raised (rule 2) and says plainly what wasn't captured (rule 3).
 // Synthetic but seeded from the endpoint, so the demo is stable.
 
+import { agentByEndpoint } from "@ir/telemetry"
 import type { Endpoint } from "@/data/endpoints"
 import { alertType, type AlertType } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
@@ -151,7 +152,8 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
     const m = t.metric
     const v = sev === "critical" ? (m.lowerIsWorse ? r1(m.crit * (0.4 + r() * 0.5)) : Math.round(m.crit + r() * (100 - m.crit))) : (m.lowerIsWorse ? r1(m.crit + (m.warn - m.crit) * (0.2 + r() * 0.7)) : Math.round(m.warn + r() * (m.crit - m.warn)))
     const threshold = sev === "critical" ? m.crit : m.warn
-    const energy = t.id === "cpu" && (rng(e.id + "es")() < 0.8)
+    // demo agents only get a CPU alert from the widget's "Computer busy" scenario, which has energy saver on
+    const energy = t.id === "cpu" && (!!agentByEndpoint(e.id) || rng(e.id + "es")() < 0.8)
     return { ...common,
       summary: `${m.name} at ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold.${energy ? " Energy saver was on." : ""}`,
       whatHappened: `${m.name} reached ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold${isActive ? ` and has stayed there for ${startedMinAgo} minutes` : ""}.${energy ? " Windows energy saver was on when the alert was raised, which throttles the CPU." : ""}`,

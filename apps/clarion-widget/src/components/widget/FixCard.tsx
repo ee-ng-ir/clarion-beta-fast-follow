@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { X, CircleAlert, TriangleAlert, Send } from "lucide-react"
+import { X, CircleAlert, TriangleAlert, Send, BatteryLow } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Status } from "@/data/widget"
 
@@ -15,11 +15,14 @@ export function FixCard({
   status,
   title,
   description,
+  cause,
   onSendToIt,
 }: {
   status: Status
   title: string
   description: string
+  /** Fast Follow: the likely cause, named only — e.g. "Energy saver is on, which can slow your computer." */
+  cause?: string
   /** When provided (platform alerts), shows a neutral "Send to IT" button. Clicking it does NOT dismiss the alert. */
   onSendToIt?: () => void
 }) {
@@ -51,6 +54,12 @@ export function FixCard({
         </button>
       </div>
       <div className="mt-1 text-xs leading-snug" style={{ color: "var(--fg-neutral-muted)" }}>{description}</div>
+      {cause && (
+        <div className="mt-1.5 flex items-start gap-1.5 text-xs font-medium leading-snug" style={{ color: "var(--fg-neutral-emphasis)" }}>
+          <BatteryLow className="mt-px size-3.5 shrink-0" aria-hidden />
+          <span><span className="sr-only">Likely cause: </span>{cause}</span>
+        </div>
+      )}
       <div className="mt-2.5 flex items-center gap-2">
         {onSendToIt && (
           // Neutral-emphasis DS button (bg.neutral.emphasis / fg.on.neutral-emphasis). Does not dismiss the alert.

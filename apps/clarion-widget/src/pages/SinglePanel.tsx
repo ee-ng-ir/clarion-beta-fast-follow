@@ -25,7 +25,7 @@ interface RowData {
   name: string
   detail: string
   status: Status
-  fix?: { title: string; description: string }
+  fix?: { title: string; description: string; cause?: string }
 }
 
 /**
@@ -144,7 +144,7 @@ function Row({ data, first }: { data: RowData; first: boolean }) {
       </div>
       {showFix && data.fix && (
         <div className="px-4 pb-3">
-          <FixCard status={data.status} title={data.fix.title} description={data.fix.description} />
+          <FixCard status={data.status} title={data.fix.title} description={data.fix.description} cause={data.fix.cause} />
         </div>
       )}
     </Fragment>

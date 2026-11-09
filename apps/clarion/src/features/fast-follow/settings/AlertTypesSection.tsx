@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Alert, AlertDescription, Badge, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
 import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
@@ -22,7 +22,7 @@ function thresholdLine(t: AlertType) {
  * prompt and notifications; readings still show in endpoint detail, and the
  * thresholds are kept for when it's turned back on.
  */
-export function AlertTypesSection({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+export function AlertTypesSection({ onViewThresholds, onDirtyChange }: { onViewThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
   const { person } = useViewer()
   const [off, setOff] = useState<string[]>(settings.disabledTypes)
@@ -48,7 +48,7 @@ export function AlertTypesSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
   return (
     <div className="flex w-full max-w-content-reading flex-col gap-gutter">
       <p className="text-body-md text-content-neutral-muted">
-        Applies to every endpoint. All alert types are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail. Thresholds are IR's and can't be changed in this release.
+        Applies to every endpoint. All alert types are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail.
       </p>
 
       {off.length > 0 && (
@@ -95,6 +95,7 @@ export function AlertTypesSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
         onSave={save}
         saveLabel="Save alert types"
         confirmation={confirmation}
+        extra={<Button variant="ghost" onClick={onViewThresholds}>View thresholds</Button>}
       />
     </div>
   )

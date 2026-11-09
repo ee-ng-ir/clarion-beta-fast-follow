@@ -11,7 +11,7 @@
 export type Status = "healthy" | "warning" | "critical" | "syncing" | "unknown"
 
 /** The demo states the prototype can switch between. */
-export type ScenarioId = "healthy" | "device" | "network" | "platform" | "multi" | "syncing" | "collectFail" | "reconnecting" | "reconnectCold" | "verifying" | "notVerified"
+export type ScenarioId = "healthy" | "device" | "network" | "platform" | "multi" | "busy" | "hovering" | "syncing" | "collectFail" | "reconnecting" | "reconnectCold" | "verifying" | "notVerified"
 
 /** The things Clarion monitors. */
 export type ComponentId = "wifi" | "headphones" | "microphone" | "camera" | "cpu" | "memory" | "disk" | "platform"
@@ -36,6 +36,8 @@ export interface ComponentReading {
 export interface Fix {
   title: string
   description: string
+  /** Fast Follow: the likely cause, named only (no steps), e.g. energy saver */
+  cause?: string
 }
 
 /** A desktop notification fired when something needs attention. */
@@ -95,7 +97,45 @@ const HEALTHY = {
   platform: reading("platform", "healthy", "Genesys Cloud · Connected"),
 } as const
 
+// ---- Fast Follow · smarter alerts -------------------------------------------
+// Energy saver is named as the likely cause; it is context, never an alert of its own.
+const BUSY: Scenario = {
+  id: "busy",
+  label: "Computer busy",
+  overallStatus: "warning",
+  banner: { main: "Your computer is busy", sub: "Calls may stutter or lag" },
+  components: {
+    ...HEALTHY,
+    cpu: reading("cpu", "warning", "91% · On battery · Energy saver on"),
+  },
+  fixes: {
+    cpu: {
+      title: "Your computer is busy",
+      description: "Your CPU is at 91%, which can make calls stutter. Close apps you aren't using.",
+      cause: "Energy saver is on, which can slow your computer.",
+    },
+  },
+  toast: { title: "Your computer is busy", body: "Your CPU is at 91%. Energy saver is on, which can slow your computer." },
+  footer: "Issue detected at 2:47 PM · 1 warning",
+}
+// Alert stability: a reading that hovers around its threshold never becomes an
+// alert. The agent sees nothing change; that is the point.
+const HOVERING: Scenario = {
+  id: "hovering",
+  label: "Wi-Fi hovering",
+  overallStatus: "healthy",
+  banner: { main: "You're ready for calls", sub: "All systems healthy" },
+  components: {
+    ...HEALTHY,
+    wifi: reading("wifi", "healthy", "Signal 48–53% · 42 Mbps · 31 ms latency"),
+  },
+  fixes: {},
+  footer: "Monitoring active · Telemetry streaming to Clarion",
+}
+
 export const scenarios: Record<ScenarioId, Scenario> = {
+  busy: BUSY,
+  hovering: HOVERING,
   healthy: {
     id: "healthy",
     label: "All healthy",
@@ -306,6 +346,8 @@ export const scenarioList: Scenario[] = [
   scenarios.device,
   scenarios.platform,
   scenarios.multi,
+  scenarios.busy,
+  scenarios.hovering,
   scenarios.syncing,
   scenarios.collectFail,
   scenarios.reconnecting,

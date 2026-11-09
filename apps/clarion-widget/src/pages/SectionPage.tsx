@@ -86,7 +86,7 @@ function SectionRow({
   note,
 }: {
   reading: Reading
-  fix?: { title: string; description: string }
+  fix?: { title: string; description: string; cause?: string }
   brand: boolean
   first: boolean
   /** Fast Follow: an advisory note under the row (approved headsets) */
@@ -123,7 +123,7 @@ function SectionRow({
       {note && <div className="px-4 pb-3">{note}</div>}
       {showFix && fix && (
         <div className="px-4 pb-3">
-          <FixCard status={reading.status} title={fix.title} description={fix.description} />
+          <FixCard status={reading.status} title={fix.title} description={fix.description} cause={fix.cause} />
         </div>
       )}
     </Fragment>

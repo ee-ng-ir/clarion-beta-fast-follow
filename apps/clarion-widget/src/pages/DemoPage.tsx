@@ -104,6 +104,13 @@ const triggerGroups: { label: string; items: Trigger[] }[] = [
     ],
   },
   {
+    label: "Fast Follow · smarter alerts",
+    items: [
+      { id: "busy", label: "Computer busy", when: "Sam's laptop is unplugged and Windows energy saver is on. His CPU climbs to 91%.", what: "The usual “Your computer is busy” card, plus one line naming the likely cause: energy saver. Cause only, no steps. In Clarion the alert's evidence says energy saver was on; energy saver is never an alert of its own." },
+      { id: "hovering", label: "Wi-Fi hovering", when: "The agent sits at the edge of the office Wi-Fi. The signal hovers around the 50% warning line all morning.", what: "Nothing changes, and that's the point. Alert stability (Balanced, IR's default) waits 3 minutes before raising and needs a 5-point recovery before clearing, so the flicker never becomes an alert, here or in Clarion. Without it, this morning would be 14 alerts." },
+    ],
+  },
+  {
     label: "Clarion states · data & connection",
     items: [
       { id: "syncing", label: "Waiting for data", when: "Clarion has just started and telemetry hasn't arrived yet.", what: "The widget opens, but each tile shows a loading skeleton until its reading lands." },
