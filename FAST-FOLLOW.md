@@ -20,6 +20,14 @@ Open design questions live in the shared doc "Clarion Fast Follow — design que
 
 ## Rules for this repo
 
+- **Picasso or it isn't done.** Fast Follow UI is built from `@ir/ui` (Picasso) and its
+  conventions: Picasso components first, then compositions of them; semantic utilities only
+  (`bg-surface-*`, `text-content-*`, `border-line-*`, `text-heading-*`/`label-*`/`body-*`/`metric-*`);
+  no inline styles, `var()` or arbitrary values; content responds to its container (`@`-variants),
+  only the shell to the viewport; charts are Picasso's (no chart library). Picasso is switched on
+  for the whole demo with `<html data-picasso>`. Where Picasso lacks something, log it as a
+  Picasso gap rather than building beside it.
+- Keep Picasso current with `npm run sync:picasso` (reads `../picasso`) and commit `packages/picasso`.
 - Every Fast Follow screen shows the **Fast Follow preview** marker. Anything still TBC also
   carries an **Exploring** tag. Sales will read anything on screen as a promise.
 - Put new code in new files (e.g. `src/features/fast-follow/`) and keep edits to existing
