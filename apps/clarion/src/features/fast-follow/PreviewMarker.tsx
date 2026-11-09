@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react"
+import "./preview.css"
 
 /**
  * Persistent "Fast Follow preview" strip across the top of the whole window.

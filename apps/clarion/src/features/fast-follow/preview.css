@@ -1,0 +1,11 @@
+/* Fast Follow preview banner (PreviewMarker, h-8 = 2rem) stays visible over every
+   overlay: Picasso's drawers, dialog scrims and overlay scrims start below it.
+   Demo-only chrome, so it's handled here by data-slot rather than in Picasso. */
+:root { --ff-preview-height: 2rem; }
+
+[data-slot="drawer-overlay"],
+[data-slot="dialog-overlay"],
+[data-slot="overlay-scrim"],
+[data-slot="drawer-content"] {
+  top: var(--ff-preview-height);
+}
