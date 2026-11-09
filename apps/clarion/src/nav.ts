@@ -1,7 +1,9 @@
 import {
   LayoutDashboard,
+  BellRing,
+  BarChart3,
+  Settings,
   Monitor,
-  SlidersHorizontal,
   BookOpen,
   Workflow,
   Laptop,
@@ -23,7 +25,7 @@ import {
 } from "lucide-react"
 
 export type PageId =
-  | "overview" | "endpoints" | "alerts" | "thresholds"
+  | "overview" | "endpoints" | "alerts" | "thresholds" | "dashboards" | "settings"
   | "users" | "widgetusers" | "groups" | "locations" | "roles" | "widgets" | "sso" | "subscription" | "audit"
   | "rbacdoc" | "groupsdoc" | "billingdoc"
   | "glossary" | "issuesdoc" | "devicesdoc" | "scopedoc" | "components"
@@ -34,17 +36,23 @@ export interface NavItem {
   icon: LucideIcon
 }
 
+// Fast Follow: Alerts comes back into the nav, Dashboards is new, and Settings
+// replaces Thresholds as the home for everything an IT Admin configures.
 export const navItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "alerts", label: "Alerts", icon: BellRing },
   { id: "endpoints", label: "Endpoints", icon: Monitor },
-  { id: "thresholds", label: "Thresholds", icon: SlidersHorizontal },
+  { id: "dashboards", label: "Dashboards", icon: BarChart3 },
+  { id: "settings", label: "Settings", icon: Settings },
 ]
+/** Nav items introduced by Fast Follow (shown with a "New" tag). */
+export const newNavIds: PageId[] = ["alerts", "dashboards", "settings"]
 
 // De-scoped from the sidebar for MVP (kept as a Day-2 route reachable via the
 // Overview card / command palette). Labels that aren't rendered in any nav list
 // but are still needed by pageLabel() / breadcrumbs live here.
 const offNavLabels: Partial<Record<PageId, string>> = {
-  alerts: "Alerts",
+  thresholds: "Thresholds",
 }
 
 // Administration — shown only to Admins (role-gated within the one Fleet view).
@@ -97,6 +105,9 @@ export const pageLabel = (id: PageId) =>
 // Add entries only where a subtitle is genuinely useful — keep pages lean otherwise.
 export const pageSubtitle: Partial<Record<PageId, string>> = {
   thresholds: "Set when an endpoint is flagged warning or critical.",
+  alerts: "Problems across your fleet, grouped by type.",
+  dashboards: "Fleet-wide summaries over recent history.",
+  settings: "Alerts, notifications and devices for your whole tenancy.",
   users: "Everyone who can sign in to Iris, and what they can access.",
   widgetusers: "Who can run the Clarion widget, whether it has connected, and who uses a licence.",
   groups: "Give access to groups of people instead of one person at a time.",
@@ -118,6 +129,8 @@ export const pagePath: Record<PageId, string> = {
   endpoints: "/endpoints",
   alerts: "/issues",
   thresholds: "/thresholds",
+  dashboards: "/dashboards",
+  settings: "/settings",
   users: "/admin/users",
   widgetusers: "/admin/widget-users",
   groups: "/admin/groups",
@@ -139,6 +152,7 @@ export const pagePath: Record<PageId, string> = {
 
 export const pageFromPath = (path: string): PageId => {
   const clean = path.replace(/\/+$/, "") || "/"
+  if (clean === "/thresholds") return "settings"
   return (Object.keys(pagePath) as PageId[]).find((id) => pagePath[id] === clean) ?? "overview"
 }
 

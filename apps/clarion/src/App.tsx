@@ -11,6 +11,9 @@ import { IssuesDocPage } from "@/pages/IssuesDocPage"
 import { DevicesModelPage } from "@/pages/DevicesModelPage"
 import { ScopePage } from "@/pages/ScopePage"
 import { ComponentsPage } from "@/pages/ComponentsPage"
+import { SettingsPage } from "@/features/fast-follow/SettingsPage"
+import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
+import { PreviewMarker } from "@/features/fast-follow/PreviewMarker"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
 import { AlertDrawer } from "@/components/alerts/AlertDrawer"
@@ -178,6 +181,7 @@ export default function App() {
           borderRight: "1px solid var(--border-neutral-muted)",
         }}
       >
+        <PreviewMarker />
         <Topbar
           page={page}
           dark={dark}
@@ -233,6 +237,8 @@ export default function App() {
             />
           )}
           {page === "thresholds" && allowed && <ThresholdsPage />}
+          {page === "settings" && allowed && <SettingsPage />}
+          {page === "dashboards" && <DashboardsPage />}
           {page === "glossary" && <GlossaryPage />}
           {page === "devicesdoc" && <DevicesModelPage />}
           {page === "issuesdoc" && <IssuesDocPage />}

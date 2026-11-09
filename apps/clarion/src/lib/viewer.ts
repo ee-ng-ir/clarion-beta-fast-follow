@@ -18,9 +18,9 @@ export function useViewer() {
   return { id, person: access.person(id)!, thresholds: thresholdAccess(id) }
 }
 
-/** Can this person open the page? Only Thresholds is gated so far. */
+/** Can this person open the page? Only Settings (which holds Thresholds) is gated so far. */
 export const canOpen = (page: PageId, viewer: ReturnType<typeof useViewer>) =>
-  page !== "thresholds" || viewer.thresholds.mode !== "none"
+  (page !== "thresholds" && page !== "settings") || viewer.thresholds.mode !== "none"
 
 /** Prototype only: switch who is signed in, and remember it in this browser. */
 export function setViewAs(id: string) {

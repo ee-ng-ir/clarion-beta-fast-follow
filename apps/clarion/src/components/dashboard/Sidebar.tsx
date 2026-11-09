@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { ChevronDown, PanelLeftClose, CircleHelp, Moon, ExternalLink } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
-import { navItems, type NavItem, type PageId } from "@/nav"
+import { navItems, newNavIds, type NavItem, type PageId } from "@/nav"
+import { NewTag } from "@/features/fast-follow/ExploringTag"
 import { cn } from "@/lib/utils"
 import { canOpen, useViewer } from "@/lib/viewer"
 
@@ -166,6 +167,7 @@ function NavGroup({
               )}
               <Icon className="size-4 shrink-0" style={{ color: isActive ? "var(--fg-primary-emphasis)" : "var(--fg-neutral-muted)" }} />
               <span className="truncate">{itemLabel}</span>
+              {newNavIds.includes(id) && <NewTag className="ml-auto" />}
             </button>
           )
         })}
