@@ -26,7 +26,7 @@ export function BottomSheetContent({
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
-        className="fixed inset-x-0 bottom-0 top-8 z-[80] data-[state=open]:animate-in data-[state=open]:fade-in-0"
+        data-ff-offset="" className="fixed inset-x-0 bottom-0 z-[80] data-[state=open]:animate-in data-[state=open]:fade-in-0"
         style={{ background: "var(--bg-scrim)" }}
       />
       <DialogPrimitive.Content

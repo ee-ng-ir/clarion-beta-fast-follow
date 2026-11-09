@@ -11,7 +11,7 @@ import { formatLastSeen } from "@/lib/utils"
 import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
 import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
-import { Badge } from "@ir/ui"
+import { CountBadge } from "@/features/fast-follow/CountBadge"
 import { activeAlertCount } from "@/features/fast-follow/evidence/evidence"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
@@ -123,17 +123,18 @@ export function EndpointDrawer({
 
   const contentClass = expanded && !isMobile
     ? "fixed left-1/2 top-1/2 z-50 flex h-[94vh] w-[1120px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-    : "fixed bottom-0 right-0 top-8 z-50 flex w-full flex-col overflow-hidden shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right sm:w-[640px] sm:max-w-[95vw]"
+    : "fixed bottom-0 right-0 z-50 flex w-full flex-col overflow-hidden shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right sm:w-[640px] sm:max-w-[95vw]"
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay
-          className="fixed inset-x-0 bottom-0 top-8 z-50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+          data-ff-offset="" className="fixed inset-x-0 bottom-0 z-50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           style={{ background: "var(--bg-scrim)" }}
         />
         <Dialog.Content
           className={contentClass}
+          data-ff-offset={expanded && !isMobile ? undefined : ""}
           style={{ background: "var(--bg-card)", border: "1px solid var(--border-neutral-muted)" }}
         >
           {/* utility bar */}
@@ -205,7 +206,7 @@ export function EndpointDrawer({
                   >
                     {t.label}
                     {t.id === "alerts" && activeAlertCount(e) > 0 && (
-                      <Badge color={e.status === "critical" ? "danger" : "warning"} variant="emphasis" className="ms-1.5" aria-label="1 active alert">1</Badge>
+                      <CountBadge count={activeAlertCount(e)} tone={e.status === "critical" ? "danger" : "warning"} label={`, ${activeAlertCount(e)} active alert`} className="ms-1.5" />
                     )}
                   </TabsTrigger>
                 ))}

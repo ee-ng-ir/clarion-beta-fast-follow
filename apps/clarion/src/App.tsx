@@ -16,7 +16,7 @@ import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
 import { openGroup } from "@/features/fast-follow/alerts/store"
 import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
 import { setNavigator } from "@/features/fast-follow/navigator"
-import { PreviewMarker } from "@/features/fast-follow/PreviewMarker"
+import { PreviewFrame } from "@/features/fast-follow/PreviewMarker"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
 import { AlertDrawer } from "@/components/alerts/AlertDrawer"
@@ -159,8 +159,7 @@ export default function App() {
   return (
     <FeedVersion.Provider value={feedVersion}>
     {/* Fast Follow: the preview banner spans the whole window, above the nav, page and Iris */}
-    <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: "var(--bg-app)" }}>
-    <PreviewMarker />
+    <PreviewFrame>
     <div className="flex min-h-0 w-full flex-1 items-start overflow-hidden">
       {!isMobile && sidebarOpen && (
         <Sidebar active={page} onNavigate={navigate} lastRefreshAt={live.lastRefreshAt} />
@@ -278,7 +277,7 @@ export default function App() {
       {/* transient toasts (save confirmations, etc.) */}
       <Toaster />
     </div>
-    </div>
+    </PreviewFrame>
     </FeedVersion.Provider>
   )
 }

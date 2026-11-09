@@ -35,7 +35,7 @@ export function MobileNav({
       <Dialog.Portal>
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed inset-x-0 bottom-0 top-8 z-[90] flex w-full outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left"
+          data-ff-offset="" className="fixed inset-x-0 bottom-0 z-[90] flex w-full outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left"
         >
           <Dialog.Title className="sr-only">Navigation</Dialog.Title>
           {children}

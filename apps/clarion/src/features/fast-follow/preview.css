@@ -1,11 +1,31 @@
-/* Fast Follow preview banner (PreviewMarker, h-8 = 2rem) stays visible over every
-   overlay: Picasso's drawers, dialog scrims and overlay scrims start below it.
-   Demo-only chrome, so it's handled here by data-slot rather than in Picasso. */
+/* Fast Follow preview banner (PreviewFrame, h-8 = 2rem).
+   --ff-preview-height is 2rem while the banner is in the layout and 0 once hidden;
+   PreviewFrame sets it. Overlays and drawers start below the banner, so the label
+   stays visible over them. Demo-only chrome, so it's handled here by data-slot
+   rather than in Picasso. */
 :root { --ff-preview-height: 2rem; }
 
 [data-slot="drawer-overlay"],
 [data-slot="dialog-overlay"],
 [data-slot="overlay-scrim"],
-[data-slot="drawer-content"] {
+[data-slot="drawer-content"],
+[data-ff-offset] {
   top: var(--ff-preview-height);
+}
+
+/* Hide / show: the whole frame slides by the banner's height. Transform only
+   (IR motion: never top or height); base duration, in-out easing, because it's
+   something already on screen moving. The banner leaves the layout at the end. */
+.ff-frame {
+  transition: transform var(--motion-duration-base) var(--motion-easing-in-out);
+}
+.ff-frame[data-phase="hiding"],
+.ff-frame[data-phase="showing-start"] {
+  transform: translateY(calc(-1 * 2rem));
+}
+.ff-frame[data-phase="showing-start"] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-frame { transition: none; }
 }

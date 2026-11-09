@@ -56,9 +56,10 @@ export function IrisPanel({
   return (
     <aside
       aria-label="Iris"
+      data-ff-offset={isMobile ? "" : undefined}
       className={cn(
         "flex flex-col bg-surface-card",
-        isMobile ? "fixed inset-x-0 bottom-0 top-8 z-50" : "h-full w-100 shrink-0 border-s border-line-neutral-muted",
+        isMobile ? "fixed inset-x-0 bottom-0 z-50" : "h-full w-100 shrink-0 border-s border-line-neutral-muted",
       )}
     >
       {/* header */}

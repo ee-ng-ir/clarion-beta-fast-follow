@@ -35,7 +35,7 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-x-0 bottom-0 top-8 z-[90] flex items-start justify-center p-4 pt-[12vh] animate-in fade-in"
+      data-ff-offset="" className="fixed inset-x-0 bottom-0 z-[90] flex items-start justify-center p-4 pt-[12vh] animate-in fade-in"
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={() => onOpenChange(false)}
       role="presentation"
