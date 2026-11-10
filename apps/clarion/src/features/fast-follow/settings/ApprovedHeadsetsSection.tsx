@@ -75,10 +75,13 @@ export function ApprovedHeadsetsSection({ onDirtyChange }: { onDirtyChange?: (di
             </Alert>
           )}
 
-          {models.length === 0 ? (
+          {models.length === 0 && (
             <EmptyState size="sm" illustration="call-readiness" title="No approved headsets"
               description="Without a list, headsets aren't checked and nothing is flagged. Add the models your company approves." />
-          ) : (
+          )}
+        </CardContent>
+        {/* the table sits straight in the card so it runs edge to edge, like every table-in-a-card */}
+        {models.length > 0 && (
             <Table size="sm">
               <TableHeader>
                 <TableRow>
@@ -111,8 +114,7 @@ export function ApprovedHeadsetsSection({ onDirtyChange }: { onDirtyChange?: (di
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
+        )}
       </Card>
 
       <SectionFooter

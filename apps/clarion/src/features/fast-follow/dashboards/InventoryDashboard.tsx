@@ -166,8 +166,8 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
                     </TableBody>
                   </Table>
                   {all.length > ROWS_SHOWN && (
-                    <CardContent className="pt-0">
-                      <Button variant="ghost" size="sm" onClick={() => setExpanded(open ? expanded.filter((x) => x !== c) : [...expanded, c])}>
+                    <CardContent className="pt-3">
+                      <Button variant="ghost" size="sm" className="self-start" onClick={() => setExpanded(open ? expanded.filter((x) => x !== c) : [...expanded, c])}>
                         {open ? "Show fewer" : `Show all ${all.length}`}
                       </Button>
                     </CardContent>

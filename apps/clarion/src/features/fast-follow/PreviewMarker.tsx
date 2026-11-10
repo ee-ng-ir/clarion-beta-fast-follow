@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { ChevronUp, Sparkles } from "lucide-react"
 import { Button } from "@ir/ui"
 import "./preview.css"
+import "./card-table.css"
 
 const KEY = "ff:preview-banner-hidden"
 type Phase = "shown" | "hiding" | "hidden" | "showing-start" | "showing"

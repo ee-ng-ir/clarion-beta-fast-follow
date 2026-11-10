@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { BellOff, BellRing, Lightbulb, Sparkles } from "lucide-react"
 import {
-  Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle,
+  Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Drawer, DrawerActions, DrawerBody, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader,
   DrawerHeading, DrawerIcon, DrawerTitle, DrawerTitleGroup,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -131,11 +131,12 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
 
         <Card size="sm">
           <CardHeader>
-            <CardTitle>By location</CardTitle>
+            <CardHeaderText>
+              <CardTitle>By location</CardTitle>
+              <CardDescription>Where Clarion places each endpoint by its network address, as on the map.</CardDescription>
+            </CardHeaderText>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <p className="text-body-sm text-content-neutral-muted">Where Clarion places each endpoint by its network address, as on the map.</p>
-            <Table size="sm">
+          <Table size="sm">
               <TableHeader><TableRow><TableHead align="start">Location</TableHead><TableHead numeric>Endpoints</TableHead></TableRow></TableHeader>
               <TableBody>
                 {g.locations.map((l) => (
@@ -143,13 +144,11 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
         </Card>
 
         {!closed && (
           <Card size="sm">
             <CardHeader><CardTitle>Affected endpoints · {g.endpoints.length}</CardTitle></CardHeader>
-            <CardContent className="flex flex-col gap-2">
               <Table size="sm">
                 <TableHeader><TableRow><TableHead align="start">User / machine</TableHead><TableHead align="start">Location</TableHead><TableHead align="start">Severity</TableHead></TableRow></TableHeader>
                 <TableBody>
@@ -174,11 +173,12 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                 </TableBody>
               </Table>
               {g.endpoints.length > ENDPOINTS_SHOWN && (
-                <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(!showAll)}>
-                  {showAll ? "Show fewer" : `Show all ${g.endpoints.length}`}
-                </Button>
+                <CardContent className="pt-3">
+                  <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(!showAll)}>
+                    {showAll ? "Show fewer" : `Show all ${g.endpoints.length}`}
+                  </Button>
+                </CardContent>
               )}
-            </CardContent>
           </Card>
         )}
       </DrawerBody>

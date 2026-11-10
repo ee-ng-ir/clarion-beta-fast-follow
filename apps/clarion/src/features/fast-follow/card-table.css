@@ -1,0 +1,26 @@
+/* A Picasso Table placed straight inside a Card (Picasso gap P7).
+   Card has no gap of its own and CardHeader only pads its bottom when it is the
+   card's last child: the pattern expects CardContent next. With a Table next,
+   the header sits on the table's header band, and the cells (16 at md, 12 at
+   sm) don't line up with the card's own inset (24, or 16 at size sm).
+   Handled here by data-slot until Picasso has a table-in-card pattern. */
+
+[data-slot="card"][data-size] > [data-slot="card-header"]:has(+ [data-slot="table-container"]) {
+  padding-bottom: 1.5rem;
+}
+[data-slot="card"][data-size="sm"] > [data-slot="card-header"]:has(+ [data-slot="table-container"]) {
+  padding-bottom: 1rem;
+}
+
+[data-slot="card"][data-size] > [data-slot="table-container"] :is([data-slot="table-head"], [data-slot="table-cell"]):first-child {
+  padding-inline-start: 1.5rem;
+}
+[data-slot="card"][data-size] > [data-slot="table-container"] :is([data-slot="table-head"], [data-slot="table-cell"]):last-child {
+  padding-inline-end: 1.5rem;
+}
+[data-slot="card"][data-size="sm"] > [data-slot="table-container"] :is([data-slot="table-head"], [data-slot="table-cell"]):first-child {
+  padding-inline-start: 1rem;
+}
+[data-slot="card"][data-size="sm"] > [data-slot="table-container"] :is([data-slot="table-head"], [data-slot="table-cell"]):last-child {
+  padding-inline-end: 1rem;
+}
