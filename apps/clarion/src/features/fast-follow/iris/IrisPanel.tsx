@@ -28,7 +28,7 @@ export function IrisPanel({
   page, onNavigate, onOpenEndpoint,
 }: {
   page: PageId
-  onNavigate: (p: PageId) => void
+  onNavigate: (p: PageId, then?: () => void) => void
   onOpenEndpoint: (rows: Endpoint[], index: number) => void
 }) {
   const { open, context, messages, thinking } = useIris()
@@ -53,7 +53,7 @@ export function IrisPanel({
   const follow = (link: IrisLink) => {
     if (link.kind === "group") { openGroup(link.id); onNavigate("alerts") }
     else if (link.kind === "page") onNavigate(link.page)
-    else if (link.kind === "dashboard") { openWith(link.view, link.state); onNavigate("dashboards") }
+    else if (link.kind === "dashboard") onNavigate("dashboards", () => openWith(link.view, link.state))
     else { const e = endpointById(link.id); if (e) onOpenEndpoint([e], 0) }
     if (isMobile) closeIris()
   }

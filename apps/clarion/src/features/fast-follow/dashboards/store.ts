@@ -81,6 +81,15 @@ const SEED: SavedDashboard[] = [
     state: { locations: ["manilla", "cebu"], tab: "endpoints", filters: ["windows|Windows 10 22H2"], q: "" } },
   { id: "seed-3", name: "Top alerts this month", view: "alerts", by: "Alex Kim", savedAt: Date.now() - 12 * 24 * H,
     state: { ...DEFAULTS.alerts } },
+  // samples of what Iris builds from its four suggestions, with the same filters it sets
+  { id: "sample-wifi", name: "Weak Wi-Fi by site", view: "trends", by: "Alex Kim", savedAt: Date.now() - 2 * H,
+    state: { days: 30, types: ["wifi"], locations: ["manilla", "cebu", "london"], measure: "times" } },
+  { id: "sample-headsets", name: "Headsets that aren't approved", view: "inventory", by: "Alex Kim", savedAt: Date.now() - 3 * H,
+    state: { locations: [], tab: "endpoints", filters: ["compliance|not-approved"], q: "" } },
+  { id: "sample-call-quality", name: "Call quality this week", view: "alerts", by: "Alex Kim", savedAt: Date.now() - 4 * H,
+    state: { ...DEFAULTS.alerts, days: 7, selected: "call-quality" } },
+  { id: "sample-recurring", name: "Alerts that keep coming back", view: "alerts", by: "Alex Kim", savedAt: Date.now() - 6 * H,
+    state: { ...DEFAULTS.alerts, days: 30, selected: "wifi" } },
 ]
 
 const SAVED_KEY = "ff:saved-dashboards:v2"
@@ -96,7 +105,20 @@ interface Store extends DashState { view: View; saved: SavedDashboard[] }
 const persisted = read<Partial<Store>>(ss, VIEW_KEY, {})
 // the address wins over the remembered view, so a link or a reload opens the dashboard it names
 const urlView = typeof window === "undefined" ? null : viewFromPath(window.location.pathname)
-let state: Store = { ...DEFAULTS, ...persisted, view: urlView ?? persisted.view ?? "home", saved: read(ls, SAVED_KEY, SEED) }
+// seeds added after someone has saved dashboards are added once, beside theirs; deleting one keeps it deleted
+const SEEDED_KEY = "ff:saved-dashboards:seeded"
+function loadSaved(): SavedDashboard[] {
+  const saved = read<SavedDashboard[]>(ls, SAVED_KEY, SEED)
+  // before this key existed, the first three seeds had already been offered
+  const seeded = read<string[]>(ls, SEEDED_KEY, ["seed-1", "seed-2", "seed-3"])
+  const fresh = SEED.filter((s) => !seeded.includes(s.id) && !saved.some((x) => x.id === s.id))
+  write(ls, SEEDED_KEY, SEED.map((s) => s.id))
+  if (!fresh.length) return saved
+  const next = [...fresh, ...saved]
+  write(ls, SAVED_KEY, next)
+  return next
+}
+let state: Store = { ...DEFAULTS, ...persisted, view: urlView ?? persisted.view ?? "home", saved: loadSaved() }
 const subs = new Set<() => void>()
 function set(next: Partial<Store>) {
   state = { ...state, ...next }

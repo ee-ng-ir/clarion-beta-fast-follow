@@ -137,7 +137,8 @@ export default function App() {
   // Navigating to another page closes any open drawer (a drilldown belongs to
   // the page it was opened from).
   // Fast Follow: a page with unsaved changes (Settings) can hold the change of page
-  const navigate = (p: PageId) => guarded(() => { setDrawer(null); setAlertDrawer(null); if (p === "dashboards") showDashboard("home"); setPage(p) })
+  // `then` runs after the page resets, e.g. Iris opening the dashboard it built rather than the landing page
+  const navigate = (p: PageId, then?: () => void) => guarded(() => { setDrawer(null); setAlertDrawer(null); if (p === "dashboards") showDashboard("home"); then?.(); setPage(p) })
   setNavigator(navigate) // Fast Follow: lets drawers and Iris change page
 
   const handleViewEndpoints = (loc?: string | string[]) => {
