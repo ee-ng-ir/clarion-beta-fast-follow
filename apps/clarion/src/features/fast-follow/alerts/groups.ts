@@ -5,6 +5,7 @@
 
 import { endpoints, type Endpoint } from "@/data/endpoints"
 import { ALERT_TYPES, alertType, type AlertType } from "./catalogue"
+import { energySaverEffect, energySaverOn } from "./energySaver"
 import { getSettings, isTypeOn } from "../settings/store"
 
 export type Severity = "critical" | "warning"
@@ -98,13 +99,14 @@ function evidenceFor(t: AlertType, eps: Endpoint[], locs: LocationShare[], energ
     case "network": {
       const avgLoss = (eps.reduce((s, e) => s + e.packetLoss, 0) / eps.length).toFixed(1)
       const avgLat = Math.round(eps.reduce((s, e) => s + e.latency, 0) / eps.length)
-      return `Affected endpoints are ${where}. ${pct(wifi, eps.length)}% are on Wi-Fi. Packet loss averages ${avgLoss}% and latency ${avgLat} ms. Start with ${concentrated ? `the network at ${top.name}` : t.lookFirst}.`
+      const saver = energy > 0 ? ` Energy saver was on for ${energy} of them when this was raised, which ${energySaverEffect(t.id)}.` : ""
+      return `Affected endpoints are ${where}. ${pct(wifi, eps.length)}% are on Wi-Fi.${saver} Packet loss averages ${avgLoss}% and latency ${avgLat} ms. Start with ${concentrated ? `the network at ${top.name}` : t.lookFirst}.`
     }
     case "platform":
       return `Endpoints ${where} can't reach the platform, while other platforms on the same endpoints respond normally. This points to the platform or the route to it, not the PCs. Check ${t.lookFirst}.`
     case "system":
       return energy > 0
-        ? `Energy saver was on for ${energy} of ${eps.length} endpoints when this was raised, which throttles the CPU. Start with ${t.lookFirst}.`
+        ? `Energy saver was on for ${energy} of ${eps.length} endpoints when this was raised, which ${energySaverEffect(t.id)}. Start with ${t.lookFirst}.`
         : `Affected endpoints are ${where}. No shared network cause; this is local to each PC. Start with ${t.lookFirst}.`
     case "devices":
       return `Affected endpoints are ${where}. Each lost its playback device mid-session. Start with ${t.lookFirst}.`
@@ -151,7 +153,7 @@ export function activeGroups(version = 0): AlertGroup[] {
     const locations = [...locMap.values()].sort((a, b) => b.count - a.count)
     const firstSeen = seeded(typeId + "first", 8, 190)
     const recurrence = type.category === "system" ? seeded(typeId + "rec", 2, 6) : seeded(typeId + "rec", 1, 3)
-    const energy = typeId === "cpu" ? Math.round(eps.length * 0.8) : 0
+    const energy = eps.filter((e) => energySaverOn(typeId, e)).length
     const notify = notification(severity, eps.length, firstSeen)
     const g: AlertGroup = {
       id: `grp-${typeId}`, type, title: severity === "critical" ? type.critical : type.warning, severity, counts,

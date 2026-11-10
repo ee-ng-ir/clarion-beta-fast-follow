@@ -4,10 +4,10 @@
 // alert was raised (rule 2) and says plainly what wasn't captured (rule 3).
 // Synthetic but seeded from the endpoint, so the demo is stable.
 
-import { agentByEndpoint } from "@ir/telemetry"
 import type { Endpoint } from "@/data/endpoints"
 import { alertType, type AlertType } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
+import { energySaverOn } from "../alerts/energySaver"
 import { isTypeOn } from "../settings/store"
 
 export type Severity = "critical" | "warning"
@@ -93,10 +93,11 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
   const title = sev === "critical" ? t.critical : t.warning
   const wifi = e.connection === "Wi-Fi"
   const signal = Math.round(sev === "critical" ? 12 + r() * 12 : 30 + r() * 18)
+  const energy = energySaverOn(typeId, e)
   const common = {
     id: `${e.id}:${typeId}:${startedMinAgo}`, type: t, severity: sev, title, active: isActive, startedMinAgo, lastedMin,
     groupId: isActive ? `grp-${typeId}` : null,
-    snapshot: snapshot(e, signal, r, isActive ? startedMinAgo : startedMinAgo),
+    snapshot: snapshot(e, signal, r, isActive ? startedMinAgo : startedMinAgo, energy),
   }
   const thr = (v: number, u: string) => `${v}${u}`
 
@@ -112,8 +113,8 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
     const mainNames = drivers.filter((d) => d.role === "Main factor").map((d) => d.label.toLowerCase())
     const factors = mainNames.length ? mainNames.join(" and ") : "packet loss"
     return { ...common,
-      summary: `Quality index ${v} against a ${sev === "critical" ? crit : warn} ${sev} threshold${wifi ? `, on Wi-Fi at ${signal}% signal` : ""}. ${cap(factors)} ${mainNames.length > 1 ? "are" : "is"} the main factor${mainNames.length > 1 ? "s" : ""}.`,
-      whatHappened: `Network quality index fell to ${v} against a ${sev === "critical" ? crit : warn} ${sev} threshold${isActive ? ` and has stayed there for ${startedMinAgo} minutes` : ""}. ${cap(factors)} ${mainNames.length > 1 ? "are" : "is"} the main factor${mainNames.length > 1 ? "s" : ""}.${wifi ? ` The endpoint is on Wi-Fi at ${signal}% signal.` : " The endpoint is on a wired connection."}`,
+      summary: `Quality index ${v} against a ${sev === "critical" ? crit : warn} ${sev} threshold${wifi ? `, on Wi-Fi at ${signal}% signal` : ""}. ${cap(factors)} ${mainNames.length > 1 ? "are" : "is"} the main factor${mainNames.length > 1 ? "s" : ""}.${energy ? " Energy saver was on." : ""}`,
+      whatHappened: `Network quality index fell to ${v} against a ${sev === "critical" ? crit : warn} ${sev} threshold${isActive ? ` and has stayed there for ${startedMinAgo} minutes` : ""}. ${cap(factors)} ${mainNames.length > 1 ? "are" : "is"} the main factor${mainNames.length > 1 ? "s" : ""}.${wifi ? ` The endpoint is on Wi-Fi at ${signal}% signal.` : " The endpoint is on a wired connection."}${energy ? " Windows energy saver was on, which cuts power to the Wi-Fi adapter." : ""}`,
       likelyCauseShort: wifi ? "weak Wi-Fi at the agent's location" : "the network beyond this PC",
       reading: { name: "Network quality index", value: String(v), threshold: thr(sev === "critical" ? crit : warn, ""), thresholdNow: thr(sev === "critical" ? crit : warn, ""), changedSince: false },
       main: series(common.id, startedMinAgo, 4.1, v, { name: "Network quality index (1–5, lower is worse)", unit: "", warn, crit, lowerIsWorse: true, min: 1, max: 5 }),
@@ -125,36 +126,36 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
       where: wifi ? { label: "Local network", detail: "Most of the delay is between the PC and the router, not beyond it." } : { label: "Beyond the router", detail: "The local link is clean; the delay builds up past the router, at the provider or across the WAN." },
       causes: wifi
         ? [{ title: "Weak Wi-Fi at the agent's location", likelihood: "Most likely", why: `Signal fell to ${signal}% four minutes before packet loss rose. Delay is mostly local.` },
+           ...(energy ? [{ title: "Windows energy saver", likelihood: "Possible" as const, why: "It was on when the alert was raised, and it cuts power to the Wi-Fi adapter." }] : []),
            { title: "Device too far from a 5 GHz router", likelihood: "Possible", why: "5 GHz has a shorter range, and the device switched access points twice." },
            { title: "Internet provider", likelihood: "Less likely", why: "Little of the delay is beyond the router." }]
         : [{ title: "Congestion on the office network or WAN", likelihood: "Most likely", why: "Delay builds up past the router while the local link is clean." },
            { title: "Internet provider or carrier issue", likelihood: "Possible", why: "Other endpoints at the same location may show the same pattern." },
            { title: "This PC's network adapter", likelihood: "Less likely", why: "No errors on the local link." }],
       steps: wifi
-        ? ["Ask the agent to move closer to the router or plug in a network cable.", "If they can't move closer, try the 2.4 GHz network, which reaches further.", "If it keeps happening, consider a Wi-Fi extender or a wired setup for this home worker."]
+        ? [energy ? "Ask the agent to plug in their laptop and move closer to the router, or plug in a network cable." : "Ask the agent to move closer to the router or plug in a network cable.", "If they can't move closer, try the 2.4 GHz network, which reaches further.", "If it keeps happening, consider a Wi-Fi extender or a wired setup for this home worker."]
         : ["Check whether other endpoints at this location show the same drop.", "If they do, check the office network and WAN link first.", "If it's only this PC, try another network port or cable."],
     }
   }
   if (t.id === "wifi") {
     return { ...common,
-      summary: `Wi-Fi signal fell to ${signal}% against a ${sev === "critical" ? 25 : 50}% ${sev} threshold, on ${ssid(e)} (5 GHz).`,
-      whatHappened: `Wi-Fi signal fell to ${signal}% against a ${sev === "critical" ? 25 : 50}% ${sev} threshold${isActive ? ` and has stayed below it for ${startedMinAgo} minutes` : ""}.`,
-      likelyCauseShort: "distance from the router",
+      summary: `Wi-Fi signal fell to ${signal}% against a ${sev === "critical" ? 25 : 50}% ${sev} threshold, on ${ssid(e)} (5 GHz).${energy ? " Energy saver was on." : ""}`,
+      whatHappened: `Wi-Fi signal fell to ${signal}% against a ${sev === "critical" ? 25 : 50}% ${sev} threshold${isActive ? ` and has stayed below it for ${startedMinAgo} minutes` : ""}.${energy ? " Windows energy saver was on when the alert was raised, which cuts power to the Wi-Fi adapter." : ""}`,
+      likelyCauseShort: energy ? "energy saver was on" : "distance from the router",
       reading: { name: "Wi-Fi signal", value: `${signal}%`, threshold: `${sev === "critical" ? 25 : 50}%`, thresholdNow: `${sev === "critical" ? 25 : 50}%`, changedSince: false },
       main: series(common.id, startedMinAgo, 68, signal, { name: "Wi-Fi signal (%)", unit: "%", warn: 50, crit: 25, lowerIsWorse: true, min: 0, max: 100 }),
       contributor: null, drivers: [], where: { label: "Local network", detail: "The problem is the wireless link to the router." },
-      causes: [{ title: "Distance or walls between the PC and the router", likelihood: "Most likely", why: "Signal dropped steadily with no change in the network beyond." },
+      causes: [...(energy ? [{ title: "Windows energy saver", likelihood: "Most likely" as const, why: "It was on when the alert was raised, and it cuts power to the Wi-Fi adapter." }] : []),
+               { title: "Distance or walls between the PC and the router", likelihood: energy ? "Possible" : "Most likely", why: "Signal dropped steadily with no change in the network beyond." },
                { title: "Interference from nearby networks", likelihood: "Possible", why: "Common in apartments on the 2.4 GHz band." }],
-      steps: ["Ask the agent to move closer to the router, or plug in a cable.", "Try the other band (2.4 GHz reaches further, 5 GHz is faster).", "If it recurs, consider an extender for this home worker."],
+      steps: [energy ? "Ask the agent to plug in, or turn off power saving for the Wi-Fi adapter." : "Ask the agent to move closer to the router, or plug in a cable.", "Try the other band (2.4 GHz reaches further, 5 GHz is faster).", "If it recurs, consider an extender for this home worker."],
     }
   }
   if (t.category === "system" && t.metric) {
     const m = t.metric
     const v = sev === "critical" ? (m.lowerIsWorse ? r1(m.crit * (0.4 + r() * 0.5)) : Math.round(m.crit + r() * (100 - m.crit))) : (m.lowerIsWorse ? r1(m.crit + (m.warn - m.crit) * (0.2 + r() * 0.7)) : Math.round(m.warn + r() * (m.crit - m.warn)))
     const threshold = sev === "critical" ? m.crit : m.warn
-    // demo agents only get a CPU alert from the widget's "Computer busy" scenario, which has energy saver on
     const changed = t.id === "cpu" && !isActive
-    const energy = t.id === "cpu" && (!!agentByEndpoint(e.id) || rng(e.id + "es")() < 0.8)
     return { ...common,
       summary: `${m.name} at ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold.${energy ? " Energy saver was on." : ""}`,
       whatHappened: `${m.name} reached ${v}${m.unit} against a ${threshold}${m.unit} ${sev} threshold${isActive ? ` and has stayed there for ${startedMinAgo} minutes` : ""}.${energy ? " Windows energy saver was on when the alert was raised, which throttles the CPU." : ""}`,
@@ -197,7 +198,7 @@ function build(e: Endpoint, typeId: string, sev: Severity, isActive: boolean, st
   }
 }
 
-function snapshot(e: Endpoint, signal: number, r: () => number, at: number): EndpointAlert["snapshot"] {
+function snapshot(e: Endpoint, signal: number, r: () => number, at: number, energy: boolean): EndpointAlert["snapshot"] {
   const offline = e.status === "offline"
   const wifi = e.connection === "Wi-Fi"
   return {
@@ -205,7 +206,7 @@ function snapshot(e: Endpoint, signal: number, r: () => number, at: number): End
     sections: [
       { title: "Network", rows: [wifi ? `Wi-Fi · ${ssid(e)} · 5 GHz · ${signal}% signal` : "Ethernet · 1 Gbps", wifi ? "Switched access point twice in 10 min" : "No link errors", `VPN: ${r() < 0.5 ? "connected" : "not connected"}`] },
       { title: "Platforms", rows: [`${e.primaryPlatform} · ${e.primaryIssue?.endsWith("down") ? "unreachable" : "connected"}`, `Microsoft Teams · connected`] },
-      { title: "System", rows: offline ? null : [`CPU ${Math.round(18 + r() * 40)}% · Memory ${Math.round(35 + r() * 40)}%`, `Energy saver: ${r() < 0.3 ? "on" : "off"}`] },
+      { title: "System", rows: offline ? null : [`CPU ${Math.round(18 + r() * 40)}% · Memory ${Math.round(35 + r() * 40)}%`, `Energy saver: ${energy ? "on" : "off"}`] },
       { title: "Devices", rows: offline ? null : [`Jabra Evolve2 75 · ${r() < 0.5 ? "USB dongle" : "Bluetooth"} · in use`, `On a call: ${r() < 0.7 ? `yes (${e.primaryPlatform})` : "no"}`] },
     ],
   }
