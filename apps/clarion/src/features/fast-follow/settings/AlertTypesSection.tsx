@@ -34,7 +34,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
     const turnedOff = off.filter((x) => !settings.disabledTypes.includes(x)).length
     const turnedOn = settings.disabledTypes.filter((x) => !off.includes(x)).length
     saveTypes(off, person.name)
-    setConfirmation(`Saved. ${[turnedOff && `${turnedOff} alert type${turnedOff === 1 ? "" : "s"} turned off`, turnedOn && `${turnedOn} turned back on`].filter(Boolean).join(", ")}. Alerts, Top issues and the widget now follow this.`)
+    setConfirmation(`Saved. ${[turnedOff && `${turnedOff} alert${turnedOff === 1 ? "" : "s"} turned off`, turnedOn && `${turnedOn} turned back on`].filter(Boolean).join(", ")}. Alerts, Top issues and the widget now follow this.`)
   }
 
   // endpoints each type would alert on right now, so turning one off isn't a blind choice
@@ -51,7 +51,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
       {off.length > 0 && (
         <Alert variant="warning">
           <AlertDescription>
-            {off.length} alert type{off.length === 1 ? " is" : "s are"} off. Agents won't see {off.length === 1 ? "it" : "them"} in the widget, and no one will be emailed about {off.length === 1 ? "it" : "them"}.
+            {off.length} alert{off.length === 1 ? " is" : "s are"} off. Agents won't see {off.length === 1 ? "it" : "them"} in the widget, and no one will be emailed about {off.length === 1 ? "it" : "them"}.
           </AlertDescription>
         </Alert>
       )}
@@ -60,9 +60,9 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
       <Card className="@container gap-0 overflow-hidden">
         <CardHeader className="pb-6">
           <CardHeaderText>
-            <CardTitle>Alert types</CardTitle>
+            <CardTitle>Alerts</CardTitle>
             <CardDescription>
-              Applies to every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail. When each alert is raised is set on Thresholds.
+              Choose which alerts Clarion raises, for every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail. When each alert is raised is set on Thresholds.
             </CardDescription>
           </CardHeaderText>
         </CardHeader>
@@ -96,7 +96,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
         dirty={dirty}
         onDiscard={() => setOff(settings.disabledTypes)}
         onSave={save}
-        saveLabel="Save alert types"
+        saveLabel="Save alerts"
         confirmation={confirmation}
         extra={<Button variant="ghost" onClick={onEditThresholds}>Edit thresholds</Button>}
       />

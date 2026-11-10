@@ -58,7 +58,7 @@ export function SettingsPage() {
     <>
       <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
         <TabsList aria-label="Settings sections">
-          <TabsTrigger value="types">Alert types <NewDot className="ms-1.5" /></TabsTrigger>
+          <TabsTrigger value="types">Alerts <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
           <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
