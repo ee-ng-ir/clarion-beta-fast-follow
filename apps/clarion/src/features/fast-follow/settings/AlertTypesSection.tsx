@@ -108,12 +108,12 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
 }
 
 /**
- * What the row says on its right: context when on, the consequence while an
- * unsaved change would turn it off, and just "Off" once it's off.
+ * What the row says on its right: how many endpoints have it now, and "Off" once
+ * it has been saved off. An unsaved change says nothing here; the footer's
+ * "Unsaved changes" covers it.
  */
 function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
-  if (on) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
-  if (wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-label-sm text-content-warning-emphasis">Off once you save · active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
+  if (on || wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
   return <Badge className="ms-auto shrink-0">Off</Badge>
 }
 
