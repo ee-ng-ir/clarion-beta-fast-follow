@@ -58,6 +58,7 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
   }, [eps, approved])
   const approvedEps = eps.filter((e) => complianceFor(e, approved) === "approved").length
   const notApprovedEps = eps.filter((e) => complianceFor(e, approved) === "not-approved").length
+  const notCheckedEps = eps.filter((e) => complianceFor(e, approved) === "not-checked").length
   const win10 = counts.windows.find((r) => r.key.startsWith("Windows 10"))?.count ?? 0
   const outdated = eps.length - (counts.widget.find((r) => r.key === LATEST_WIDGET)?.count ?? 0)
 
@@ -69,7 +70,7 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
   const pick = (key: string) => { patchInventory({ filters: [key], tab: "endpoints", q: "" }); setShown(PAGE) }
 
   const filterOptions = [
-    ...(hasList ? [{ value: "compliance|not-approved", label: "Not approved", group: "Headset approval" }, { value: "compliance|not-checked", label: "Can't be checked", group: "Headset approval" }] : []),
+    ...(hasList ? [{ value: "compliance|not-approved", label: "Not approved", detail: String(notApprovedEps), group: "Headset approval" }, { value: "compliance|not-checked", label: "Can't be checked", detail: String(notCheckedEps), group: "Headset approval" }] : []),
     ...CATS.flatMap((c) => counts[c].map((r) => ({ value: `${c}|${r.key}`, label: r.key, detail: String(r.count), group: INV_LABEL[c] }))),
   ]
 

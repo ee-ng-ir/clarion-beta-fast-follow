@@ -58,17 +58,9 @@ export function AlertsSection({ onDirtyChange }: { onDirtyChange?: (dirty: boole
   const flip = (key: string) => setOpen((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]))
 
   const save = () => {
-    const turnedOff = off.filter((x) => !settings.disabledTypes.includes(x)).length
-    const turnedOn = settings.disabledTypes.filter((x) => !off.includes(x)).length
-    const moved = Object.keys(policy).filter((k) => policy[k].warn !== settings.thresholds[k].warn || policy[k].crit !== settings.thresholds[k].crit).length
     if (typesDirty) saveTypes(off, person.name)
     if (policyDirty) saveThresholds(policy, person.name)
-    const parts = [
-      turnedOff && `${turnedOff} alert${turnedOff === 1 ? "" : "s"} turned off`,
-      turnedOn && `${turnedOn} turned back on`,
-      moved && `${moved} threshold${moved === 1 ? "" : "s"} changed`,
-    ].filter(Boolean)
-    setConfirmation(`Saved: ${parts.join(", ")}. New alerts follow this straight away; alerts already raised keep the threshold they were raised against.`)
+    setConfirmation("Alerts saved")
   }
 
   const lastSaved = [settings.saved.types, settings.saved.thresholds].filter((s): s is Saved => !!s).sort((a, b) => b.at.getTime() - a.at.getTime())[0]

@@ -1,18 +1,26 @@
-import { Alert, AlertDescription, Button, PageFooter } from "@ir/ui"
+import { useEffect, useRef } from "react"
+import { Button, PageFooter } from "@ir/ui"
+import { toast } from "@/components/ui/toast"
 
 /** Picasso form footer, kept in view: who last saved it, then Discard (outline) and the primary, last. */
 export function SectionFooter({ saved, dirty, onDiscard, onSave, saveLabel, extra, confirmation }: {
   saved: string; dirty: boolean; onDiscard: () => void; onSave: () => void; saveLabel: string; extra?: React.ReactNode
-  /** shown after a save until the next edit, so it's unmistakable that it landed */
+  /** set after a save to a short title ("Alert stability saved"); shown once as a success toast,
+      the product's pattern for a save landing. They can see what they saved, so no description. */
   confirmation?: string | null
 }) {
+  // Toast once per save. The ref stops a repeat when the effect re-runs (StrictMode, re-renders);
+  // sections clear confirmation on the next edit, which re-arms it.
+  const shown = useRef<string | null>(null)
+  useEffect(() => {
+    if (!confirmation) { shown.current = null; return }
+    if (shown.current === confirmation) return
+    shown.current = confirmation
+    toast({ variant: "success", title: confirmation })
+  }, [confirmation])
+
   return (
     <>
-    {confirmation && !dirty && (
-      <Alert variant="success" role="status">
-        <AlertDescription>{confirmation}</AlertDescription>
-      </Alert>
-    )}
     {/* Sticky so Save is always in view on a long tab. Picasso's PageFooter doesn't stick
         (its docs say a sticky bar isn't built yet): logged as a Picasso gap. */}
     <PageFooter className="sticky -bottom-4 z-10 -mb-4 bg-surface-app pb-4">

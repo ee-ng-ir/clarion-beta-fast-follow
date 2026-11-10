@@ -43,9 +43,7 @@ export function ApprovedHeadsetsSection({ onDirtyChange }: { onDirtyChange?: (di
   const save = () => {
     approvedHeadsets.set(draft)
     markHeadsetsSaved(person.name)
-    setConfirmation(draft.length
-      ? `Saved. ${draft.length} approved model${draft.length === 1 ? "" : "s"}. Every endpoint is checked against this list within a few minutes, and widgets show their agents a note if they're on another headset.`
-      : "Saved. No approved list: headsets aren't checked or flagged.")
+    setConfirmation("Approved headsets saved")
   }
 
   return (

@@ -95,7 +95,7 @@ export function StabilitySection({ onDirtyChange }: { onDirtyChange?: (dirty: bo
         saved={savedLine(settings.saved.stability)}
         dirty={dirty}
         onDiscard={() => setDraft(settings.stability)}
-        onSave={() => { saveStability(draft, person.name); setConfirmation("Saved. The widget and Fleet-view now raise and clear alerts with these settings.") }}
+        onSave={() => { saveStability(draft, person.name); setConfirmation("Alert stability saved") }}
         saveLabel="Save alert stability"
         confirmation={confirmation}
       />

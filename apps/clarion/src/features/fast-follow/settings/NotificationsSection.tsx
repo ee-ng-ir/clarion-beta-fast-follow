@@ -4,6 +4,7 @@ import {
   Alert, AlertDescription, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption, Input, NumberInput, TagsInput,
 } from "@ir/ui"
+import { toast } from "@/components/ui/toast"
 import { useViewer } from "@/lib/viewer"
 import { activeGroups } from "../alerts/groups"
 import { IR_DEFAULT_NOTIFY, saveNotify, savedLine, useSettings, type NotifySettings } from "./store"
@@ -23,9 +24,8 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
   const { person } = useViewer()
   const [draft, setDraft] = useState<NotifySettings>(settings.notify)
   const [itReports, setItReports] = useState(settings.itReports)
-  const [testSent, setTestSent] = useState<string | null>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || itReports !== settings.itReports
-  const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setTestSent(null); setConfirmation(null) }
+  const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setConfirmation(null) }
   const [confirmation, setConfirmation] = useState<string | null>(null)
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
@@ -79,18 +79,13 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
 
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" disabled={!draft.enabled || noRecipients}
-              onClick={() => setTestSent(draft.recipients.join(", "))}>
+              onClick={() => toast({ variant: "success", title: "Test email sent", description: draft.recipients.join(", ") })}>
               <Mail aria-hidden /> Send test email
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <a href="/email" target="_blank" rel="noopener" onClick={() => stashPreviewRules(draft)}>Preview the email <ArrowUpRight aria-hidden /></a>
             </Button>
           </div>
-          {testSent && (
-            <Alert variant="success" onDismiss={() => setTestSent(null)} dismissLabel="Dismiss">
-              <AlertDescription>Test email sent to {testSent}. It can take a minute to arrive.</AlertDescription>
-            </Alert>
-          )}
         </CardContent>
       </Card>
 
@@ -140,9 +135,7 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
         onDiscard={() => { setDraft(settings.notify); setItReports(settings.itReports) }}
         onSave={() => {
           saveNotify(draft, itReports, person.name)
-          setConfirmation(draft.enabled && draft.recipients.length
-            ? `Saved. Critical groups that meet these rules will email ${draft.recipients.length} recipient${draft.recipients.length === 1 ? "" : "s"}.`
-            : "Saved. Proactive notifications are off; nothing will be emailed.")
+          setConfirmation("Notifications saved")
         }}
         saveLabel="Save notifications"
         confirmation={confirmation}
