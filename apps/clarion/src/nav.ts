@@ -153,6 +153,8 @@ export const pagePath: Record<PageId, string> = {
 export const pageFromPath = (path: string): PageId => {
   const clean = path.replace(/\/+$/, "") || "/"
   if (clean === "/thresholds") return "settings"
+  // Fast Follow: each dashboard is its own page under Dashboards (/dashboards/alert-trends)
+  if (clean.startsWith("/dashboards/")) return "dashboards"
   return (Object.keys(pagePath) as PageId[]).find((id) => pagePath[id] === clean) ?? "overview"
 }
 
@@ -166,12 +168,14 @@ export const readDrawerParams = (search: string): DrawerParams => {
   return { device: p.get("device") ?? undefined, issue: p.get("issue") ?? undefined }
 }
 
-export const buildPath = (page: PageId, drawer: DrawerParams = {}): string => {
+/** `sub` is a child page under `page`, e.g. one dashboard under Dashboards: /dashboards/alert-trends */
+export const buildPath = (page: PageId, drawer: DrawerParams = {}, sub?: string): string => {
+  const base = sub ? `${pagePath[page]}/${sub}` : pagePath[page]
   const p = new URLSearchParams()
   if (drawer.device) p.set("device", drawer.device)
   if (drawer.issue) p.set("issue", drawer.issue)
   const qs = p.toString()
-  return qs ? `${pagePath[page]}?${qs}` : pagePath[page]
+  return qs ? `${base}?${qs}` : base
 }
 
 // ---- Experiences (two surfaces in one repo) --------------------------------

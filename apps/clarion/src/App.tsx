@@ -13,7 +13,7 @@ import { ComponentsPage } from "@/pages/ComponentsPage"
 import { SettingsPage } from "@/features/fast-follow/SettingsPage"
 import { DashboardsPage } from "@/features/fast-follow/DashboardsPage"
 import { DashboardsSubtitle, DashboardsTitle } from "@/features/fast-follow/dashboards/DashboardsChrome"
-import { showDashboard } from "@/features/fast-follow/dashboards/store"
+import { dashSlug, showDashboard, useDashboards, viewFromPath } from "@/features/fast-follow/dashboards/store"
 import { AlertGroupsPage } from "@/features/fast-follow/alerts/AlertGroupsPage"
 import { openGroup } from "@/features/fast-follow/alerts/store"
 import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
@@ -95,7 +95,10 @@ export default function App() {
   }, [feedState])
   const live = useStreaming()
   // remembers the last synced page + open-drawer flags, to decide push vs replace
-  const histPrev = useRef({ page, device: drawer !== null, issue: alertDrawer !== null })
+  // Fast Follow: the open dashboard is part of the address, so Back returns to the Dashboards landing page
+  const { view: dashView } = useDashboards()
+  const dashSub = page === "dashboards" ? dashSlug(dashView) : undefined
+  const histPrev = useRef({ page, device: drawer !== null, issue: alertDrawer !== null, dashSub })
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark)
@@ -107,21 +110,23 @@ export default function App() {
   useEffect(() => {
     const device = drawer ? drawer.rows[drawer.index]?.id : undefined
     const issue = alertDrawer ? alertDrawer.rows[alertDrawer.index]?.id : undefined
-    const url = buildPath(page, { device, issue })
+    const url = buildPath(page, { device, issue }, dashSub)
     const current = window.location.pathname + window.location.search
     if (current !== url) {
       const opened = (!histPrev.current.device && drawer !== null) || (!histPrev.current.issue && alertDrawer !== null)
-      const pageChanged = histPrev.current.page !== page
+      const pageChanged = histPrev.current.page !== page || histPrev.current.dashSub !== dashSub
       if (opened || pageChanged) window.history.pushState(null, "", url)
       else window.history.replaceState(null, "", url)
     }
-    histPrev.current = { page, device: drawer !== null, issue: alertDrawer !== null }
-  }, [page, drawer, alertDrawer])
+    histPrev.current = { page, device: drawer !== null, issue: alertDrawer !== null, dashSub }
+  }, [page, drawer, alertDrawer, dashSub])
 
   // back/forward buttons → rebuild page + drawers from the URL
   useEffect(() => {
     const onPop = () => {
       setPage(pageFromPath(window.location.pathname))
+      const v = viewFromPath(window.location.pathname)
+      if (v) showDashboard(v)
       setDrawer(deviceDrawerFromUrl())
       setAlertDrawer(issueDrawerFromUrl())
     }

@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from "react"
-import { BarChart3, Boxes, Plus, Sparkles, TrendingUp, Trash2 } from "lucide-react"
+import { ArrowLeft, BarChart3, Boxes, Plus, Sparkles, TrendingUp, Trash2 } from "lucide-react"
 import { Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Chip, InputGroup, InputGroupAddon, InputGroupInput, Sparkline } from "@ir/ui"
 import type { Endpoint } from "@/data/endpoints"
 import { ExploringTag } from "./ExploringTag"
 import { ask, openIris } from "./iris/store"
+import { BUILD_SUGGESTIONS as SUGGESTIONS } from "./iris/build"
 import { complianceFor, useHeadsetsVersion } from "./headsets/headsets"
 import { CommonAlertsDashboard } from "./dashboards/CommonAlertsDashboard"
 import { InventoryDashboard } from "./dashboards/InventoryDashboard"
@@ -21,10 +22,28 @@ const ICON: Record<DashId, typeof BarChart3> = { inventory: Boxes, alerts: BarCh
  */
 export function DashboardsPage({ onOpenEndpoint }: { onOpenEndpoint: (rows: Endpoint[], index: number) => void }) {
   const { view } = useDashboards()
-  if (view === "inventory") return <InventoryDashboard onOpenEndpoint={onOpenEndpoint} />
-  if (view === "alerts") return <CommonAlertsDashboard onOpenEndpoint={onOpenEndpoint} />
-  if (view === "trends") return <TrendsDashboard />
-  return <DashboardsHome />
+  if (view === "home") return <DashboardsHome />
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <BackToDashboards />
+      {view === "inventory" && <InventoryDashboard onOpenEndpoint={onOpenEndpoint} />}
+      {view === "alerts" && <CommonAlertsDashboard onOpenEndpoint={onOpenEndpoint} />}
+      {view === "trends" && <TrendsDashboard />}
+    </div>
+  )
+}
+
+/**
+ * The way back to the library from any one dashboard, ready-made or saved. Sits
+ * where the eye lands, not only in the top-bar breadcrumb, which is easy to miss.
+ * Filters are kept, so coming back to the same dashboard picks up where you left.
+ */
+function BackToDashboards() {
+  return (
+    <Button variant="link" className="self-start" onClick={() => showDashboard("home")}>
+      <ArrowLeft aria-hidden /> All dashboards
+    </Button>
+  )
 }
 
 interface Preview { metric: string; label: string; spark?: number[]; bars?: number[]; share?: number }
@@ -116,7 +135,6 @@ function LibraryCard({ title, icon: Icon, meta, onOpen, preview, action, footer 
 }
 
 const IRIS_CONTEXT = { kind: "page", page: "dashboards", label: "Dashboards" } as const
-const SUGGESTIONS = ["Weak Wi-Fi by site", "Headsets that aren't approved", "Call quality this week", "Alerts that keep coming back"]
 
 /** Hand a request to Iris: open the panel on Dashboards and ask it there. */
 function buildWithIris(text: string) {
@@ -169,7 +187,7 @@ function DashboardsHome() {
       <section aria-labelledby="lib-ready" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 id="lib-ready" className="text-heading-xs text-content-neutral-emphasis">Ready to use</h2>
-          <span className="text-body-sm text-content-neutral-muted">Built for every fleet. Open one and it already works.</span>
+          <span className="text-body-sm text-content-neutral-muted">Made by IR. They show your fleet's data with no set-up.</span>
         </div>
         <div className="grid gap-4 @3xl:grid-cols-3">
           {(["alerts", "trends", "inventory"] as DashId[]).map((id) => (

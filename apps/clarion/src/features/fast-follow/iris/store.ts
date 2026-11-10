@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react"
 import type { IrisContext, Message } from "./types"
 import { answer, type Intent } from "./answers"
+import { openWith } from "../dashboards/store"
 
 interface State { open: boolean; context: IrisContext | null; messages: Message[]; thinking: string | null }
 
@@ -38,8 +39,16 @@ export function ask(q: Intent | { text: string }, shownAs?: string) {
   if (!state.context || state.thinking) return
   const text = "text" in q ? q.text : shownAs ?? q.label
   const msgs: Message[] = "text" in q || shownAs || !q.auto ? [...state.messages, { id: nextId++, role: "user", text }] : state.messages
-  const { answer: a, thinking } = answer(state.context, q)
-  set({ messages: msgs, thinking })
-  // short, honest pause: the status line says what Iris is reading
-  window.setTimeout(() => set({ messages: [...state.messages, { id: nextId++, role: "iris", answer: a }], thinking: null }), 900)
+  const ctx = state.context
+  const { answer: a, thinking } = answer(ctx, q)
+  // short, honest pause: the status line says what Iris is reading, step by step when it's building
+  const steps = Array.isArray(thinking) ? thinking : [thinking]
+  const each = steps.length > 1 ? 700 : 900
+  set({ messages: msgs, thinking: steps[0] })
+  steps.slice(1).forEach((s, i) => window.setTimeout(() => set({ thinking: s }), each * (i + 1)))
+  window.setTimeout(() => {
+    set({ messages: [...state.messages, { id: nextId++, role: "iris", answer: a }], thinking: null })
+    // asked for on Dashboards, a built dashboard opens beside the answer, so you see it straight away
+    if (a.dashboard && ctx.kind === "page" && ctx.page === "dashboards") openWith(a.dashboard.view, a.dashboard.state)
+  }, each * steps.length)
 }

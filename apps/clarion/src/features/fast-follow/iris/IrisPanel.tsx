@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, ArrowUp, BookOpen, Check, Copy, Database, Info, Layers, RotateCcw, X } from "lucide-react"
-import { Button, Card, CardContent, Chip, Loader, Textarea } from "@ir/ui"
+import { ArrowRight, ArrowUp, BookOpen, Check, Copy, Database, Info, LayoutDashboard, Layers, RotateCcw, Save, X } from "lucide-react"
+import { Button, Card, CardContent, Chip, Loader, Sparkline, Textarea } from "@ir/ui"
+import { toast } from "@/components/ui/toast"
 import { useIsMobile } from "@/components/dashboard/MobileNav"
 import { endpointById, type Endpoint } from "@/data/endpoints"
 import { pageLabel, type PageId } from "@/nav"
 import { cn } from "@/lib/utils"
 import { ExploringTag } from "../ExploringTag"
 import { openGroup } from "../alerts/store"
+import { DASH_TITLE, isSaved, openWith, saveSpec, useDashboards } from "../dashboards/store"
+import type { BuiltDashboard } from "./build"
 import { ask, clearThread, closeIris, setContext, useIris } from "./store"
 import { suggestionsFor, timeLabel } from "./answers"
 import { IrisMark, type IrisMood } from "./IrisMark"
@@ -50,6 +53,7 @@ export function IrisPanel({
   const follow = (link: IrisLink) => {
     if (link.kind === "group") { openGroup(link.id); onNavigate("alerts") }
     else if (link.kind === "page") onNavigate(link.page)
+    else if (link.kind === "dashboard") { openWith(link.view, link.state); onNavigate("dashboards") }
     else { const e = endpointById(link.id); if (e) onOpenEndpoint([e], 0) }
     if (isMobile) closeIris()
   }
@@ -211,6 +215,8 @@ function AnswerView({ a, onFollow }: { a: Answer; onFollow: (l: IrisLink) => voi
       <CardContent className="flex flex-col gap-3 text-body-md text-content-neutral-emphasis">
         {a.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
 
+        {a.dashboard && <BuiltCard d={a.dashboard} onOpen={() => onFollow({ kind: "dashboard", view: a.dashboard!.view, state: a.dashboard!.state })} />}
+
         {a.steps && <ol className="flex list-decimal flex-col gap-1.5 ps-5">{a.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>}
 
         {a.facts && a.facts.length > 0 && (
@@ -247,5 +253,53 @@ function AnswerView({ a, onFollow }: { a: Answer; onFollow: (l: IrisLink) => voi
         </footer>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * The dashboard Iris built, inside the answer. It's one of Clarion's own
+ * dashboards with filters set, opened beside the chat; it isn't kept until you
+ * save it, so trying ideas never fills up your saved list.
+ */
+function BuiltCard({ d, onOpen }: { d: BuiltDashboard; onOpen: () => void }) {
+  useDashboards() // re-render when it's saved
+  const saved = isSaved(d.name)
+  const save = () => {
+    saveSpec(d.view, d.name, d.state)
+    toast({ title: `Saved "${d.name}"`, description: "Find it under Saved dashboards.", variant: "success" })
+  }
+  const max = Math.max(1, ...(d.bars ?? []))
+  return (
+    <div className="overflow-hidden rounded-lg border border-line-primary-muted bg-surface-card">
+      {(d.bars || d.spark) && (
+        <div aria-hidden className="flex h-16 items-end border-b border-line-neutral-subtle bg-surface-layer-subtle px-4 pt-3">
+          {d.bars && (
+            <div className="flex h-12 w-full items-end gap-1.5">
+              {d.bars.map((v, i) => <span key={i} className="flex-1 rounded-t-xs bg-chart-1" style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />)}
+            </div>
+          )}
+          {d.spark && <Sparkline values={d.spark} label={null} variant="area" className="mb-2 h-11 w-full" />}
+        </div>
+      )}
+      <div className="flex flex-col gap-2 p-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1.5 text-body-xs text-content-neutral-muted">
+            <LayoutDashboard className="size-3" aria-hidden />{DASH_TITLE[d.view]} · {saved ? "saved" : "not saved yet"}
+          </span>
+          <span className="text-label-md text-content-neutral-emphasis">{d.name}</span>
+          <span className="text-body-xs text-content-neutral-muted">{d.summary}</span>
+        </div>
+        <p className="flex items-baseline gap-2">
+          <span className="text-metric-sm tabular-nums text-content-neutral-emphasis">{d.metric}</span>
+          <span className="text-body-sm text-content-neutral-muted">{d.metricLabel}</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={onOpen}>Open dashboard<ArrowRight aria-hidden /></Button>
+          <Button size="sm" variant="outline" disabled={saved} onClick={save}>
+            {saved ? <Check aria-hidden /> : <Save aria-hidden />}{saved ? "Saved" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }

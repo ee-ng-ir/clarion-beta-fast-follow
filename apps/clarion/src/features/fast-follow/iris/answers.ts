@@ -9,11 +9,16 @@ import { ago } from "../alerts/format"
 import type { Answer, IrisContext } from "./types"
 import { endpointById } from "@/data/endpoints"
 import { clockTime, evidenceFor, type EndpointAlert } from "../evidence/evidence"
+import { BUILD_SUGGESTIONS, buildHelp, looksLikeBuild, plan } from "./build"
 
 export type IntentId =
   | "summary" | "check-first" | "elsewhere" | "before" | "worst" | "note"
-  | "attention" | "fleet"
-export interface Intent { id: IntentId; label: string; /** sent by Iris itself, not typed (no user bubble) */ auto?: boolean }
+  | "attention" | "fleet" | "build"
+export interface Intent {
+  id: IntentId; label: string
+  /** sent by Iris itself, not typed (no user bubble) */ auto?: boolean
+  /** for "build": what to build, in the words of the request */ request?: string
+}
 
 export const RETENTION_DAYS = 180 // to confirm (questions log X7)
 
@@ -34,6 +39,10 @@ export function suggestionsFor(ctx: IrisContext | null): Intent[] {
     { id: "before", label: "Has this happened before?" },
     { id: "worst", label: "Which endpoints are worst?" },
     { id: "note", label: "Draft a note for the service desk" },
+  ]
+  if (ctx.page === "dashboards") return [
+    ...BUILD_SUGGESTIONS.map((t): Intent => ({ id: "build", label: `Build: ${t}`, request: t })),
+    { id: "attention", label: "What needs my attention right now?" },
   ]
   return [
     { id: "attention", label: "What needs my attention right now?" },
@@ -61,7 +70,15 @@ function matchText(text: string, ctx: IrisContext): IntentId | "howto-alerts" | 
   return "unknown"
 }
 
-export function answer(ctx: IrisContext, q: Intent | { text: string }): { answer: Answer; thinking: string } {
+export function answer(ctx: IrisContext, q: Intent | { text: string }): { answer: Answer; thinking: string | string[] } {
+  // On Dashboards, a request for something to keep an eye on is a request to build it
+  if (ctx.kind === "page" && ctx.page === "dashboards") {
+    const text = "text" in q ? q.text : q.id === "build" ? q.request ?? q.label : null
+    const m = text ? matchText(text, ctx) : null
+    const elsewhere = m === "howto-alerts" || m === "howto-notify" || m === "out-of-scope"
+    if (text && ("id" in q || (looksLikeBuild(text) && !elsewhere))) return build(text)
+    if (text && m === "unknown") return { answer: buildHelp(), thinking: "Reading your request…" }
+  }
   const id = "text" in q ? matchText(q.text, ctx) : q.id
   if (ctx.kind === "alert") {
     const e = endpointById(ctx.endpointId)
@@ -249,6 +266,24 @@ function pageAnswer(id: string): Answer {
     case "howto-notify": return howTo("notify")
     case "out-of-scope": return outOfScope()
     default: return unknown(null)
+  }
+}
+
+// ---- dashboards ----------------------------------------------------------------
+
+function build(text: string): { answer: Answer; thinking: string[] } {
+  const p = plan(text)
+  if (!p) return { answer: buildHelp(), thinking: ["Reading your request…"] }
+  if ("cant" in p) return { answer: p.cant, thinking: ["Reading your request…", "Checking what Clarion has for it…"] }
+  const b = p.built
+  return {
+    answer: { ...p.answer, basis: "data", asOf: now(), dashboard: b,
+      paragraphs: [...p.answer.paragraphs, "It's open beside this chat. Change any filter there, or save it to keep it."] },
+    thinking: [
+      "Reading your request…",
+      b.view === "inventory" ? "Reading devices on every endpoint…" : "Reading 90 days of alert history…",
+      `Building “${b.name}”…`,
+    ],
   }
 }
 

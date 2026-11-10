@@ -52,6 +52,21 @@ export const DASH_BLURB: Record<DashId, string> = {
   trends: "Whether an alert is growing, recurring or fixed. Compare locations week by week.",
 }
 
+/** Each dashboard's address under /dashboards, so Back, Forward and links land on it. */
+export const DASH_SLUG: Record<DashId, string> = {
+  inventory: "device-inventory",
+  alerts: "most-common-alerts",
+  trends: "alert-trends",
+}
+/** The slug for a view, or none for the Dashboards landing page. */
+export const dashSlug = (view: View) => (view === "home" ? undefined : DASH_SLUG[view])
+/** Which view a path shows: null when it isn't under Dashboards; an unknown slug falls back to the landing page. */
+export function viewFromPath(path: string): View | null {
+  const m = path.replace(/\/+$/, "").match(/^\/dashboards(?:\/([^/]+))?$/)
+  if (!m) return null
+  return (Object.keys(DASH_SLUG) as DashId[]).find((id) => DASH_SLUG[id] === m[1]) ?? "home"
+}
+
 const DEFAULTS: DashState = {
   inventory: { locations: [], tab: "summary", filters: [], q: "" },
   alerts: { days: 30, locations: [], severity: [], categories: [], rank: "times", selected: null },
@@ -79,7 +94,9 @@ const ls = typeof window === "undefined" ? undefined : window.localStorage
 
 interface Store extends DashState { view: View; saved: SavedDashboard[] }
 const persisted = read<Partial<Store>>(ss, VIEW_KEY, {})
-let state: Store = { ...DEFAULTS, ...persisted, view: persisted.view ?? "home", saved: read(ls, SAVED_KEY, SEED) }
+// the address wins over the remembered view, so a link or a reload opens the dashboard it names
+const urlView = typeof window === "undefined" ? null : viewFromPath(window.location.pathname)
+let state: Store = { ...DEFAULTS, ...persisted, view: urlView ?? persisted.view ?? "home", saved: read(ls, SAVED_KEY, SEED) }
 const subs = new Set<() => void>()
 function set(next: Partial<Store>) {
   state = { ...state, ...next }
@@ -104,3 +121,19 @@ export function saveDashboard(view: DashId, name: string) {
   return s
 }
 export const deleteSaved = (id: string) => set({ saved: state.saved.filter((s) => s.id !== id) })
+
+// ---- Iris-built dashboards -----------------------------------------------------------
+
+export type AnyDashState = InventoryState | AlertsState | TrendsState
+
+/** Open a dashboard with a given set of filters, e.g. one Iris has just built. */
+export function openWith(view: DashId, st: Partial<AnyDashState>) {
+  set({ view, [view]: { ...DEFAULTS[view], ...st } } as Partial<Store>)
+}
+/** Save a dashboard from a spec, not from whatever is on screen. Iris builds it; you keep it. */
+export function saveSpec(view: DashId, name: string, st: Partial<AnyDashState>) {
+  const s: SavedDashboard = { id: `s-${Date.now()}`, name, view, state: { ...DEFAULTS[view], ...st } as AnyDashState, savedAt: Date.now(), by: "You" }
+  set({ saved: [s, ...state.saved] })
+  return s
+}
+export const isSaved = (name: string) => state.saved.some((s) => s.name === name)
