@@ -47,7 +47,7 @@ export const DASH_TITLE: Record<DashId, string> = {
   trends: "Alert trends",
 }
 export const DASH_BLURB: Record<DashId, string> = {
-  inventory: "Which headsets, microphones, cameras, Windows and widget versions are in use, and which headsets are approved.",
+  inventory: "Which devices and versions are in use, and which headsets are approved.",
   alerts: "The alerts raised most often over a period, by times raised or endpoints affected.",
   trends: "Whether an alert is growing, recurring or fixed. Compare locations week by week.",
 }

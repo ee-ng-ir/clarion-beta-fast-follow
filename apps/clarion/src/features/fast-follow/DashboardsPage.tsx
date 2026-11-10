@@ -1,11 +1,9 @@
 import { useMemo } from "react"
-import { ArrowRight, BarChart3, Boxes, TrendingUp, Trash2 } from "lucide-react"
-import {
-  Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, EmptyState,
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@ir/ui"
+import { BarChart3, Boxes, Sparkles, TrendingUp, Trash2 } from "lucide-react"
+import { Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, Chip, Sparkline } from "@ir/ui"
 import type { Endpoint } from "@/data/endpoints"
-import { ComingSoon } from "./ComingSoon"
+import { ExploringTag } from "./ExploringTag"
+import { openIris } from "./iris/store"
 import { complianceFor, useHeadsetsVersion } from "./headsets/headsets"
 import { CommonAlertsDashboard } from "./dashboards/CommonAlertsDashboard"
 import { InventoryDashboard } from "./dashboards/InventoryDashboard"
@@ -29,95 +27,104 @@ export function DashboardsPage({ onOpenEndpoint }: { onOpenEndpoint: (rows: Endp
   return <DashboardsHome />
 }
 
-function useHeadlines(): Record<DashId, string> {
+interface Preview { metric: string; label: string; spark?: number[] }
+
+/** One consistent preview per dashboard: a number, what it is, and a sparkline where the point is a trend. */
+function usePreviews(): Record<DashId, Preview> {
   const { approved } = useHeadsetsVersion()
   return useMemo(() => {
     const eps = endpointsIn([])
     const ok = eps.filter((e) => complianceFor(e, approved) === "approved").length
     const top = commonAlerts(filtered({ days: 30 })).sort((a, b) => b.times - a.times)[0]
     const wifi = weekly(filtered({ days: 90, types: ["wifi"], locations: ["manilla"] }), 90, "times")
-    const ch = Math.round((((wifi.at(-2) ?? 0) + (wifi.at(-3) ?? 0)) / Math.max(1, wifi[0] + wifi[1]) - 1) * 100)
+    const ch = Math.round((((wifi.at(-1) ?? 0) + (wifi.at(-2) ?? 0)) / Math.max(1, wifi[0] + wifi[1]) - 1) * 100)
     return {
-      inventory: `${eps.length.toLocaleString()} endpoints · ${approved.length ? `${Math.round((ok / eps.length) * 100)}% of headsets approved` : "no approved headset list yet"}`,
-      alerts: top ? `Last 30 days: ${top.name}, raised ${top.times.toLocaleString()} times` : "No alerts in the last 30 days",
-      trends: `Weak Wi-Fi in Manila is ${ch >= 0 ? `up ${ch}%` : `down ${-ch}%`} over 90 days`,
+      inventory: approved.length
+        ? { metric: `${Math.round((ok / eps.length) * 100)}%`, label: `of headsets approved, across ${eps.length.toLocaleString()} endpoints` }
+        : { metric: eps.length.toLocaleString(), label: "endpoints reporting devices" },
+      alerts: top ? { metric: top.times.toLocaleString(), label: `${top.name}, the most raised alert in the last 30 days` } : { metric: "0", label: "alerts in the last 30 days" },
+      trends: { metric: `${ch >= 0 ? "+" : "−"}${Math.abs(ch)}%`, label: "Weak Wi-Fi in Manila over 90 days", spark: wifi },
     }
   }, [approved])
 }
 
+/** The whole card opens the dashboard: the title is the one control, stretched over the card. */
+function LibraryCard({ title, icon: Icon, meta, onOpen, preview, action, footer }: {
+  title: string; icon: typeof BarChart3; meta: string; onOpen: () => void; preview?: Preview; action?: React.ReactNode
+  /** who made it and when, for saved and (later) Iris-built dashboards */
+  footer?: string
+}) {
+  return (
+    <Card className="relative transition-colors hover:border-line-neutral-emphasis">
+      <CardHeader>
+        <CardHeaderText>
+          <CardTitle className="flex items-center gap-2">
+            <Icon className="size-4 shrink-0 text-content-neutral-muted" aria-hidden />
+            <button type="button" onClick={onOpen}
+              className="rounded-xs text-start outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:ring-2 focus-visible:ring-line-focused">
+              {title}
+            </button>
+          </CardTitle>
+          <CardDescription>{meta}</CardDescription>
+        </CardHeaderText>
+        {action && <CardAction className="relative z-10">{action}</CardAction>}
+      </CardHeader>
+      {preview && (
+        <CardContent className="mt-auto flex-row items-end justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-metric-lg text-content-neutral-emphasis">{preview.metric}</span>
+            <span className="text-body-sm text-content-neutral-muted">{preview.label}</span>
+          </div>
+          {preview.spark && <Sparkline values={preview.spark} label={null} className="h-10 w-28 shrink-0" />}
+        </CardContent>
+      )}
+      {footer && <CardContent className="mt-auto pt-4 text-body-xs text-content-neutral-muted">{footer}</CardContent>}
+    </Card>
+  )
+}
+
+/**
+ * The dashboard library: IR's fixed dashboards and the ones you've saved (and,
+ * later, ones Iris builds). One shape for all of them: a card that opens.
+ */
 function DashboardsHome() {
   const { saved } = useDashboards()
-  const headline = useHeadlines()
+  const preview = usePreviews()
   return (
-    <div className="@container flex w-full flex-col gap-4">
-      <div className="grid gap-4 @3xl:grid-cols-3">
-        {(["inventory", "alerts", "trends"] as DashId[]).map((id) => {
-          const Icon = ICON[id]
-          return (
-            <Card key={id} className="cursor-pointer transition-colors hover:border-line-neutral-emphasis" onClick={() => showDashboard(id)}>
-              <CardHeader>
-                <CardHeaderText>
-                  <CardTitle className="flex items-center gap-2"><Icon className="size-4 text-content-neutral-muted" aria-hidden />{DASH_TITLE[id]}</CardTitle>
-                  <CardDescription>{DASH_BLURB[id]}</CardDescription>
-                </CardHeaderText>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col justify-end gap-3">
-                <p className="text-label-md text-content-neutral-emphasis">{headline[id]}</p>
-                <Button variant="outline" size="sm" className="self-start" onClick={(e) => { e.stopPropagation(); showDashboard(id) }}>
-                  Open <ArrowRight aria-hidden />
-                </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+    <div className="@container flex w-full flex-col gap-6">
+      <section aria-labelledby="lib-ir" className="flex flex-col gap-3">
+        <h2 id="lib-ir" className="text-heading-xs text-content-neutral-emphasis">From IR</h2>
+        <div className="grid gap-4 @3xl:grid-cols-3">
+          {(["alerts", "trends", "inventory"] as DashId[]).map((id) => (
+            <LibraryCard key={id} title={DASH_TITLE[id]} icon={ICON[id]} meta={DASH_BLURB[id]} preview={preview[id]} onOpen={() => showDashboard(id)} />
+          ))}
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardHeaderText>
-            <CardTitle>Saved dashboards</CardTitle>
-            <CardDescription>A dashboard with its filters and date range. Save one from any dashboard.</CardDescription>
-          </CardHeaderText>
-          {saved.length > 0 && <CardAction><span className="text-body-sm text-content-neutral-muted">{saved.length} saved</span></CardAction>}
-        </CardHeader>
+      <section aria-labelledby="lib-yours" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="lib-yours" className="text-heading-xs text-content-neutral-emphasis">Yours{saved.length ? ` · ${saved.length}` : ""}</h2>
+          <span className="ms-auto flex items-center gap-2">
+            <Chip onClick={() => openIris({ kind: "page", page: "dashboards", label: "Dashboards" })}>
+              <Sparkles aria-hidden /> Build a dashboard with Iris
+            </Chip>
+            <ExploringTag />
+          </span>
+        </div>
         {saved.length === 0 ? (
-          <CardContent>
-            <EmptyState size="sm" illustration="dashboards" title="Nothing saved yet" description="Open a dashboard, set the filters you check often, then choose Save." />
-          </CardContent>
+          <p className="text-body-md text-content-neutral-muted">Nothing here yet. Save a dashboard with its filters, or ask Iris to build one.</p>
         ) : (
-          <Table size="sm" aria-label="Saved dashboards">
-            <TableHeader>
-              <TableRow>
-                <TableHead align="start">Name</TableHead>
-                <TableHead align="start" className="hidden @3xl:table-cell">Dashboard</TableHead>
-                <TableHead align="start" className="hidden @4xl:table-cell">Filters</TableHead>
-                <TableHead align="end" className="hidden @2xl:table-cell">Saved</TableHead>
-                <TableHead align="end"><span className="sr-only">Actions</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {saved.map((s) => (
-                <TableRow key={s.id} className="cursor-pointer" onClick={() => openSaved(s)}>
-                  <TableCell align="start">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); openSaved(s) }}
-                      className="rounded-xs text-start text-label-md text-content-neutral-emphasis outline-none hover:underline focus-visible:ring-2 focus-visible:ring-line-focused">
-                      {s.name}
-                    </button>
-                  </TableCell>
-                  <TableCell align="start" className="hidden @3xl:table-cell">{DASH_TITLE[s.view]}</TableCell>
-                  <TableCell align="start" className="hidden text-content-neutral-muted @4xl:table-cell">{describeSaved(s)}</TableCell>
-                  <TableCell align="end" className="hidden text-content-neutral-muted @2xl:table-cell">{s.by} · {savedAgo(s.savedAt)}</TableCell>
-                  <TableCell align="end">
-                    <Button variant="ghost" size="icon-sm" aria-label={`Delete ${s.name}`} onClick={(e) => { e.stopPropagation(); deleteSaved(s.id) }}><Trash2 /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="grid gap-4 @3xl:grid-cols-3">
+            {saved.map((s) => (
+              <LibraryCard key={s.id} title={s.name} icon={ICON[s.view]}
+                meta={describeSaved(s)}
+                footer={`${DASH_TITLE[s.view]} · saved by ${s.by === "You" ? "you" : s.by} ${savedAgo(s.savedAt)}`}
+                onOpen={() => openSaved(s)}
+                action={<Button variant="ghost" size="icon-sm" aria-label={`Delete ${s.name}`} onClick={() => deleteSaved(s.id)}><Trash2 /></Button>} />
+            ))}
+          </div>
         )}
-      </Card>
-
-      <ComingSoon illustration="assistant" title="Ask Iris for a dashboard" body="Ask in plain words, like “Weak Wi-Fi in Manila over 90 days”, and Iris opens the matching dashboard with those filters, so the numbers always match." exploring questions={["R6", "X5"]} />
+      </section>
     </div>
   )
 }
