@@ -20,6 +20,7 @@ import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
 import { guarded, setNavigator } from "@/features/fast-follow/navigator"
 import { PreviewFrame } from "@/features/fast-follow/PreviewMarker"
 import { ClarionSidebar } from "@/features/fast-follow/shell/ClarionSidebar"
+import { AskIrisButton } from "@/features/fast-follow/iris/AskIrisButton"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
 import { AlertDrawer } from "@/components/alerts/AlertDrawer"
@@ -199,7 +200,9 @@ export default function App() {
           onSwitchExperience={switchExperience}
         />
 
-        <div className="shrink-0 p-5" style={{ borderBottom: "1px solid var(--border-neutral-muted)" }}>
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 p-5" style={{ borderBottom: "1px solid var(--border-neutral-muted)" }}>
+          {/* Fast Follow: title block + Iris AI chip (out of the top bar, per Picasso App shell) */}
+          <div className="min-w-0">
           <h1 className="text-xl font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>
             {page === "endpoints" && endpointFilters.length > 0 ? (
               <>
@@ -217,6 +220,8 @@ export default function App() {
           {pageSubtitle[page] && (
             <p className="mt-1 text-sm" style={{ color: "var(--fg-neutral-muted)" }}>{page === "dashboards" ? <DashboardsSubtitle /> : pageSubtitle[page]}</p>
           )}
+          </div>
+          <AskIrisButton page={page} />
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">

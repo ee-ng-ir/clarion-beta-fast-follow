@@ -4,7 +4,6 @@ import { fleet } from "@/data/dashboard"
 import { pageLabel, type PageId, type Experience } from "@/nav"
 import { Button } from "@/components/ui/button"
 import { ExperienceMenu } from "./ExperienceMenu"
-import { AskIrisButton } from "@/features/fast-follow/iris/AskIrisButton"
 import { DashboardsCrumb } from "@/features/fast-follow/dashboards/DashboardsChrome"
 
 function IconButton({ children, label, onClick }: { children: ReactNode; label: string; onClick?: () => void }) {
@@ -66,7 +65,6 @@ export function Topbar({
 
       <div className="flex shrink-0 items-center gap-4">
         <div className="flex items-center gap-1 md:gap-2">
-          <AskIrisButton page={page} />
           {/* phones: Help and theme live in the navigation footer (top bar option B) */}
           <span className="hidden md:contents">
             <Button asChild variant="ghost" size="icon">

@@ -1,21 +1,24 @@
 import { Sparkles } from "lucide-react"
-import { Button } from "@ir/ui"
+import { Chip } from "@ir/ui"
 import { pageLabel, type PageId } from "@/nav"
 import { openIris, closeIris, useIris } from "./store"
 
-/** Top-bar entry point, quiet like the icons beside it (ghost; secondary while open). Opens Iris already looking at the current page. */
+/**
+ * Iris's entry point, as Picasso's AI chip (a Chip with a leading Sparkles),
+ * beside the page title rather than in the top bar: the App shell keeps the
+ * top bar to the toggle and the breadcrumb. Opens Iris already looking at
+ * this page. Never `selected` — Picasso's AI chip is an action, not a toggle.
+ */
 export function AskIrisButton({ page }: { page: PageId }) {
   const { open } = useIris()
   return (
-    <Button
-      variant={open ? "secondary" : "ghost"}
-      size="sm"
-      aria-pressed={open}
-      aria-label="Ask Iris"
+    <Chip
+      aria-expanded={open}
       onClick={() => (open ? closeIris() : openIris({ kind: "page", page, label: pageLabel(page) }))}
+      className="shrink-0"
     >
       <Sparkles aria-hidden />
-      <span className="hidden sm:inline">Ask Iris</span>
-    </Button>
+      Ask Iris about this page
+    </Chip>
   )
 }
