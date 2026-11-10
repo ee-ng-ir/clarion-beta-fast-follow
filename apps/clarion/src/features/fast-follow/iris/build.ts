@@ -1,4 +1,5 @@
 // Iris builds a dashboard from a plain request ("headsets that aren't approved").
+import { listName } from "../alerts/names"
 // It doesn't invent a new kind of dashboard: it picks one of the three Clarion
 // already has and sets its filters, so what Iris builds is exactly what you'd get
 // filtering by hand, and you can change it afterwards. Every figure Iris quotes is
@@ -137,15 +138,15 @@ function alertPlan(typeId: string, days: number | undefined, locs: string[], byS
     const rank = commonAlerts(rs).sort((a, b) => b.times - a.times).findIndex((r) => r.typeId === typeId) + 1
     const site = topSites(mine, 1)[0]
     const built = asSaved({
-      name: `${t.warning} · this week${locs.length ? ` · ${locs.map(locationName).join(", ")}` : ""}`,
+      name: `${listName(t)} · this week${locs.length ? ` · ${locs.map(locationName).join(", ")}` : ""}`,
       view: "alerts", state: { days: 7, locations: locs, severity: [], categories: [], rank: "times", selected: typeId },
       metric: mine.length.toLocaleString(), metricLabel: `times raised in the last 7 days, on ${plural(eps, "endpoint")}`,
     })
     return { built, answer: { sources: [SRC_HISTORY],
       paragraphs: [
         mine.length
-          ? `“${t.warning}” was raised ${plural(mine.length, "time")} on ${plural(eps, "endpoint")} in the last 7 days${rank ? `, ${rankLabel(rank)}` : ""}.${site ? ` ${site.name} had the most (${site.n}).` : ""}`
-          : `“${t.warning}” hasn't been raised in the last 7 days.`,
+          ? `“${listName(t)}” was raised ${plural(mine.length, "time")} on ${plural(eps, "endpoint")} in the last 7 days${rank ? `, ${rankLabel(rank)}` : ""}.${site ? ` ${site.name} had the most (${site.n}).` : ""}`
+          : `“${listName(t)}” hasn't been raised in the last 7 days.`,
         "A week is too short to show a trend, so it opens on this alert with the endpoints it hit. Pick 30 or 90 days there to see it week by week.",
       ] } }
   }
@@ -157,15 +158,15 @@ function alertPlan(typeId: string, days: number | undefined, locs: string[], byS
   const spark = weekly(filtered({ days: Math.ceil(d / 7) * 7, types: [typeId], locations: top ? [top.id] : [] }), d, "times")
   const ch = trendPct(spark)
   const built = asSaved({
-    name: `${t.warning} ${lines.length ? `by site` : "over time"} · ${d} days`,
+    name: `${listName(t)} ${lines.length ? `by site` : "over time"} · ${d} days`,
     view: "trends", state: { days: d, types: [typeId], locations: lines, measure: "times" },
     metric: rs.length.toLocaleString(), metricLabel: `times raised in ${d} days${top ? `, most at ${top.name}` : ""}`, spark,
   })
   return { built, answer: { sources: [SRC_HISTORY],
     paragraphs: [
       rs.length
-        ? `“${t.warning}” was raised ${plural(rs.length, "time")} in the last ${d} days.${top ? ` ${top.name} has the most${ch !== null ? `, and it's ${ch >= 0 ? "up" : "down"} ${Math.abs(ch)}% from the first two weeks to the last two` : ""}.` : ""}`
-        : `“${t.warning}” hasn't been raised in the last ${d} days.`,
+        ? `“${listName(t)}” was raised ${plural(rs.length, "time")} in the last ${d} days.${top ? ` ${top.name} has the most${ch !== null ? `, and it's ${ch >= 0 ? "up" : "down"} ${Math.abs(ch)}% from the first two weeks to the last two` : ""}.` : ""}`
+        : `“${listName(t)}” hasn't been raised in the last ${d} days.`,
       lines.length && !locs.length ? `It compares the ${lines.length} sites with the most.` : "",
       days && days < 30 ? `Trends start at 30 days, so I've used 30.` : "",
     ].filter(Boolean),

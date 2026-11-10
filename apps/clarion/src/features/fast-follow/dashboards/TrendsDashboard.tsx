@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { listName } from "../alerts/names"
 import {
   Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   SegmentedControl, SegmentedControlItem, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TimeSeriesChart,
@@ -13,7 +14,7 @@ import { OffNotice } from "../OffNotice"
 
 const RANGES = [30, 60, 90]
 const MAX_LINES = 5
-const typeOptions = ALERT_TYPES.map((t) => ({ value: t.id, label: t.warning, group: categoryLabel[t.category] }))
+const typeOptions = ALERT_TYPES.map((t) => ({ value: t.id, label: listName(t), group: categoryLabel[t.category] }))
 const locationOptions = LOCATIONS.map((l) => ({ value: l.id, label: l.name }))
 
 /** Up or down over the period: the last two weeks against the first two, so one noisy week doesn't decide it. */
@@ -41,7 +42,7 @@ export function TrendsDashboard() {
   }, [st.days, st.types, st.measure, st.locations, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = st.locations.slice(0, MAX_LINES)
 
-  const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? ALERT_TYPES.find((t) => t.id === st.types[0])!.warning : `${st.types.length} alerts`
+  const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? listName(ALERT_TYPES.find((t) => t.id === st.types[0])!) : `${st.types.length} alerts`
   const summary = series.map((s) => { const d = direction(s.points); return d ? (s.id === "all" ? d : `${s.label}: ${d}`) : null }).filter(Boolean).join(" · ")
 
   const exportCsv = () => downloadCsv(`Alert-trends_${what}_last-${st.days}-days`,

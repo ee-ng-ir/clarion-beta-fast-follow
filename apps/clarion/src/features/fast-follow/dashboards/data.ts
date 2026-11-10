@@ -1,4 +1,5 @@
 // Dashboards data: 90 days of synthetic alert history and a device inventory,
+import { listName } from "../alerts/names"
 // both built from the same endpoints the rest of the demo uses. Seeded, so the
 // numbers are stable between reloads and match the endpoint drawer.
 // Demo only — the real history starts on release day (R5).
@@ -196,7 +197,7 @@ export function commonAlerts(rs: Raise[]): AlertRank[] {
   }
   return [...m].map(([typeId, a]) => {
     const t = alertType(typeId)
-    return { typeId, name: t.warning, category: categoryLabel[t.category], times: a.times, endpoints: a.eps.size, critical: a.critical }
+    return { typeId, name: listName(t), category: categoryLabel[t.category], times: a.times, endpoints: a.eps.size, critical: a.critical }
   })
 }
 

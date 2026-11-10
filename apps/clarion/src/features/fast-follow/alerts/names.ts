@@ -6,3 +6,10 @@ const SHORT_NAME: Record<string, string> = {
   storage: "Storage space", battery: "Battery", "audio-device": "Headset and audio devices",
 }
 export const alertName = (t: AlertType) => (t.category === "platform" ? t.id.replace(/^platform:/, "") : SHORT_NAME[t.id] ?? t.warning)
+
+/**
+ * The alert's name in lists and pickers (dashboards, Iris answers): the agent-facing
+ * Warning name, except platforms, which go by the platform alone ("Zoom", not
+ * "Zoom call quality may be reduced"); their category already says they're platforms.
+ */
+export const listName = (t: AlertType) => (t.category === "platform" ? t.id.replace(/^platform:/, "") : t.warning)
