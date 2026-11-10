@@ -9,7 +9,17 @@ import { SectionFooter } from "./SectionFooter"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
 
-function thresholdLine(t: AlertType) {
+/** Platform alerts are one per platform: Warning when its call quality drops, Critical when it can't be reached. */
+const platformName = (t: AlertType) => t.id.replace(/^platform:/, "")
+
+function rowTitle(t: AlertType) {
+  return t.category === "platform" ? platformName(t) : `${t.warning} · ${t.critical}`
+}
+
+function thresholdLine(t: AlertType, platformQuality: { warn: number; crit: number }) {
+  if (t.category === "platform") {
+    return `Warning when call quality drops (Platform Quality Index below ${platformQuality.warn.toFixed(1)}) · Critical when it can't be reached`
+  }
   if (!t.metric) return "No threshold: raised when it happens"
   const u = t.metric.unit
   return `${t.metric.name} · Warning ${t.metric.warn}${u} · Critical ${t.metric.crit}${u}`
@@ -69,7 +79,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
           <section key={c} aria-label={categoryLabel[c]}>
             <div className="flex flex-col gap-0.5 border-t border-line-neutral-subtle px-6 py-3">
               <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
-              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">Each platform is set separately, so Teams can stay on while Zoom is off.</p>}
+              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">One alert per platform, so turning one platform off leaves the others on.</p>}
             </div>
             {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
               const on = !off.includes(t.id)
@@ -79,9 +89,9 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                   <FieldOption
                     className="min-w-0 flex-1"
                     control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
-                    description={thresholdLine(t)}
+                    description={thresholdLine(t, settings.thresholds.platformmos)}
                   >
-                    {t.warning} · {t.critical}
+                    {rowTitle(t)}
                   </FieldOption>
                   <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={n} />
                 </div>
@@ -110,6 +120,6 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
  */
 function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
   if (on) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
-  if (wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-label-sm text-content-warning-emphasis">Saving stops {active} active alert{active === 1 ? "" : "s"}</span> : null
+  if (wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-label-sm text-content-warning-emphasis">Off once you save · active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
   return <Badge className="ms-auto shrink-0">Off</Badge>
 }
