@@ -9,21 +9,12 @@ import { SectionFooter } from "./SectionFooter"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
 
-/** Platform alerts are one per platform: Warning when its call quality drops, Critical when it can't be reached. */
-const platformName = (t: AlertType) => t.id.replace(/^platform:/, "")
-
-function rowTitle(t: AlertType) {
-  return t.category === "platform" ? platformName(t) : `${t.warning} · ${t.critical}`
+/** One plain name per kind of alert: the only choice here is on or off. When each is raised lives on Thresholds. */
+const SHORT_NAME: Record<string, string> = {
+  "call-quality": "Call quality", wifi: "Wi-Fi signal", cpu: "CPU", memory: "Memory",
+  storage: "Storage space", battery: "Battery", "audio-device": "Headset and audio devices",
 }
-
-function thresholdLine(t: AlertType, platformQuality: { warn: number; crit: number }) {
-  if (t.category === "platform") {
-    return `Warning when call quality drops (Platform Quality Index below ${platformQuality.warn.toFixed(1)}) · Critical when it can't be reached`
-  }
-  if (!t.metric) return "No threshold: raised when it happens"
-  const u = t.metric.unit
-  return `${t.metric.name} · Warning ${t.metric.warn}${u} · Critical ${t.metric.crit}${u}`
-}
+const rowName = (t: AlertType) => (t.category === "platform" ? t.id.replace(/^platform:/, "") : SHORT_NAME[t.id] ?? t.warning)
 
 /**
  * Settings › Alert types. Every alert type can be on or off, for the whole tenancy.
@@ -71,7 +62,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
           <CardHeaderText>
             <CardTitle>Alert types</CardTitle>
             <CardDescription>
-              Applies to every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail, and its thresholds are kept for when you turn it back on.
+              Applies to every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail. When each alert is raised is set on Thresholds.
             </CardDescription>
           </CardHeaderText>
         </CardHeader>
@@ -79,7 +70,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
           <section key={c} aria-label={categoryLabel[c]}>
             <div className="flex flex-col gap-0.5 border-t border-line-neutral-subtle px-6 py-3">
               <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
-              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">One alert per platform, so turning one platform off leaves the others on.</p>}
+              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">Each platform alerts when its call quality drops or it can't be reached. Turning one off leaves the others on.</p>}
             </div>
             {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
               const on = !off.includes(t.id)
@@ -89,9 +80,8 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                   <FieldOption
                     className="min-w-0 flex-1"
                     control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
-                    description={thresholdLine(t, settings.thresholds.platformmos)}
                   >
-                    {rowTitle(t)}
+                    {rowName(t)}
                   </FieldOption>
                   <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={n} />
                 </div>
