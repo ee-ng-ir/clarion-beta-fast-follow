@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { CircleHelp } from "lucide-react"
+import { CircleAlert, CircleHelp, TriangleAlert } from "lucide-react"
 import {
   Alert, AlertDescription, Badge, Button, Card, CardAction, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox,
   Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, FieldOption, SegmentedControl, SegmentedControlItem,
+  Table, TableBody, TableCell, TableCol, TableColGroup, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
@@ -89,40 +90,70 @@ export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThres
           </CardAction>
         </CardHeader>
 
-        {categories.map((c) => (
-          <section key={c} aria-label={categoryLabel[c]}>
-            {/* the category heading carries its stability; the rows under it carry on/off */}
-            <div className="flex flex-col gap-3 border-t border-line-neutral-subtle bg-surface-canvas px-6 py-4 @3xl:flex-row @3xl:items-start @3xl:justify-between @3xl:gap-8">
-              <div className="flex min-w-0 flex-col gap-1">
-                <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
-                <p className="text-body-sm text-content-neutral-muted">
-                  {RAISED_AS_IT_HAPPENS.includes(c)
-                    ? "Raised as they happen. Stability sets how long a recovery must hold before the alert clears."
-                    : PRESETS[stability[c]].words}
-                </p>
-                {c === "platform" && <PlatformBadges quality={settings.thresholds.platformmos} />}
-              </div>
-              <SegmentedControl size="sm" aria-label={`${categoryLabel[c]} stability`} value={stability[c]} className="shrink-0 self-start"
-                onValueChange={(v) => v && setCategory(c, v as Stability)}>
-                {(Object.keys(PRESETS) as Stability[]).map((k) => <SegmentedControlItem key={k} value={k}>{PRESETS[k].label}</SegmentedControlItem>)}
-              </SegmentedControl>
-            </div>
-            {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
-              const on = !off.includes(t.id)
-              return (
-                <div key={t.id} className="flex items-center gap-4 border-t border-line-neutral-subtle px-6 py-4">
-                  <FieldOption className="min-w-0 flex-1" control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      {alertName(t)}
-                      <ThresholdBadges t={t} />
-                    </span>
-                  </FieldOption>
-                  <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={affected.get(t.id) ?? 0} />
-                </div>
-              )
-            })}
-          </section>
-        ))}
+        {/* One table: thresholds in their own columns (read-only here, set on
+            Thresholds), so values line up and nothing on a settings page looks
+            alarming. Each category row carries its stability (decided 10 Nov). */}
+        <Table className="min-w-[44rem]">
+          <TableColGroup>
+            <TableCol />
+            <TableCol className="w-44" />
+            <TableCol className="w-44" />
+            <TableCol className="w-36" />
+          </TableColGroup>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="ps-6 text-start">Alert</TableHead>
+              <TableHead className="text-start"><span className="flex items-center gap-1.5"><TriangleAlert className="size-3.5 text-status-warning" aria-hidden />Warning</span></TableHead>
+              <TableHead className="text-start"><span className="flex items-center gap-1.5"><CircleAlert className="size-3.5 text-status-critical" aria-hidden />Critical</span></TableHead>
+              <TableHead className="pe-6 text-end">Active now</TableHead>
+            </TableRow>
+          </TableHeader>
+          {categories.map((c) => (
+            <TableBody key={c}>
+              <TableRow className="bg-surface-neutral-subtle hover:bg-surface-neutral-subtle">
+                <TableCell className="py-4 ps-6 align-top">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-label-md font-semibold text-content-neutral-emphasis">{categoryLabel[c]}</h3>
+                    <p className="text-body-sm text-content-neutral-muted">
+                      {RAISED_AS_IT_HAPPENS.includes(c)
+                        ? "Raised as they happen. Stability sets how long a recovery must hold before the alert clears."
+                        : PRESETS[stability[c]].words}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-body-sm text-content-neutral-muted">Stability</span>
+                      <SegmentedControl size="sm" aria-label={`${categoryLabel[c]} stability`} value={stability[c]}
+                        onValueChange={(v) => v && setCategory(c, v as Stability)}>
+                        {(Object.keys(PRESETS) as Stability[]).map((k) => <SegmentedControlItem key={k} value={k}>{PRESETS[k].label}</SegmentedControlItem>)}
+                      </SegmentedControl>
+                    </div>
+                  </div>
+                </TableCell>
+                {/* platforms share one pair of thresholds: said once, under the column headers */}
+                <TableCell className="py-4 align-top">{c === "platform" ? `Quality below ${settings.thresholds.platformmos.warn.toFixed(1)}` : c === "devices" ? <span className="text-content-neutral-subtle">No threshold</span> : null}</TableCell>
+                <TableCell className="py-4 align-top">{c === "platform" ? "Can't be reached" : null}</TableCell>
+                <TableCell className="pe-6" />
+              </TableRow>
+              {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
+                const on = !off.includes(t.id)
+                const at = threshold(t)
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell className="ps-6">
+                      <FieldOption className={on ? undefined : "text-content-neutral-subtle"} control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}>
+                        {alertName(t)}
+                      </FieldOption>
+                    </TableCell>
+                    <TableCell>{at?.warn}</TableCell>
+                    <TableCell>{at?.crit}</TableCell>
+                    <TableCell className="pe-6 text-end">
+                      <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={affected.get(t.id) ?? 0} />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          ))}
+        </Table>
       </Card>
 
       <SectionFooter
@@ -148,31 +179,17 @@ export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThres
   )
 }
 
-/** How many endpoints have it now, or "Off" once it has been saved off. An unsaved change says nothing here; the footer covers it. */
+/** How many endpoints have it now ("None" when none), or "Off" once it has been saved off. An unsaved change says nothing here; the footer covers it. */
 function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
-  if (on || wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
-  return <Badge className="ms-auto shrink-0">Off</Badge>
+  if (!on && !wasOn) return <Badge>Off</Badge>
+  if (active === 0) return <span className="text-content-neutral-subtle">None</span>
+  return <span className="text-content-neutral-muted">{active} endpoint{active === 1 ? "" : "s"}</span>
 }
 
-/** When the alert is raised, at a glance (set on Thresholds). Platforms say it once, in their heading; devices have no threshold. */
-function ThresholdBadges({ t }: { t: AlertType }) {
+/** When the alert is raised (set on Thresholds), as plain text for its column. Platforms say it once, in their group row; devices have no threshold. */
+function threshold(t: AlertType): { warn: string; crit: string } | null {
   if (t.category === "platform" || !t.metric) return null
   const m = t.metric
-  const v = (n: number) => `${m.lowerIsWorse ? "below" : "above"} ${n}${m.unit}`
-  return (
-    <span className="flex items-center gap-1.5">
-      <Badge color="warning" dot>Warning {v(m.warn)}</Badge>
-      <Badge color="danger" dot>Critical {v(m.crit)}</Badge>
-    </span>
-  )
-}
-
-/** Platform alerts: Warning on the Platform Quality Index, Critical when unreachable. The same for every platform. */
-function PlatformBadges({ quality }: { quality: { warn: number; crit: number } }) {
-  return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      <Badge color="warning" dot>Warning: quality below {quality.warn.toFixed(1)}</Badge>
-      <Badge color="danger" dot>Critical: can't be reached</Badge>
-    </span>
-  )
+  const v = (n: number) => `${m.lowerIsWorse ? "Below" : "Above"} ${n}${m.unit}`
+  return { warn: v(m.warn), crit: v(m.crit) }
 }
