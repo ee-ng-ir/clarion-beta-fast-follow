@@ -1,243 +1,168 @@
-import { Fragment, useEffect, useMemo, useState } from "react"
-import { ChevronDown, RotateCcw } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { CircleHelp } from "lucide-react"
 import {
   Alert, AlertDescription, Badge, Button, Card, CardAction, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox,
-  Slider, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ThresholdSlider,
+  Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, FieldOption, SegmentedControl, SegmentedControlItem,
 } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
-import { metricById } from "@/data/thresholds"
 import { useViewer } from "@/lib/viewer"
 import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
 import { alertName } from "../alerts/names"
-import { takeSettingsFocus } from "../navigator"
-import { saveThresholds, saveTypes, savedLine, useSettings, type Saved } from "./store"
+import { saveStability, saveTypes, savedLine, useSettings, type Saved, type Stability } from "./store"
+import { PRESETS } from "./stability"
 import { SectionFooter } from "./SectionFooter"
-import { IR_THRESHOLDS, metricForType, samePolicy, type Policy } from "./thresholds"
+import { StabilityExample } from "./StabilityExample"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
-const COLS = 6
+/** Platform and device alerts have no reading that hovers around a threshold. */
+const RAISED_AS_IT_HAPPENS: AlertCategory[] = ["platform", "devices"]
 
 /**
- * Settings › Alerting › Alerts & thresholds (canvas option D). Which alerts
- * Clarion raises and the readings that raise them, in one table: Alerts and
- * Thresholds were one decision on two tabs. A row expands to its threshold;
- * every platform shares one (the Platform Quality Index), set on the group row.
- * A form like every Settings tab (D9): change things, then one Save.
- * Off isn't evaluated (D10); its threshold is kept for when it's back on.
+ * Settings › Alerting › Alerts: which alerts Clarion raises, and how settled a
+ * problem must be before one is raised or cleared (alert stability, anti-flapping).
+ * Both shape how noisy alerts are, and both are set per category, so the
+ * category heading carries its stability and the rows carry on/off.
+ * The numbers that raise each alert stay on Thresholds (their own section).
+ * A form like every Settings section (D9): change things, then one Save.
+ * Off isn't evaluated (D10). Stability applies to the widget and Fleet-view alike.
  */
-export function AlertsSection({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const settings = useSettings()
-  const { person, thresholds: acc } = useViewer()
-  const readOnly = !acc.editDefaults
+  const { person } = useViewer()
   const [off, setOff] = useState<string[]>(settings.disabledTypes)
-  const [policy, setPolicy] = useState<Policy>(settings.thresholds)
-  // a deep link ("Edit this alert" on an alert group) opens straight to that row
-  const [open, setOpen] = useState<string[]>(() => { const f = takeSettingsFocus(); return f ? [f] : [] })
+  const [stability, setStability] = useState(settings.stability)
+  const [explain, setExplain] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
 
   const typesDirty = off.slice().sort().join() !== settings.disabledTypes.slice().sort().join()
-  const policyDirty = !samePolicy(policy, settings.thresholds)
-  const dirty = typesDirty || policyDirty
+  const stabilityDirty = JSON.stringify(stability) !== JSON.stringify(settings.stability)
+  const dirty = typesDirty || stabilityDirty
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
-  useEffect(() => {
-    if (!open.length) return
-    document.getElementById(`alert-row-${open[0]}`)?.scrollIntoView({ block: "center" })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, for the deep link
-
+  // endpoints each type alerts on right now, so turning one off isn't a blind choice
   const affected = useMemo(() => {
     const m = new Map<string, number>()
     for (const e of endpoints) if (e.status === "critical" || e.status === "warning") m.set(classify(e), (m.get(classify(e)) ?? 0) + 1)
     return m
   }, [])
 
-  const edit = () => setConfirmation(null)
-  const toggle = (id: string, on: boolean) => { edit(); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
-  const setBand = (metric: string, warn: number, crit: number) => { edit(); setPolicy((p) => ({ ...p, [metric]: { warn, crit } })) }
-  const flip = (key: string) => setOpen((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]))
-
+  const toggle = (id: string, on: boolean) => { setConfirmation(null); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
+  const setCategory = (c: AlertCategory, v: Stability) => { setConfirmation(null); setStability((s) => ({ ...s, [c]: v })) }
   const save = () => {
     if (typesDirty) saveTypes(off, person.name)
-    if (policyDirty) saveThresholds(policy, person.name)
+    if (stabilityDirty) saveStability(stability, person.name)
     setConfirmation("Alerts saved")
   }
-
-  const lastSaved = [settings.saved.types, settings.saved.thresholds].filter((s): s is Saved => !!s).sort((a, b) => b.at.getTime() - a.at.getTime())[0]
-  const changedFromIr = !samePolicy(policy, IR_THRESHOLDS)
+  const lastSaved = [settings.saved.types, settings.saved.stability].filter((s): s is Saved => !!s).sort((a, b) => b.at.getTime() - a.at.getTime())[0]
 
   return (
     <div className="flex w-full flex-col gap-gutter">
-      {readOnly && (
-        <Alert variant="info"><AlertDescription>Thresholds are read-only. They're set by administrators with access to every location.</AlertDescription></Alert>
+      {off.length > 0 && (
+        <Alert variant="warning">
+          <AlertDescription>
+            {off.length} alert{off.length === 1 ? " is" : "s are"} off. Agents won't see {off.length === 1 ? "it" : "them"} in the widget, and no one will be emailed about {off.length === 1 ? "it" : "them"}.
+          </AlertDescription>
+        </Alert>
       )}
 
       <Card className="@container gap-0 overflow-hidden">
-        <CardHeader className="items-center">
+        <CardHeader className="pb-6">
           <CardHeaderText>
-            <CardTitle>Alerts &amp; thresholds</CardTitle>
-            <CardDescription>Which alerts Clarion raises, and the readings that raise them. For every endpoint.</CardDescription>
+            <CardTitle>Alerts</CardTitle>
+            <CardDescription>
+              Choose which alerts Clarion raises, and how long a problem must last before an alert is raised or cleared. For every endpoint, in the widget and Fleet-view alike.
+            </CardDescription>
           </CardHeaderText>
-          {!readOnly && (
-            <CardAction>
-              <Button variant="outline" size="sm" disabled={!changedFromIr} onClick={() => { edit(); setPolicy(IR_THRESHOLDS) }}>
-                <RotateCcw aria-hidden />Reset thresholds
-              </Button>
-            </CardAction>
-          )}
+          <CardAction>
+            <Button variant="ghost" size="sm" onClick={() => setExplain(true)}><CircleHelp aria-hidden />What does stability change?</Button>
+          </CardAction>
         </CardHeader>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead align="start" className="w-12">On</TableHead>
-              <TableHead align="start">Alert</TableHead>
-              <TableHead align="start">Warning</TableHead>
-              <TableHead align="start">Critical</TableHead>
-              <TableHead numeric>Active now</TableHead>
-              <TableHead className="w-12"><span className="sr-only">Threshold</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {categories.map((c) => {
-              const types = ALERT_TYPES.filter((t) => t.category === c)
+
+        {categories.map((c) => (
+          <section key={c} aria-label={categoryLabel[c]}>
+            {/* the category heading carries its stability; the rows under it carry on/off */}
+            <div className="flex flex-col gap-3 border-t border-line-neutral-subtle bg-surface-canvas px-6 py-4 @3xl:flex-row @3xl:items-start @3xl:justify-between @3xl:gap-8">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
+                <p className="text-body-sm text-content-neutral-muted">
+                  {RAISED_AS_IT_HAPPENS.includes(c)
+                    ? "Raised as they happen. Stability sets how long a recovery must hold before the alert clears."
+                    : PRESETS[stability[c]].words}
+                </p>
+                {c === "platform" && <PlatformBadges quality={settings.thresholds.platformmos} />}
+              </div>
+              <SegmentedControl size="sm" aria-label={`${categoryLabel[c]} stability`} value={stability[c]} className="shrink-0 self-start"
+                onValueChange={(v) => v && setCategory(c, v as Stability)}>
+                {(Object.keys(PRESETS) as Stability[]).map((k) => <SegmentedControlItem key={k} value={k}>{PRESETS[k].label}</SegmentedControlItem>)}
+              </SegmentedControl>
+            </div>
+            {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
+              const on = !off.includes(t.id)
               return (
-                <Fragment key={c}>
-                  {c === "platform" ? (
-                    <PlatformGroupRow policy={policy} open={open.includes("platform")} onFlip={() => flip("platform")} readOnly={readOnly}
-                      onWarn={(w) => setBand("platformmos", w, policy.platformmos.crit)} />
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={COLS} className="pt-5 pb-2 text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</TableCell>
-                    </TableRow>
-                  )}
-                  {types.map((t) => (
-                    <AlertRow key={t.id} t={t} policy={policy} on={!off.includes(t.id)} savedOff={settings.disabledTypes.includes(t.id)}
-                      active={affected.get(t.id) ?? 0} open={open.includes(t.id)} onFlip={() => flip(t.id)}
-                      onToggle={(v) => toggle(t.id, v)} onBand={setBand} readOnly={readOnly} />
-                  ))}
-                </Fragment>
+                <div key={t.id} className="flex items-center gap-4 border-t border-line-neutral-subtle px-6 py-4">
+                  <FieldOption className="min-w-0 flex-1" control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}>
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {alertName(t)}
+                      <ThresholdBadges t={t} />
+                    </span>
+                  </FieldOption>
+                  <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={affected.get(t.id) ?? 0} />
+                </div>
               )
             })}
-          </TableBody>
-        </Table>
+          </section>
+        ))}
       </Card>
 
       <SectionFooter
         saved={savedLine(lastSaved)}
         dirty={dirty}
-        onDiscard={() => { setOff(settings.disabledTypes); setPolicy(settings.thresholds) }}
+        onDiscard={() => { setOff(settings.disabledTypes); setStability(settings.stability) }}
         onSave={save}
         saveLabel="Save alerts"
         confirmation={confirmation}
+        extra={<Button variant="ghost" onClick={onEditThresholds}>Edit thresholds</Button>}
       />
+
+      <Dialog open={explain} onOpenChange={setExplain}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>What alert stability changes</DialogTitle>
+            <DialogDescription>It stops alerts popping up and clearing when a reading hovers around its threshold. An alert held back in the widget never shows in Fleet-view either.</DialogDescription>
+          </DialogHeader>
+          <DialogBody><StabilityExample setting={stability.network} /></DialogBody>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-const fmtFor = (metricId: string) => { const m = metricById(metricId)!; return (v: number) => `${v.toFixed(m.decimals)}${m.unit}` }
+/** How many endpoints have it now, or "Off" once it has been saved off. An unsaved change says nothing here; the footer covers it. */
+function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
+  if (on || wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
+  return <Badge className="ms-auto shrink-0">Off</Badge>
+}
 
-function AlertRow({ t, policy, on, savedOff, active, open, onFlip, onToggle, onBand, readOnly }: {
-  t: AlertType; policy: Policy; on: boolean; savedOff: boolean; active: number; open: boolean
-  onFlip: () => void; onToggle: (on: boolean) => void; onBand: (metric: string, warn: number, crit: number) => void; readOnly: boolean
-}) {
-  const metricId = t.category === "platform" ? null : metricForType(t.id)
-  const m = metricId ? metricById(metricId)! : null
-  const band = metricId ? policy[metricId] : null
-  const fmt = metricId ? fmtFor(metricId) : null
-  const dir = m?.direction === "higher" ? "Above" : "Below"
-  const name = alertName(t)
-  const ir = metricId ? IR_THRESHOLDS[metricId] : null
-  const muted = !on && "text-content-neutral-muted"
+/** When the alert is raised, at a glance (set on Thresholds). Platforms say it once, in their heading; devices have no threshold. */
+function ThresholdBadges({ t }: { t: AlertType }) {
+  if (t.category === "platform" || !t.metric) return null
+  const m = t.metric
+  const v = (n: number) => `${m.lowerIsWorse ? "below" : "above"} ${n}${m.unit}`
   return (
-    <>
-      <TableRow id={`alert-row-${t.id}`} selected={open}>
-        <TableCell align="start"><Checkbox checked={on} onCheckedChange={(v) => onToggle(v === true)} aria-label={`${name} alerts on`} /></TableCell>
-        <TableCell align="start" className={muted || "text-label-md text-content-neutral-emphasis"}>{name}</TableCell>
-        {band && fmt ? (
-          <>
-            <TableCell align="start"><Badge color={on ? "warning" : undefined} dot={on}>{dir} {fmt(band.warn)}</Badge></TableCell>
-            <TableCell align="start"><Badge color={on ? "danger" : undefined} dot={on}>{dir} {fmt(band.crit)}</Badge></TableCell>
-          </>
-        ) : (
-          <TableCell align="start" colSpan={2} className="text-content-neutral-muted">
-            {t.category === "platform" ? "As set for every platform" : "Whenever it happens"}
-          </TableCell>
-        )}
-        <TableCell numeric className="text-content-neutral-muted">{savedOff && !on ? <Badge>Off</Badge> : active || "—"}</TableCell>
-        <TableCell align="end">
-          {band && (
-            <Button variant="ghost" size="icon-sm" aria-expanded={open} aria-controls={`alert-edit-${t.id}`}
-              aria-label={`${open ? "Hide" : "Edit"} ${name} thresholds`} onClick={onFlip}>
-              <ChevronDown className={open ? "rotate-180 transition-transform" : "transition-transform"} />
-            </Button>
-          )}
-        </TableCell>
-      </TableRow>
-      {open && band && m && fmt && ir && (
-        <TableRow id={`alert-edit-${t.id}`} selected className="hover:bg-transparent">
-          <TableCell />
-          <TableCell colSpan={COLS - 1} align="start" className="pb-6">
-            <div className="flex max-w-2xl flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-body-sm text-content-neutral-muted">
-                <span>{m.name} · {m.direction === "higher" ? "higher is worse" : "lower is worse"}</span>
-                {(band.warn !== ir.warn || band.crit !== ir.crit) && !readOnly && (
-                  <Button variant="link" size="xs" onClick={() => onBand(metricId!, ir.warn, ir.crit)}>Set back to IR default ({fmt(ir.warn)} / {fmt(ir.crit)})</Button>
-                )}
-              </div>
-              <ThresholdSlider min={m.min} max={m.max} step={m.step} warning={band.warn} critical={band.crit} disabled={readOnly}
-                format={fmt} aria-label={`${name} thresholds`} onChange={({ warning, critical }) => onBand(metricId!, warning, critical)} />
-              {!on && <span className="text-body-sm text-content-neutral-muted">This alert is off. The threshold is kept for when it's turned back on.</span>}
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+    <span className="flex items-center gap-1.5">
+      <Badge color="warning" dot>Warning {v(m.warn)}</Badge>
+      <Badge color="danger" dot>Critical {v(m.crit)}</Badge>
+    </span>
   )
 }
 
-/** UC/CC platforms: one threshold for all of them, on the group row. Warning on quality; Critical is "can't be reached", which has no number. */
-function PlatformGroupRow({ policy, open, onFlip, onWarn, readOnly }: {
-  policy: Policy; open: boolean; onFlip: () => void; onWarn: (w: number) => void; readOnly: boolean
-}) {
-  const m = metricById("platformmos")!
-  const fmt = fmtFor("platformmos")
-  const w = policy.platformmos.warn
-  const ir = IR_THRESHOLDS.platformmos.warn
+/** Platform alerts: Warning on the Platform Quality Index, Critical when unreachable. The same for every platform. */
+function PlatformBadges({ quality }: { quality: { warn: number; crit: number } }) {
   return (
-    <>
-      <TableRow id="alert-row-platform" selected={open}>
-        <TableCell colSpan={2} align="start" className="pt-5">
-          <span className="flex flex-col gap-0.5">
-            <span className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel.platform}</span>
-            <span className="text-body-xs text-content-neutral-muted">One threshold for every platform</span>
-          </span>
-        </TableCell>
-        <TableCell align="start" className="pt-5"><Badge color="warning" dot>Quality below {fmt(w)}</Badge></TableCell>
-        <TableCell align="start" className="pt-5"><Badge color="danger" dot>Can't be reached</Badge></TableCell>
-        <TableCell className="pt-5" />
-        <TableCell align="end" className="pt-5">
-          <Button variant="ghost" size="icon-sm" aria-expanded={open} aria-controls="alert-edit-platform"
-            aria-label={`${open ? "Hide" : "Edit"} the platform quality threshold`} onClick={onFlip}>
-            <ChevronDown className={open ? "rotate-180 transition-transform" : "transition-transform"} />
-          </Button>
-        </TableCell>
-      </TableRow>
-      {open && (
-        <TableRow id="alert-edit-platform" selected className="hover:bg-transparent">
-          <TableCell />
-          <TableCell colSpan={COLS - 1} align="start" className="pb-6">
-            <div className="flex max-w-2xl flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-body-sm text-content-neutral-muted">
-                <span>{m.name}: Warning below <span className="text-label-md text-content-warning-emphasis">{fmt(w)}</span></span>
-                {w !== ir && !readOnly && <Button variant="link" size="xs" onClick={() => onWarn(ir)}>Set back to IR default ({fmt(ir)})</Button>}
-              </div>
-              <Slider min={m.min} max={m.max} step={m.step} value={[w]} disabled={readOnly} thumbLabels={["Warning below"]}
-                onValueChange={([v]) => onWarn(v)} />
-              <div className="flex justify-between text-body-xs text-content-neutral-muted"><span>{fmt(m.min)}</span><span>{fmt(m.max)}</span></div>
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+    <span className="flex flex-wrap items-center gap-1.5">
+      <Badge color="warning" dot>Warning: quality below {quality.warn.toFixed(1)}</Badge>
+      <Badge color="danger" dot>Critical: can't be reached</Badge>
+    </span>
   )
 }

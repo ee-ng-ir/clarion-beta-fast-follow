@@ -4,12 +4,13 @@ import { NewDot } from "./ExploringTag"
 import { clearSettingsTab, setLeaveGuard, takeSettingsTab } from "./navigator"
 import { AlertsSection } from "./settings/AlertsSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
-import { StabilitySection } from "./settings/StabilitySection"
 import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
+import { ThresholdsSection } from "./settings/ThresholdsSection"
 
 /**
  * Settings: the top-level home for everything an IT Admin configures in Clarion,
- * grouped by job (canvas IA option 2): Alerting is what raises an alert, Delivery
+ * grouped by job (canvas IA option 2): Alerting is what raises an alert (Alerts =
+ * on/off and stability, Thresholds = the numbers), Delivery
  * is where alerts go (email now; ticketing and push later slot in here), Devices
  * is the approved headset list. Picasso's Line tabs, its pattern for
  * settings-style navigation. The Alerts page links in ("Alert settings").
@@ -17,7 +18,7 @@ import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
  * Leaving a section, or Settings itself, with unsaved changes asks first.
  */
 const GROUPS: { label: string; items: { value: string; label: string; isNew?: boolean }[] }[] = [
-  { label: "Alerting", items: [{ value: "alerts", label: "Alerts & thresholds", isNew: true }, { value: "stability", label: "Alert stability", isNew: true }] },
+  { label: "Alerting", items: [{ value: "alerts", label: "Alerts", isNew: true }, { value: "thresholds", label: "Thresholds" }] },
   { label: "Delivery", items: [{ value: "notifications", label: "Email", isNew: true }] },
   { label: "Devices", items: [{ value: "devices", label: "Approved headsets", isNew: true }] },
 ]
@@ -77,8 +78,8 @@ export function SettingsPage() {
               </div>
             ))}
           </nav>
-          <TabsContent value="alerts" className="min-w-0"><AlertsSection onDirtyChange={onDirtyChange} /></TabsContent>
-          <TabsContent value="stability" className="min-w-0"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
+          <TabsContent value="alerts" className="min-w-0"><AlertsSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
+          <TabsContent value="thresholds" className="min-w-0"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
           <TabsContent value="notifications" className="min-w-0"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
           <TabsContent value="devices" className="min-w-0"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
         </Tabs>

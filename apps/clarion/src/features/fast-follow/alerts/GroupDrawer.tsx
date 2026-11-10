@@ -45,8 +45,7 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
   const closed = !!g.closed
   const shown = showAll ? g.endpoints : g.endpoints.slice(0, ENDPOINTS_SHOWN)
   const mayConfigure = canOpen("settings", useViewer())
-  // straight to this alert's row in Settings, opened to its threshold (platforms share one, on the group row)
-  const editAlert = () => { onClose(); goToSettings("alerts", g.type.category === "platform" ? "platform" : g.type.id) }
+  const editAlert = () => { onClose(); goToSettings("alerts") }
 
   return (
     <>
@@ -63,7 +62,7 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
             </DrawerDescription>
           </DrawerTitleGroup>
           <DrawerActions>
-            {mayConfigure && <Button variant="ghost" size="sm" onClick={editAlert}><Settings2 aria-hidden />Edit this alert</Button>}
+            {mayConfigure && <Button variant="ghost" size="sm" onClick={editAlert}><Settings2 aria-hidden />Alert settings</Button>}
             <DrawerCloseButton />
           </DrawerActions>
         </DrawerHeading>
