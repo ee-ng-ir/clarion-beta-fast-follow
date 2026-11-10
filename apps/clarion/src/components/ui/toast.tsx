@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import { createPortal } from "react-dom"
-import { CheckCircle2, Info, AlertTriangle, X } from "lucide-react"
+import {
+  Toast, ToastBody, ToastClose, ToastContent, ToastDescription, ToastIcon, ToastProvider, ToastTitle, ToastViewport,
+} from "@ir/ui"
 
 type ToastVariant = "success" | "info" | "danger"
 interface ToastItem { id: number; title: string; description?: string; variant?: ToastVariant }
@@ -13,52 +14,34 @@ export function toast(t: { title: string; description?: string; variant?: ToastV
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { ...t, id: ++counter } }))
 }
 
-const toneColor: Record<ToastVariant, string> = {
-  success: "var(--fg-success-emphasis)",
-  info: "var(--fg-info-emphasis)",
-  danger: "var(--fg-danger-emphasis)",
-}
-const toneIcon = { success: CheckCircle2, info: Info, danger: AlertTriangle }
+const tone = { success: "success", info: "info", danger: "destructive" } as const
 
-/** Mount once near the app root. Listens for toast() events and renders a stack. */
+/** Mount once near the app root. Renders toast() events with Picasso's Toast, as ops-console and client-console do. */
 export function Toaster() {
   const [items, setItems] = useState<ToastItem[]>([])
-
   useEffect(() => {
-    const onToast = (e: Event) => {
-      const item = (e as CustomEvent).detail as ToastItem
-      setItems((xs) => [...xs, item])
-      window.setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 4000)
-    }
+    const onToast = (e: Event) => setItems((xs) => [...xs, (e as CustomEvent).detail as ToastItem])
     window.addEventListener(EVENT, onToast)
     return () => window.removeEventListener(EVENT, onToast)
   }, [])
+  const remove = (id: number) => setItems((xs) => xs.filter((x) => x.id !== id))
 
-  const dismiss = (id: number) => setItems((xs) => xs.filter((x) => x.id !== id))
-
-  return createPortal(
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2" role="region" aria-label="Notifications">
-      {items.map((t) => {
-        const variant = t.variant ?? "success"
-        const Icon = toneIcon[variant]
-        return (
-          <div key={t.id} role="status" aria-live="polite"
-            className="pointer-events-auto flex items-start gap-3 rounded-xl p-3 shadow-lg data-[state=open]:animate-in slide-in-from-bottom-2 fade-in"
-            data-state="open"
-            style={{ background: "var(--bg-overlay)", border: "1px solid var(--border-neutral-muted)" }}>
-            <Icon className="mt-0.5 size-5 shrink-0" style={{ color: toneColor[variant] }} />
-            <div className="flex min-w-px flex-1 flex-col">
-              <span className="text-sm font-medium" style={{ color: "var(--fg-neutral-emphasis)" }}>{t.title}</span>
-              {t.description && <span className="mt-0.5 text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{t.description}</span>}
-            </div>
-            <button type="button" aria-label="Dismiss" onClick={() => dismiss(t.id)}
-              className="flex size-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[var(--bg-neutral-subtle-hovered)]" style={{ color: "var(--fg-neutral-muted)" }}>
-              <X className="size-3.5" />
-            </button>
-          </div>
-        )
-      })}
-    </div>,
-    document.body
+  return (
+    <ToastProvider duration={4000}>
+      {items.map((t) => (
+        <Toast key={t.id} variant={tone[t.variant ?? "success"]} appearance="subtle" defaultOpen
+          onOpenChange={(open) => { if (!open) window.setTimeout(() => remove(t.id), 200) }}>
+          <ToastBody>
+            <ToastIcon />
+            <ToastContent>
+              <ToastTitle>{t.title}</ToastTitle>
+              {t.description && <ToastDescription>{t.description}</ToastDescription>}
+            </ToastContent>
+            <ToastClose />
+          </ToastBody>
+        </Toast>
+      ))}
+      <ToastViewport />
+    </ToastProvider>
   )
 }
