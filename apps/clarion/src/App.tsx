@@ -19,6 +19,7 @@ import { openGroup } from "@/features/fast-follow/alerts/store"
 import { IrisPanel } from "@/features/fast-follow/iris/IrisPanel"
 import { guarded, setNavigator } from "@/features/fast-follow/navigator"
 import { PreviewFrame } from "@/features/fast-follow/PreviewMarker"
+import { ClarionSidebar } from "@/features/fast-follow/shell/ClarionSidebar"
 import { CLIENT_CONSOLE_URL } from "@/lib/apps"
 import { EndpointDrawer } from "@/components/endpoints/drawer/EndpointDrawer"
 import { AlertDrawer } from "@/components/alerts/AlertDrawer"
@@ -164,8 +165,9 @@ export default function App() {
     {/* Fast Follow: the preview banner spans the whole window, above the nav, page and Iris */}
     <PreviewFrame>
     <div className="flex min-h-0 w-full flex-1 items-start overflow-hidden">
-      {!isMobile && sidebarOpen && (
-        <Sidebar active={page} onNavigate={navigate} lastRefreshAt={live.lastRefreshAt} />
+      {/* Fast Follow: Picasso Sidebar — collapses to the 48 rail instead of disappearing */}
+      {!isMobile && (
+        <ClarionSidebar collapsed={!sidebarOpen} active={page} onNavigate={navigate} lastRefreshAt={live.lastRefreshAt} />
       )}
       {isMobile && (
         <MobileNav open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
