@@ -107,7 +107,7 @@ export const pageSubtitle: Partial<Record<PageId, string>> = {
   thresholds: "Set when an endpoint is flagged warning or critical.",
   alerts: "Problems across your fleet, grouped by type.",
   dashboards: "Fleet-wide summaries over recent history.",
-  settings: "Alerts, notifications and devices for your whole tenancy.",
+  settings: "What raises an alert, where alerts go, and approved devices. For your whole tenancy.",
   users: "Everyone who can sign in to Iris, and what they can access.",
   widgetusers: "Who can run the Clarion widget, whether it has connected, and who uses a licence.",
   groups: "Give access to groups of people instead of one person at a time.",

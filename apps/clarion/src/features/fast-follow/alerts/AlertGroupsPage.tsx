@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react"
-import { Search, X } from "lucide-react"
+import { Search, Settings2, X } from "lucide-react"
 import {
   Badge, Button, Card, CardContent, EmptyState, InputGroup, InputGroupAddon, InputGroupInput,
   SegmentedControl, SegmentedControlItem, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import { useFeedVersion } from "@/data/agentFeed"
 import type { Endpoint } from "@/data/endpoints"
+import { canOpen, useViewer } from "@/lib/viewer"
+import { goToSettings } from "../navigator"
 import { activeGroups, closedGroups, type AlertGroup } from "./groups"
 import { categoryLabel, type AlertCategory } from "./catalogue"
 import { ago, duration, whereLine } from "./format"
@@ -46,6 +48,7 @@ export function AlertGroupsPage({ onOpenEndpoint }: { onOpenEndpoint: (rows: End
   const endpointsInAlert = active.reduce((s, g) => s + g.endpoints.length, 0)
   const openGroupData = openId ? [...active, ...closed].find((g) => g.id === openId) ?? null : null
   const filtered = search || severity.length || category.length
+  const mayConfigure = canOpen("settings", useViewer())
 
   return (
     <>
@@ -58,6 +61,10 @@ export function AlertGroupsPage({ onOpenEndpoint }: { onOpenEndpoint: (rows: End
               <SegmentedControlItem value="closed">Closed · {closed.length}</SegmentedControlItem>
             </SegmentedControl>
             {view === "active" && <Badge>{endpointsInAlert.toLocaleString()} endpoints affected</Badge>}
+            {/* the way in to what raises these alerts (Settings › Alerting), for people who may change it */}
+            {mayConfigure && (
+              <Button variant="ghost" size="sm" className="ms-auto" onClick={() => goToSettings("alerts")}><Settings2 aria-hidden />Alert settings</Button>
+            )}
           </div>
 
           {/* toolbar */}

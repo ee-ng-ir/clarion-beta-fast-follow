@@ -257,10 +257,10 @@ function pageAnswer(id: string): Answer {
 function howTo(which: "alerts" | "notify"): Answer {
   return which === "alerts"
     ? { basis: "product", asOf: now(), sources: [],
-        paragraphs: ["Alerts are turned on or off in Settings › Alerts. Turning one off stops the alert, not the data: readings still show in endpoint detail. Thresholds are set in Settings › Thresholds."],
+        paragraphs: ["Alerts are turned on or off, and their thresholds set, in Settings › Alerts & thresholds. Turning one off stops the alert, not the data: readings still show in endpoint detail."],
         links: [{ label: "Open Settings", link: { kind: "page", page: "settings" } }] }
     : { basis: "product", asOf: now(), sources: [],
-        paragraphs: [`Proactive emails are set in Settings › Notifications. Right now a Critical group emails your list when it reaches ${notifyRules().minEndpoints} endpoints or lasts ${notifyRules().minMinutes} minutes, at most once every ${notifyRules().cooldownMin} minutes.`],
+        paragraphs: [`Proactive emails are set in Settings › Email. Right now a Critical group emails your list when it reaches ${notifyRules().minEndpoints} endpoints or lasts ${notifyRules().minMinutes} minutes, at most once every ${notifyRules().cooldownMin} minutes.`],
         links: [{ label: "Open Settings", link: { kind: "page", page: "settings" } }] }
 }
 

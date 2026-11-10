@@ -2,8 +2,8 @@ import { useSyncExternalStore } from "react"
 import type { AlertCategory } from "../alerts/catalogue"
 import { applyThresholds, IR_THRESHOLDS, type Policy } from "./thresholds"
 
-// Tenancy-wide alert settings for the Fast Follow demo (Settings › Alerts,
-// Thresholds, Notifications, Alert stability). Saved values only: each section keeps its own
+// Tenancy-wide alert settings for the Fast Follow demo (Settings › Alerts &
+// thresholds, Email, Alert stability). Saved values only: each section keeps its own
 // draft until Save. Turning an alert type off stops the alert, its group, the
 // Send to IT prompt and notifications — not the data (epic rules 4 and 5).
 

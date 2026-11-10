@@ -2,22 +2,28 @@ import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
 import { NewDot } from "./ExploringTag"
 import { clearSettingsTab, setLeaveGuard, takeSettingsTab } from "./navigator"
-import { AlertTypesSection } from "./settings/AlertTypesSection"
+import { AlertsSection } from "./settings/AlertsSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
 import { StabilitySection } from "./settings/StabilitySection"
 import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
-import { ThresholdsSection } from "./settings/ThresholdsSection"
 
 /**
- * Settings: the top-level home for everything an IT Admin configures in Clarion.
- * One pattern throughout (D9): each tab is a form — change things, then Save.
- * On/off choices are checkboxes, never switches next to Save. Leaving a tab, or
- * Settings itself, with unsaved changes asks first. Hierarchy is still a draft (X2).
- * Thresholds is the original page minus custom thresholds by location (not in
- * Fast Follow); if they come in, where they sit is an IA question (X2).
+ * Settings: the top-level home for everything an IT Admin configures in Clarion,
+ * grouped by job (canvas IA option 2): Alerting is what raises an alert, Delivery
+ * is where alerts go (email now; ticketing and push later slot in here), Devices
+ * is the approved headset list. Picasso's Line tabs, its pattern for
+ * settings-style navigation. The Alerts page links in ("Alert settings").
+ * One pattern throughout (D9): each section is a form — change things, then Save.
+ * Leaving a section, or Settings itself, with unsaved changes asks first.
  */
+const GROUPS: { label: string; items: { value: string; label: string; isNew?: boolean }[] }[] = [
+  { label: "Alerting", items: [{ value: "alerts", label: "Alerts & thresholds", isNew: true }, { value: "stability", label: "Alert stability", isNew: true }] },
+  { label: "Delivery", items: [{ value: "notifications", label: "Email", isNew: true }] },
+  { label: "Devices", items: [{ value: "devices", label: "Approved headsets", isNew: true }] },
+]
+
 export function SettingsPage() {
-  const [tab, setTab] = useState(() => takeSettingsTab() ?? "types")
+  const [tab, setTab] = useState(() => takeSettingsTab() ?? "alerts")
   const [dirty, setDirty] = useState(false)
   useEffect(() => clearSettingsTab(), [])
   // what's waiting on "Discard unsaved changes?": another tab, or another page
@@ -56,27 +62,33 @@ export function SettingsPage() {
 
   return (
     <>
-      <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
-        {/* sticky, so the sections stay one click away on a long tab */}
-        <TabsList aria-label="Settings sections" className="sticky -top-4 z-20 -mt-4 bg-surface-app pt-4">
-          <TabsTrigger value="types">Alerts <NewDot className="ms-1.5" /></TabsTrigger>
-          <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>
-          <TabsTrigger value="stability">Alert stability <NewDot className="ms-1.5" /></TabsTrigger>
-          <TabsTrigger value="devices">Approved headsets <NewDot className="ms-1.5" /></TabsTrigger>
-        </TabsList>
-        <TabsContent value="types"><AlertTypesSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="thresholds"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="stability"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
-      </Tabs>
+      <div className="@container w-full">
+        <Tabs value={tab} onValueChange={go} variant="line" orientation="vertical" className="flex-col gap-gutter @3xl:flex-row">
+          {/* one tab list per group, so each group is named for screen readers too */}
+          <nav aria-label="Settings sections" className="flex shrink-0 flex-col gap-5 self-start @3xl:sticky @3xl:top-0 @3xl:w-56">
+            {GROUPS.map((g) => (
+              <div key={g.label} className="flex flex-col gap-2">
+                <h2 className="px-3.5 text-label-sm uppercase tracking-wide text-content-neutral-muted">{g.label}</h2>
+                <TabsList aria-label={g.label}>
+                  {g.items.map((i) => (
+                    <TabsTrigger key={i.value} value={i.value}>{i.label}{i.isNew && <NewDot className="ms-1.5" />}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            ))}
+          </nav>
+          <TabsContent value="alerts" className="min-w-0"><AlertsSection onDirtyChange={onDirtyChange} /></TabsContent>
+          <TabsContent value="stability" className="min-w-0"><StabilitySection onDirtyChange={onDirtyChange} /></TabsContent>
+          <TabsContent value="notifications" className="min-w-0"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
+          <TabsContent value="devices" className="min-w-0"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
+        </Tabs>
+      </div>
 
       <Dialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Discard unsaved changes?</DialogTitle>
-            <DialogDescription>You've changed settings on this tab without saving. Leaving now discards those changes.</DialogDescription>
+            <DialogDescription>You've changed settings in this section without saving. Leaving now discards those changes.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)}>Keep editing</Button>

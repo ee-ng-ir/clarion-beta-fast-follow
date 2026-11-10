@@ -14,7 +14,7 @@ const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
 const clock = (minAgo: number) => new Date(Date.now() - minAgo * 60000).toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })
 
 /**
- * Settings › Notifications. Send to IT routing (unchanged) and proactive
+ * Settings › Delivery › Email. Send to IT routing (unchanged) and proactive
  * notifications (new): opt-in, a recipient list, rules for what's significant
  * enough to email, and a cooldown. Works for Telemetry-only tenants too.
  */

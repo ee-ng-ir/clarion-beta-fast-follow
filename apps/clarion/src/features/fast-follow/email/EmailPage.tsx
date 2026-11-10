@@ -11,7 +11,7 @@ const WIDTH = { desktop: 600, phone: 375 } as const
 /**
  * /email: the proactive notification email, full size, as the service desk gets
  * it. Built from today's largest Critical alert group and the notification rules
- * (the unsaved ones, when opened from Settings › Notifications).
+ * (the unsaved ones, when opened from Settings › Email).
  */
 export function EmailPage() {
   const [rules] = useState(() => readPreviewRules() ?? getSettings().notify)
@@ -45,7 +45,7 @@ export function EmailPage() {
                 <SegmentedControlItem value="phone">Phone</SegmentedControlItem>
               </SegmentedControl>
               <div className="ms-auto flex flex-wrap items-center gap-2">
-                <Button variant="ghost" size="sm" asChild><a href="/settings?tab=notifications"><Settings aria-hidden />Notification rules</a></Button>
+                <Button variant="ghost" size="sm" asChild><a href="/settings?tab=notifications"><Settings aria-hidden />Email settings</a></Button>
                 <Button variant="outline" size="sm" asChild><a href={`/issues?group=${encodeURIComponent(group!.id)}`}>Open the alert in Clarion <ArrowUpRight aria-hidden /></a></Button>
               </div>
             </div>

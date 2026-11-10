@@ -79,7 +79,7 @@ export function notificationEmail(g: AlertGroup, rules: NotifySettings, opts: { 
   <tr><td class="pad-x" style="padding:36px 40px 0 40px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr><td style="border-top:1px solid #E6E7E8;padding:24px 0 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-      ${small(`<a href="https://admin.ir.com/resource-centre" style="color:${INK};text-decoration:underline;">Resource centre</a> &nbsp;·&nbsp; <a href="https://www.ir.com/legal/privacy-policy" style="color:${INK};text-decoration:underline;">Privacy policy</a> &nbsp;·&nbsp; <a href="${opts.origin}/settings?tab=notifications" style="color:${INK};text-decoration:underline;">Notification settings</a>`)}
+      ${small(`<a href="https://admin.ir.com/resource-centre" style="color:${INK};text-decoration:underline;">Resource centre</a> &nbsp;·&nbsp; <a href="https://www.ir.com/legal/privacy-policy" style="color:${INK};text-decoration:underline;">Privacy policy</a> &nbsp;·&nbsp; <a href="${opts.origin}/settings?tab=notifications" style="color:${INK};text-decoration:underline;">Email settings</a>`)}
       ${small(`You received this email because you're a notification recipient for ${esc(opts.tenant)} in Clarion.`, "0 0 4px 0")}
       ${small("IR Level 9, 420 George Street Sydney NSW 2000 Australia", "0 0 20px 0")}
       <tr><td style="padding:0 0 40px 0;text-align:left;">${social("social-linkedin.png", "https://www.linkedin.com/company/ir/", "IR on LinkedIn")}${social("social-x.png", "https://x.com/", "X")}${social("social-facebook.png", "https://www.facebook.com/IRWeAre", "IR on Facebook")}${social("social-youtube.png", "https://www.youtube.com/c/IR_WeAre", "IR on YouTube", true)}</td></tr>
@@ -92,7 +92,7 @@ export function notificationEmail(g: AlertGroup, rules: NotifySettings, opts: { 
   return { subject, preheader, html }
 }
 
-// ---- handoff from Settings › Notifications (unsaved draft rules) -------------
+// ---- handoff from Settings › Email (unsaved draft rules) -------------
 
 const DRAFT_KEY = "ff:email-preview-rules:v1"
 export function stashPreviewRules(rules: NotifySettings) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(rules)) } catch { /* falls back to saved rules */ } }

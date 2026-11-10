@@ -10,7 +10,7 @@ import { PRESETS, countAlerts } from "./stability"
 import { SectionFooter } from "./SectionFooter"
 
 /**
- * Settings › Alert stability (anti-flapping). Presets, not raw timings: each says
+ * Settings › Alerting › Alert stability (anti-flapping). Presets, not raw timings: each says
  * in plain words how long a problem must last before it's raised, and how far
  * it must recover before it clears. Applies to the widget and Fleet-view alike,
  * so they always agree (epic rule 11). Questions log A1, A2.

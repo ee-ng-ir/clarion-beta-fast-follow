@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BellOff, BellRing, Lightbulb, Sparkles } from "lucide-react"
+import { BellOff, BellRing, Lightbulb, Settings2, Sparkles } from "lucide-react"
 import {
   Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Drawer, DrawerActions, DrawerBody, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader,
@@ -7,6 +7,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import type { Endpoint } from "@/data/endpoints"
+import { canOpen, useViewer } from "@/lib/viewer"
+import { goToSettings } from "../navigator"
 import { ExploringTag } from "../ExploringTag"
 import { openIris } from "../iris/store"
 import { categoryLabel } from "./catalogue"
@@ -42,6 +44,9 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
 }) {
   const closed = !!g.closed
   const shown = showAll ? g.endpoints : g.endpoints.slice(0, ENDPOINTS_SHOWN)
+  const mayConfigure = canOpen("settings", useViewer())
+  // straight to this alert's row in Settings, opened to its threshold (platforms share one, on the group row)
+  const editAlert = () => { onClose(); goToSettings("alerts", g.type.category === "platform" ? "platform" : g.type.id) }
 
   return (
     <>
@@ -57,7 +62,10 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
               {categoryLabel[g.type.category]} alert group · {closed ? `peaked at ${g.closed!.peak} endpoints` : `${g.endpoints.length} endpoints affected`}
             </DrawerDescription>
           </DrawerTitleGroup>
-          <DrawerActions><DrawerCloseButton /></DrawerActions>
+          <DrawerActions>
+            {mayConfigure && <Button variant="ghost" size="sm" onClick={editAlert}><Settings2 aria-hidden />Edit this alert</Button>}
+            <DrawerCloseButton />
+          </DrawerActions>
         </DrawerHeading>
       </DrawerHeader>
 

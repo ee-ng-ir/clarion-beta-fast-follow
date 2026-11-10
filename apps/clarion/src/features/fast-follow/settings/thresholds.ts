@@ -1,4 +1,4 @@
-// Tenancy-wide default thresholds (Settings › Thresholds): the original Clarion
+// Tenancy-wide default thresholds (Settings › Alerts & thresholds): the original Clarion
 // Thresholds page minus custom thresholds by location. One source: saving here
 // moves the thresholds the alerts and their evidence use.
 
@@ -35,3 +35,9 @@ export function applyThresholds(p: Policy) {
 }
 
 export const samePolicy = (a: Policy, b: Policy) => METRICS.every((m) => a[m.id].warn === b[m.id].warn && a[m.id].crit === b[m.id].crit)
+
+/** The threshold behind an alert type, as a metric id ("platformmos" for every platform), or null when it has none. */
+export function metricForType(typeId: string): string | null {
+  if (typeId.startsWith("platform:")) return "platformmos"
+  return Object.keys(DRIVES).find((m) => DRIVES[m] === typeId) ?? null
+}

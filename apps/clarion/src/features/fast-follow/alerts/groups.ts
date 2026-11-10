@@ -68,7 +68,7 @@ const seeded = (key: string, min: number, max: number) => min + (hash(key) % (ma
 
 // ---- significance rule for proactive notifications (A7 defaults, to confirm) --
 
-/** The tenancy's saved notification rules (Settings › Notifications). */
+/** The tenancy's saved notification rules (Settings › Email). */
 export const notifyRules = () => getSettings().notify
 
 function notification(sev: Severity, n: number, firstSeen: number): { at: number | null; why: string | null } {
