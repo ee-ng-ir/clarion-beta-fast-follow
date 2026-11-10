@@ -22,7 +22,7 @@ export interface AlertType {
 }
 
 export const categoryLabel: Record<AlertCategory, string> = {
-  network: "Network", system: "System", platform: "UC/CC platforms", devices: "Devices",
+  network: "Network", system: "System", platform: "UC & CC platforms", devices: "Devices",
 }
 
 const base: AlertType[] = [
