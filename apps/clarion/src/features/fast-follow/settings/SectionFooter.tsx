@@ -21,8 +21,13 @@ export function SectionFooter({ saved, dirty, onDiscard, onSave, saveLabel, extr
         {dirty ? <span className="text-label-md text-content-neutral-emphasis">Unsaved changes</span> : saved}
       </span>
       {extra}
-      <Button variant="outline" disabled={!dirty} onClick={onDiscard}>Discard</Button>
-      <Button disabled={!dirty} onClick={onSave}>{saveLabel}</Button>
+      {/* only when there's something to save: disabled buttons at rest are just clutter */}
+      {dirty && (
+        <>
+          <Button variant="outline" onClick={onDiscard}>Discard</Button>
+          <Button onClick={onSave}>{saveLabel}</Button>
+        </>
+      )}
     </PageFooter>
     </>
   )

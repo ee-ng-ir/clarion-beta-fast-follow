@@ -57,7 +57,8 @@ export function SettingsPage() {
   return (
     <>
       <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
-        <TabsList aria-label="Settings sections">
+        {/* sticky, so the sections stay one click away on a long tab */}
+        <TabsList aria-label="Settings sections" className="sticky -top-4 z-20 -mt-4 bg-surface-app pt-4">
           <TabsTrigger value="types">Alerts <NewDot className="ms-1.5" /></TabsTrigger>
           <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
           <TabsTrigger value="notifications">Notifications <NewDot className="ms-1.5" /></TabsTrigger>

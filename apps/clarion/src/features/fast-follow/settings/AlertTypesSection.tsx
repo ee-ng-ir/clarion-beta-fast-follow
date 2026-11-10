@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Alert, AlertDescription, Badge, Button, Card, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
-import { ALERT_TYPES, categoryLabel, type AlertCategory } from "../alerts/catalogue"
+import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
 import { alertName } from "../alerts/names"
 import { saveTypes, savedLine, useSettings } from "./store"
@@ -65,7 +65,12 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
           <section key={c} aria-label={categoryLabel[c]}>
             <div className="flex flex-col gap-0.5 border-t border-line-neutral-subtle px-6 py-3">
               <h3 className="text-label-sm uppercase tracking-wide text-content-neutral-muted">{categoryLabel[c]}</h3>
-              {c === "platform" && <p className="text-body-xs text-content-neutral-muted">Each platform alerts when its call quality drops or it can't be reached. Turning one off leaves the others on.</p>}
+              {c === "platform" && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-body-xs text-content-neutral-muted">Every platform alerts the same way. Turning one off leaves the others on.</span>
+                  <PlatformBadges quality={settings.thresholds.platformmos} />
+                </div>
+              )}
             </div>
             {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
               const on = !off.includes(t.id)
@@ -76,7 +81,10 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                     className="min-w-0 flex-1"
                     control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
                   >
-                    {alertName(t)}
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {alertName(t)}
+                      <ThresholdBadges t={t} />
+                    </span>
                   </FieldOption>
                   <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={n} />
                 </div>
@@ -107,4 +115,33 @@ function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active:
   if (on) return active > 0 ? <span className="ms-auto shrink-0 text-body-sm text-content-neutral-muted">Active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
   if (wasOn) return active > 0 ? <span className="ms-auto shrink-0 text-label-sm text-content-warning-emphasis">Off once you save · active on {active} endpoint{active === 1 ? "" : "s"}</span> : null
   return <Badge className="ms-auto shrink-0">Off</Badge>
+}
+
+/**
+ * When the alert is raised, at a glance: the Warning and Critical thresholds as
+ * dot badges in their status colours (set on the Thresholds tab). Platforms use
+ * the Platform Quality Index for Warning and go Critical when unreachable;
+ * device alerts have no threshold, so they show none.
+ */
+function ThresholdBadges({ t }: { t: AlertType }) {
+  if (t.category === "platform") return null // said once, in the section heading (PlatformBadges)
+  if (!t.metric) return null
+  const m = t.metric
+  const v = (n: number) => `${m.lowerIsWorse ? "below" : "above"} ${n}${m.unit}`
+  return (
+    <span className="flex items-center gap-1.5">
+      <Badge color="warning" dot>Warning {v(m.warn)}</Badge>
+      <Badge color="danger" dot>Critical {v(m.crit)}</Badge>
+    </span>
+  )
+}
+
+/** Platform alerts: Warning on the Platform Quality Index, Critical when unreachable. The same for every platform. */
+function PlatformBadges({ quality }: { quality: { warn: number; crit: number } }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <Badge color="warning" dot>Warning: quality below {quality.warn.toFixed(1)}</Badge>
+      <Badge color="danger" dot>Critical: can't be reached</Badge>
+    </span>
+  )
 }
