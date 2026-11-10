@@ -3,12 +3,13 @@ import { Badge } from "@ir/ui"
 
 /**
  * Marks anything still TBC in the epics (e.g. Iris Investigate, energy saver
- * detection). Committed Fast Follow items carry no tag.
+ * detection). Committed Fast Follow items carry no tag. It reads "Concept":
+ * "Exploring" is our process word and means nothing to a customer in research.
  */
 export function ExploringTag({ className }: { className?: string }) {
   return (
-    <Badge color="info" className={className} title="Still being explored. Not committed for Fast Follow.">
-      Exploring
+    <Badge color="info" className={className} title="An idea we're testing. Not committed for Fast Follow.">
+      Concept
     </Badge>
   )
 }
