@@ -8,6 +8,8 @@ import { DashboardActions } from "./DashboardActions"
 import { downloadCsv } from "./csv"
 import { filtered, fmtWeeks, locationName, LOCATIONS, weekly, weeks } from "./data"
 import { COUNTING_NOTE, MEASURE_LABEL, patchTrends, useDashboards, type Measure } from "./store"
+import { useSettings } from "../settings/store"
+import { OffNotice } from "../OffNotice"
 
 const RANGES = [30, 60, 90]
 const MAX_LINES = 5
@@ -30,12 +32,13 @@ function direction(points: number[]) {
  */
 export function TrendsDashboard() {
   const { trends: st } = useDashboards()
+  const { version: settingsVersion } = useSettings()
   const wk = weeks(st.days)
   const series = useMemo(() => {
     const lines = st.locations.slice(0, MAX_LINES)
     const groups = lines.length ? lines.map((id) => ({ id, label: locationName(id), locs: [id] })) : [{ id: "all", label: "All locations", locs: [] as string[] }]
     return groups.map((g) => ({ id: g.id, label: g.label, points: weekly(filtered({ days: Math.ceil(st.days / 7) * 7, types: st.types, locations: g.locs }), st.days, st.measure) }))
-  }, [st.days, st.types, st.measure, st.locations])
+  }, [st.days, st.types, st.measure, st.locations, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = st.locations.slice(0, MAX_LINES)
 
   const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? ALERT_TYPES.find((t) => t.id === st.types[0])!.warning : `${st.types.length} alerts`
@@ -60,6 +63,7 @@ export function TrendsDashboard() {
         </CardContent>
       </Card>
 
+      <OffNotice types={st.types} />
       <Card>
         <CardHeader>
           <CardHeaderText>

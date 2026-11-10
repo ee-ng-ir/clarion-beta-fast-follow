@@ -14,6 +14,7 @@ import { openIris } from "../iris/store"
 import { RETENTION_DAYS } from "../iris/answers"
 import { clockTime, evidenceFor, type EndpointAlert, type Likelihood } from "./evidence"
 import { TrendChart } from "./TrendChart"
+import { OffNotice } from "../OffNotice"
 
 type Filter = "all" | "active" | "history"
 
@@ -45,6 +46,7 @@ export function EndpointAlertsTab({ endpoint, onCloseDrawer }: { endpoint: Endpo
 
       {active.length > 0 && <ListHeading>Active</ListHeading>}
       {active.map((a) => <AlertCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />)}
+      {filter !== "active" && <OffNotice />}
       {cleared.length > 0 && <ListHeading>History · last 7 days</ListHeading>}
       {cleared.map((a) => <AlertCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />)}
       {active.length + cleared.length === 0 && (

@@ -7,6 +7,7 @@ import { endpoints, type Endpoint } from "@/data/endpoints"
 import { locations } from "@/data/dashboard"
 import { ALERT_TYPES, alertType, categoryLabel, type AlertCategory } from "../alerts/catalogue"
 import { headsetFor } from "../headsets/headsets"
+import { getSettings } from "../settings/store"
 
 /** 14 full weeks, so a 90-day trend is 13 whole weeks */
 export const HISTORY_DAYS = 98
@@ -157,8 +158,12 @@ export interface HistoryFilter {
 
 export function filtered(f: Partial<HistoryFilter>): Raise[] {
   const days = f.days ?? HISTORY_DAYS
+  // D10: an alert that's off isn't evaluated, so nothing is recorded from the moment it was turned off
+  const { offSince } = getSettings()
+  const offFromDay = Object.fromEntries(Object.entries(offSince).map(([id, d]) => [id, Math.floor((Date.now() - d.getTime()) / DAY)]))
   return alertHistory().filter((x) => {
     if (x.day >= days) return false
+    if (x.typeId in offFromDay && x.day <= offFromDay[x.typeId]) return false
     const e = endpoints[x.ep]
     if (f.locations?.length && !f.locations.includes(e.locationId)) return false
     if (f.types?.length && !f.types.includes(x.typeId)) return false

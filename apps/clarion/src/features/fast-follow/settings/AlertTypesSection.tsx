@@ -2,19 +2,14 @@ import { useEffect, useMemo, useState } from "react"
 import { Alert, AlertDescription, Badge, Button, Card, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox, FieldOption } from "@ir/ui"
 import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
-import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
+import { ALERT_TYPES, categoryLabel, type AlertCategory } from "../alerts/catalogue"
 import { classify } from "../alerts/groups"
+import { alertName } from "../alerts/names"
 import { saveTypes, savedLine, useSettings } from "./store"
 import { SectionFooter } from "./SectionFooter"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
 
-/** One plain name per kind of alert: the only choice here is on or off. When each is raised lives on Thresholds. */
-const SHORT_NAME: Record<string, string> = {
-  "call-quality": "Call quality", wifi: "Wi-Fi signal", cpu: "CPU", memory: "Memory",
-  storage: "Storage space", battery: "Battery", "audio-device": "Headset and audio devices",
-}
-const rowName = (t: AlertType) => (t.category === "platform" ? t.id.replace(/^platform:/, "") : SHORT_NAME[t.id] ?? t.warning)
 
 /**
  * Settings › Alert types. Every alert type can be on or off, for the whole tenancy.
@@ -81,7 +76,7 @@ export function AlertTypesSection({ onEditThresholds, onDirtyChange }: { onEditT
                     className="min-w-0 flex-1"
                     control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}
                   >
-                    {rowName(t)}
+                    {alertName(t)}
                   </FieldOption>
                   <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={n} />
                 </div>

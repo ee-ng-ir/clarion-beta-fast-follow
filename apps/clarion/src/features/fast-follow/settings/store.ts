@@ -27,6 +27,8 @@ interface State {
   itReports: string
   stability: Record<AlertCategory, Stability>
   thresholds: Policy
+  /** when each alert that is off was turned off (D10: nothing is recorded from then) */
+  offSince: Record<string, Date>
   saved: Partial<Record<"types" | "thresholds" | "notify" | "stability" | "headsets", Saved>>
   version: number
 }
@@ -37,6 +39,7 @@ let state: State = {
   itReports: "it-reports@acme.com",
   stability: IR_DEFAULT_STABILITY,
   thresholds: IR_THRESHOLDS,
+  offSince: {},
   saved: { notify: { by: "Marcus Reyes", at: new Date(Date.now() - 3 * 86400000) }, headsets: { by: "Alex Kim", at: new Date(Date.now() - 19 * 86400000) } },
   version: 0,
 }
@@ -46,7 +49,11 @@ const set = (patch: Partial<State>) => { state = { ...state, ...patch, version: 
 export const useSettings = () => useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f) } }, () => state)
 export const getSettings = () => state
 
-export const saveTypes = (disabledTypes: string[], by: string) => set({ disabledTypes, saved: { ...state.saved, types: { by, at: new Date() } } })
+export const saveTypes = (disabledTypes: string[], by: string) => {
+  const now = new Date()
+  const offSince = Object.fromEntries(disabledTypes.map((id) => [id, state.offSince[id] ?? now]))
+  set({ disabledTypes, offSince, saved: { ...state.saved, types: { by, at: now } } })
+}
 export const saveNotify = (notify: NotifySettings, itReports: string, by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
 export const saveStability = (stability: Record<AlertCategory, Stability>, by: string) => set({ stability, saved: { ...state.saved, stability: { by, at: new Date() } } })
 

@@ -10,6 +10,8 @@ import { AlertIcon } from "../alerts/bits"
 import { DashboardActions } from "./DashboardActions"
 import { downloadCsv } from "./csv"
 import { affectedEndpoints, commonAlerts, dayAgo, filtered, fmtRange, fmtWeeks, locationName, LOCATIONS, weekly, weeks } from "./data"
+import { useSettings } from "../settings/store"
+import { OffNotice } from "../OffNotice"
 import { COUNTING_NOTE, MEASURE_LABEL, patchAlerts, patchTrends, showDashboard, useDashboards, type Measure } from "./store"
 
 const PERIODS = [7, 30, 90]
@@ -24,8 +26,9 @@ const OFFENDERS_SHOWN = 10
  */
 export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: Endpoint[], index: number) => void }) {
   const { alerts: st } = useDashboards()
+  const { version: settingsVersion } = useSettings()
   const raises = useMemo(() => filtered({ days: st.days, locations: st.locations, severity: st.severity as ("critical" | "warning")[], categories: st.categories as AlertCategory[] }),
-    [st.days, st.locations, st.severity, st.categories])
+    [st.days, st.locations, st.severity, st.categories, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const ranked = useMemo(() => commonAlerts(raises).sort((a, b) => (st.rank === "times" ? b.times - a.times : b.endpoints - a.endpoints)), [raises, st.rank])
   const sel = ranked.find((r) => r.typeId === st.selected) ?? null
   const offenders = useMemo(() => (sel ? affectedEndpoints(raises, sel.typeId) : []), [raises, sel])
@@ -70,6 +73,7 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
         </CardContent>
       </Card>
 
+      <OffNotice />
       <Card>
         <CardHeader>
           <CardHeaderText>
