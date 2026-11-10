@@ -10,7 +10,7 @@ import { ThresholdsSection } from "./settings/ThresholdsSection"
 /**
  * Settings: the top-level home for everything an IT Admin configures in Clarion,
  * grouped by job (canvas IA option 2): Alerting is what raises an alert (Alerts =
- * on/off and stability, Thresholds = the numbers), Delivery
+ * on/off and stability, Thresholds = the numbers), Notifications
  * is where alerts go (email now; ticketing and push later slot in here), Devices
  * is the approved headset list. Picasso's Line tabs, its pattern for
  * settings-style navigation. The Alerts page links in ("Alert settings").
@@ -19,7 +19,7 @@ import { ThresholdsSection } from "./settings/ThresholdsSection"
  */
 const GROUPS: { label: string; items: { value: string; label: string; isNew?: boolean }[] }[] = [
   { label: "Alerting", items: [{ value: "alerts", label: "Alerts", isNew: true }, { value: "thresholds", label: "Thresholds" }] },
-  { label: "Delivery", items: [{ value: "notifications", label: "Email", isNew: true }] },
+  { label: "Notifications", items: [{ value: "notifications", label: "Email", isNew: true }] },
   { label: "Devices", items: [{ value: "devices", label: "Approved headsets", isNew: true }] },
 ]
 
