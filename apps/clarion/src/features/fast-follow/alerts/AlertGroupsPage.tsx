@@ -79,8 +79,8 @@ export function AlertGroupsPage({ onOpenEndpoint }: { onOpenEndpoint: (rows: End
               )}
             </InputGroup>
             <div className="flex items-center gap-2 @2xl:ms-auto">
-              <Select label="Category" className="w-44" options={categoryOptions} value={category} onValueChange={setCategory} />
-              <Select label="Severity" className="w-40" options={severityOptions} value={severity} onValueChange={setSeverity} />
+              <Select showDetail={false} label="Category" className="w-44" options={categoryOptions} value={category} onValueChange={setCategory} />
+              <Select showDetail={false} label="Severity" className="w-40" options={severityOptions} value={severity} onValueChange={setSeverity} />
             </div>
           </div>
         </CardContent>

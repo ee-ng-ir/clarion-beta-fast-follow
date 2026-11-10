@@ -12,7 +12,7 @@ const filterOptions: { value: Compliance; label: string }[] = [
 
 /** Endpoints toolbar: filter by headset compliance. Only offered once an approved list exists. */
 export function HeadsetFilter({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
-  return <Select label="Headset" options={filterOptions} value={value} onValueChange={onChange} className="w-44" />
+  return <Select showDetail={false} label="Headset" options={filterOptions} value={value} onValueChange={onChange} className="w-44" />
 }
 
 /** Endpoints table cell: the model, and whether it's approved. */

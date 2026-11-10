@@ -65,9 +65,9 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
             <SegmentedControl aria-label="Period" value={String(st.days)} onValueChange={(v) => v && patchAlerts({ days: Number(v) })}>
               {PERIODS.map((d) => <SegmentedControlItem key={d} value={String(d)}>Last {d} days</SegmentedControlItem>)}
             </SegmentedControl>
-            <Select label="Location" className="w-40" options={locationOptions} value={st.locations} onValueChange={(v) => patchAlerts({ locations: v })} />
-            <Select label="Severity" className="w-36" options={severityOptions} value={st.severity} onValueChange={(v) => patchAlerts({ severity: v })} />
-            <Select label="Category" className="w-40" options={categoryOptions} value={st.categories} onValueChange={(v) => patchAlerts({ categories: v })} />
+            <Select showDetail={false} label="Location" className="w-40" options={locationOptions} value={st.locations} onValueChange={(v) => patchAlerts({ locations: v })} />
+            <Select showDetail={false} label="Severity" className="w-36" options={severityOptions} value={st.severity} onValueChange={(v) => patchAlerts({ severity: v })} />
+            <Select showDetail={false} label="Category" className="w-40" options={categoryOptions} value={st.categories} onValueChange={(v) => patchAlerts({ categories: v })} />
           </div>
           <DashboardActions view="alerts" suggestedName={`Top alerts · last ${st.days} days · ${scope}`} onExport={exportCsv} />
         </CardContent>
