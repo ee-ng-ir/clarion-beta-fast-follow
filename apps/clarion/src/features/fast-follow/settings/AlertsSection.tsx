@@ -11,7 +11,7 @@ import { classify } from "../alerts/groups"
 import { alertName } from "../alerts/names"
 import { saveStability, saveTypes, savedLine, useSettings, type Saved, type Stability } from "./store"
 import { PRESETS } from "./stability"
-import { SectionFooter } from "./SectionFooter"
+import { SectionFooter, type Confirmation } from "./SectionFooter"
 import { StabilityExample } from "./StabilityExample"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
@@ -33,7 +33,7 @@ export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThres
   const [off, setOff] = useState<string[]>(settings.disabledTypes)
   const [stability, setStability] = useState(settings.stability)
   const [explain, setExplain] = useState(false)
-  const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
 
   const typesDirty = off.slice().sort().join() !== settings.disabledTypes.slice().sort().join()
   const stabilityDirty = JSON.stringify(stability) !== JSON.stringify(settings.stability)
@@ -50,18 +50,28 @@ export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThres
   const toggle = (id: string, on: boolean) => { setConfirmation(null); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
   const setCategory = (c: AlertCategory, v: Stability) => { setConfirmation(null); setStability((s) => ({ ...s, [c]: v })) }
   const save = () => {
+    const turnedOff = off.filter((x) => !settings.disabledTypes.includes(x)).length
+    const turnedOn = settings.disabledTypes.filter((x) => !off.includes(x)).length
+    const restabilised = (Object.keys(stability) as AlertCategory[]).filter((c) => stability[c] !== settings.stability[c])
+    const changes = [
+      ...restabilised.map((c) => `${categoryLabel[c]} set to ${PRESETS[stability[c]].label}`),
+      turnedOff && `${turnedOff} alert${turnedOff === 1 ? "" : "s"} turned off`,
+      turnedOn && `${turnedOn} turned back on`,
+    ].filter(Boolean)
     if (typesDirty) saveTypes(off, person.name)
     if (stabilityDirty) saveStability(stability, person.name)
-    setConfirmation("Alerts saved")
+    setConfirmation({ title: "Alerts saved", description: changes.join(" · ") })
   }
+  const savedOff = settings.disabledTypes.length
   const lastSaved = [settings.saved.types, settings.saved.stability].filter((s): s is Saved => !!s).sort((a, b) => b.at.getTime() - a.at.getTime())[0]
 
   return (
     <div className="flex w-full flex-col gap-gutter">
-      {off.length > 0 && (
+      {/* Reflects what's saved, not the draft: an unsaved switch-off hasn't taken effect yet. */}
+      {savedOff > 0 && (
         <Alert variant="warning">
           <AlertDescription>
-            {off.length} alert{off.length === 1 ? " is" : "s are"} off. Agents won't see {off.length === 1 ? "it" : "them"} in the widget, and no one will be emailed about {off.length === 1 ? "it" : "them"}.
+            {savedOff} alert{savedOff === 1 ? " is" : "s are"} off. Agents won't see {savedOff === 1 ? "it" : "them"} in the widget, and no one will be emailed about {savedOff === 1 ? "it" : "them"}.
           </AlertDescription>
         </Alert>
       )}

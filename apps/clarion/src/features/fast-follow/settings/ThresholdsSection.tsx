@@ -5,7 +5,7 @@ import {
 } from "@ir/ui"
 import { useViewer } from "@/lib/viewer"
 import { savedLine, saveThresholds, useSettings } from "./store"
-import { SectionFooter } from "./SectionFooter"
+import { SectionFooter, type Confirmation } from "./SectionFooter"
 import { IR_THRESHOLDS, samePolicy, THRESHOLD_CATEGORIES, THRESHOLD_METRICS, type Policy } from "./thresholds"
 
 /**
@@ -19,14 +19,15 @@ export function ThresholdsSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
   const { person, thresholds: acc } = useViewer()
   const readOnly = !acc.editDefaults
   const [draft, setDraft] = useState<Policy>(settings.thresholds)
-  const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const dirty = !samePolicy(draft, settings.thresholds)
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   const set = (id: string, warn: number, crit: number) => { setConfirmation(null); setDraft((d) => ({ ...d, [id]: { warn, crit } })) }
   const save = () => {
+    const changed = Object.keys(draft).filter((k) => draft[k].warn !== settings.thresholds[k]?.warn || draft[k].crit !== settings.thresholds[k]?.crit).length
     saveThresholds(draft, person.name)
-    setConfirmation("Thresholds saved")
+    setConfirmation({ title: "Thresholds saved", description: `${changed} threshold${changed === 1 ? "" : "s"} changed` })
   }
 
   const changedFromIr = !samePolicy(draft, IR_THRESHOLDS)

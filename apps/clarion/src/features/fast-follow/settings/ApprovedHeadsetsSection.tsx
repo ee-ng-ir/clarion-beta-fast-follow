@@ -9,7 +9,7 @@ import { endpoints } from "@/data/endpoints"
 import { useViewer } from "@/lib/viewer"
 import { headsetFor } from "../headsets/headsets"
 import { markHeadsetsSaved, savedLine, useSettings } from "./store"
-import { SectionFooter } from "./SectionFooter"
+import { SectionFooter, type Confirmation } from "./SectionFooter"
 
 /**
  * Settings › Approved headsets. IT picks the models the company approves from
@@ -21,7 +21,7 @@ export function ApprovedHeadsetsSection({ onDirtyChange }: { onDirtyChange?: (di
   const settings = useSettings()
   const { person } = useViewer()
   const [draft, setDraft] = useState<string[]>(saved)
-  const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [requested, setRequested] = useState(false)
   const dirty = draft.slice().sort().join() !== saved.slice().sort().join()
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
@@ -43,7 +43,7 @@ export function ApprovedHeadsetsSection({ onDirtyChange }: { onDirtyChange?: (di
   const save = () => {
     approvedHeadsets.set(draft)
     markHeadsetsSaved(person.name)
-    setConfirmation("Approved headsets saved")
+    setConfirmation({ title: "Approved headsets saved", description: draft.length ? `${draft.length} approved model${draft.length === 1 ? "" : "s"}` : "No approved list" })
   }
 
   return (

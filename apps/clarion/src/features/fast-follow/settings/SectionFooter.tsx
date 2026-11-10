@@ -3,20 +3,23 @@ import { Button, PageFooter } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 
 /** Picasso form footer, kept in view: who last saved it, then Discard (outline) and the primary, last. */
+/** What a save toasts: a short title, and a line on what changed. */
+export type Confirmation = { title: string; description?: string }
+
 export function SectionFooter({ saved, dirty, onDiscard, onSave, saveLabel, extra, confirmation }: {
   saved: string; dirty: boolean; onDiscard: () => void; onSave: () => void; saveLabel: string; extra?: React.ReactNode
-  /** set after a save to a short title ("Alert stability saved"); shown once as a success toast,
-      the product's pattern for a save landing. They can see what they saved, so no description. */
-  confirmation?: string | null
+  /** set after a save; shown once as a success toast, the product's pattern for a save landing.
+      Keep the description to what changed ("Network set to Calm"), not what it means. */
+  confirmation?: Confirmation | null
 }) {
   // Toast once per save. The ref stops a repeat when the effect re-runs (StrictMode, re-renders);
   // sections clear confirmation on the next edit, which re-arms it.
-  const shown = useRef<string | null>(null)
+  const shown = useRef<Confirmation | null>(null)
   useEffect(() => {
     if (!confirmation) { shown.current = null; return }
     if (shown.current === confirmation) return
     shown.current = confirmation
-    toast({ variant: "success", title: confirmation })
+    toast({ variant: "success", ...confirmation })
   }, [confirmation])
 
   return (

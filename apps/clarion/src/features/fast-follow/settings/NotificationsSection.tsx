@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/toast"
 import { useViewer } from "@/lib/viewer"
 import { activeGroups } from "../alerts/groups"
 import { IR_DEFAULT_NOTIFY, saveNotify, savedLine, useSettings, type NotifySettings } from "./store"
-import { SectionFooter } from "./SectionFooter"
+import { SectionFooter, type Confirmation } from "./SectionFooter"
 import { stashPreviewRules } from "../email/template"
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
@@ -26,7 +26,7 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
   const [itReports, setItReports] = useState(settings.itReports)
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || itReports !== settings.itReports
   const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setConfirmation(null) }
-  const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   // what these rules would have done today — the rule made concrete
@@ -135,7 +135,7 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
         onDiscard={() => { setDraft(settings.notify); setItReports(settings.itReports) }}
         onSave={() => {
           saveNotify(draft, itReports, person.name)
-          setConfirmation("Notifications saved")
+          setConfirmation({ title: "Notifications saved", description: draft.enabled && draft.recipients.length ? `Emailing ${draft.recipients.length} recipient${draft.recipients.length === 1 ? "" : "s"}` : "Email notifications off" })
         }}
         saveLabel="Save notifications"
         confirmation={confirmation}
