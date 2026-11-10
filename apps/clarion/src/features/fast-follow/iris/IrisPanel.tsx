@@ -40,6 +40,10 @@ export function IrisPanel({
   const mood = useIrisMood(thinking, listening)
 
   // Page context follows the page; a group or alert context stays until cleared.
+  // The chips and every ask use the page you're on now, even before the effect below
+  // catches up, so a suggestion never shows on, or is answered for, a page it isn't about.
+  const current: IrisContext | null = context?.kind === "page" && context.page !== page ? { kind: "page", page, label: pageLabel(page) } : context
+  const syncContext = () => { if (current && current !== context) setContext(current) }
   useEffect(() => {
     if (open && context?.kind === "page" && context.page !== page) setContext({ kind: "page", page, label: pageLabel(page) })
   }, [open, page, context])
@@ -57,7 +61,7 @@ export function IrisPanel({
     else { const e = endpointById(link.id); if (e) onOpenEndpoint([e], 0) }
     if (isMobile) closeIris()
   }
-  const send = () => { const t = text.trim(); if (!t || t.length > MAX_CHARS) return; ask({ text: t }); setText("") }
+  const send = () => { const t = text.trim(); if (!t || t.length > MAX_CHARS) return; syncContext(); ask({ text: t }); setText("") }
   const over = text.length > MAX_CHARS
 
   return (
@@ -103,8 +107,8 @@ export function IrisPanel({
       {/* suggestions + input */}
       <div className="flex shrink-0 flex-col gap-2 border-t border-line-neutral-muted p-3">
         <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Suggested questions">
-          {suggestionsFor(context).map((s) => (
-            <Chip key={s.id} disabled={!!thinking} onClick={() => ask(s)} className="shrink-0">{s.label}</Chip>
+          {suggestionsFor(current).map((s) => (
+            <Chip key={s.id} disabled={!!thinking} onClick={() => { syncContext(); ask(s) }} className="shrink-0">{s.label}</Chip>
           ))}
         </div>
         <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); send() }}>

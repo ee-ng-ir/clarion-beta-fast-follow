@@ -24,7 +24,8 @@ export const IR_DEFAULT_STABILITY: Record<AlertCategory, Stability> = { network:
 interface State {
   disabledTypes: string[]
   notify: NotifySettings
-  itReports: string
+  /** Send to IT: every address here gets the widget's issue reports (a list, as in Clarion today) */
+  itReports: string[]
   stability: Record<AlertCategory, Stability>
   thresholds: Policy
   /** when each alert that is off was turned off (D10: nothing is recorded from then) */
@@ -36,7 +37,7 @@ interface State {
 let state: State = {
   disabledTypes: [],
   notify: IR_DEFAULT_NOTIFY,
-  itReports: "it-reports@acme.com",
+  itReports: ["it-reports@acme.com"],
   stability: IR_DEFAULT_STABILITY,
   thresholds: IR_THRESHOLDS,
   offSince: {},
@@ -54,7 +55,7 @@ export const saveTypes = (disabledTypes: string[], by: string) => {
   const offSince = Object.fromEntries(disabledTypes.map((id) => [id, state.offSince[id] ?? now]))
   set({ disabledTypes, offSince, saved: { ...state.saved, types: { by, at: now } } })
 }
-export const saveNotify = (notify: NotifySettings, itReports: string, by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
+export const saveNotify = (notify: NotifySettings, itReports: string[], by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
 export const saveStability = (stability: Record<AlertCategory, Stability>, by: string) => set({ stability, saved: { ...state.saved, stability: { by, at: new Date() } } })
 
 export const saveThresholds = (thresholds: Policy, by: string) => { applyThresholds(thresholds); set({ thresholds, saved: { ...state.saved, thresholds: { by, at: new Date() } } }) }

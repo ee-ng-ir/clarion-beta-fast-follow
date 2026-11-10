@@ -58,7 +58,7 @@ export function TrendsDashboard() {
               {RANGES.map((d) => <SegmentedControlItem key={d} value={String(d)}>{d} days</SegmentedControlItem>)}
             </SegmentedControl>
             <Select showDetail={false} label="Alert" className="w-44" options={typeOptions} value={st.types} onValueChange={(v) => patchTrends({ types: v })} />
-            <Select showDetail={false} label="Compare locations" className="w-52" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
+            <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
           </div>
           <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"} · ${st.days} days`} onExport={exportCsv} />
         </CardContent>

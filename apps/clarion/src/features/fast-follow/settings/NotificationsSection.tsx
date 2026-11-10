@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ArrowUpRight, Mail } from "lucide-react"
 import {
   Alert, AlertDescription, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
-  Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption, Input, NumberInput, TagsInput,
+  Checkbox, Field, FieldControl, FieldDescription, FieldLabel, FieldOption, NumberInput, TagsInput,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import { useViewer } from "@/lib/viewer"
@@ -24,7 +24,7 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
   const { person } = useViewer()
   const [draft, setDraft] = useState<NotifySettings>(settings.notify)
   const [itReports, setItReports] = useState(settings.itReports)
-  const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || itReports !== settings.itReports
+  const dirty = JSON.stringify(draft) !== JSON.stringify(settings.notify) || JSON.stringify(itReports) !== JSON.stringify(settings.itReports)
   const set = (patch: Partial<NotifySettings>) => { setDraft((d) => ({ ...d, ...patch })); setConfirmation(null) }
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
@@ -48,10 +48,12 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
           </CardHeaderText>
         </CardHeader>
         <CardContent>
-          <Field invalid={!!itReports && !isEmail(itReports)}>
-            <FieldLabel>Report address</FieldLabel>
-            <FieldControl><Input type="email" value={itReports} onChange={(e) => { setItReports(e.target.value); setConfirmation(null) }} /></FieldControl>
-            <FieldDescription>One address, usually your service desk's.</FieldDescription>
+          <Field>
+            <FieldLabel>Report addresses</FieldLabel>
+            <FieldControl>
+              <TagsInput value={itReports} onValueChange={(v) => { setItReports(v); setConfirmation(null) }} validate={isEmail} placeholder="Add an email address and press Enter" />
+            </FieldControl>
+            <FieldDescription>Every address here gets the report, usually your service desk.</FieldDescription>
           </Field>
         </CardContent>
       </Card>
