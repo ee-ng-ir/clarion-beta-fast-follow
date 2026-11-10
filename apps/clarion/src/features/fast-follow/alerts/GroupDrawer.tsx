@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BellOff, BellRing, Lightbulb, Settings2, Sparkles } from "lucide-react"
+import { BellOff, BellRing, Lightbulb, Settings2 } from "lucide-react"
 import {
   Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   Drawer, DrawerActions, DrawerBody, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader,
@@ -10,6 +10,7 @@ import type { Endpoint } from "@/data/endpoints"
 import { canOpen, useViewer } from "@/lib/viewer"
 import { goToSettings } from "../navigator"
 import { ExploringTag } from "../ExploringTag"
+import { IrisMark } from "../iris/IrisMark"
 import { openIris } from "../iris/store"
 import { categoryLabel } from "./catalogue"
 import { notifyRules, type AlertGroup } from "./groups"
@@ -110,7 +111,7 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                     onClose()
                     openIris({ kind: "group", groupId: g.id, label: `${g.title} · ${g.endpoints.length} endpoints` }, { id: "summary", label: "What's happening?", auto: true })
                   }}>
-                    <Sparkles aria-hidden /> Investigate with Iris
+                    <IrisMark /> Investigate with Iris
                   </Button>
                   <ExploringTag />
                 </div>

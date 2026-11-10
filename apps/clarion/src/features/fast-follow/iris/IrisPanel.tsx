@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, ArrowUp, BookOpen, Check, Copy, Database, Info, Layers, RotateCcw, Sparkles, X } from "lucide-react"
-import { Button, Card, CardContent, Chip, Textarea } from "@ir/ui"
+import { ArrowRight, ArrowUp, BookOpen, Check, Copy, Database, Info, Layers, RotateCcw, X } from "lucide-react"
+import { Button, Card, CardContent, Chip, Loader, Textarea } from "@ir/ui"
 import { useIsMobile } from "@/components/dashboard/MobileNav"
 import { endpointById, type Endpoint } from "@/data/endpoints"
 import { pageLabel, type PageId } from "@/nav"
@@ -9,6 +9,7 @@ import { ExploringTag } from "../ExploringTag"
 import { openGroup } from "../alerts/store"
 import { ask, clearThread, closeIris, setContext, useIris } from "./store"
 import { suggestionsFor, timeLabel } from "./answers"
+import { IrisMark, type IrisMood } from "./IrisMark"
 import type { Answer, Basis, IrisContext, IrisLink, Message } from "./types"
 
 const MAX_CHARS = 500
@@ -32,6 +33,8 @@ export function IrisPanel({
   const [text, setText] = useState("")
   const threadEnd = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [listening, setListening] = useState(false)
+  const mood = useIrisMood(thinking, listening)
 
   // Page context follows the page; a group or alert context stays until cleared.
   useEffect(() => {
@@ -64,8 +67,8 @@ export function IrisPanel({
     >
       {/* header */}
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line-neutral-muted px-4 md:h-20">
-        <span className="flex size-7 items-center justify-center rounded-md bg-surface-primary-emphasis text-content-on-primary-emphasis">
-          <Sparkles className="size-4" aria-hidden />
+        <span className="flex size-7 items-center justify-center rounded-md border border-line-neutral-muted bg-surface-card text-content-neutral-emphasis">
+          <IrisMark mood={mood} className="size-5" />
         </span>
         <h2 className="text-heading-xs text-content-neutral-emphasis">Iris</h2>
         <ExploringTag />
@@ -85,7 +88,7 @@ export function IrisPanel({
           {messages.map((m) => <MessageView key={m.id} m={m} onFollow={follow} />)}
           {thinking && (
             <p className="flex items-center gap-2 text-body-sm text-content-neutral-muted">
-              <span className="size-2 animate-pulse rounded-full bg-surface-primary-emphasis motion-reduce:animate-none" aria-hidden />
+              <Loader variant="pulse" label={null} delay={0} />
               {thinking}
             </p>
           )}
@@ -105,6 +108,7 @@ export function IrisPanel({
           <Textarea
             id="iris-input" ref={inputRef} rows={1} value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={() => setListening(true)} onBlur={() => setListening(false)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }}
             placeholder={context?.kind === "group" ? "Ask about this alert group" : context?.kind === "alert" ? "Ask about this alert" : "Ask about your fleet"}
             aria-describedby="iris-hint" aria-invalid={over || undefined}
@@ -118,6 +122,28 @@ export function IrisPanel({
       </div>
     </aside>
   )
+}
+
+/**
+ * The header mark's mood. Thinking wins; when an answer lands the mark winks
+ * once, then goes back to looking at you (prompt focused) or around the page.
+ */
+function useIrisMood(thinking: unknown, listening: boolean): IrisMood {
+  const busy = !!thinking
+  const [wasBusy, setWasBusy] = useState(busy)
+  const [answered, setAnswered] = useState(false)
+  if (wasBusy !== busy) {
+    setWasBusy(busy)
+    if (!busy) setAnswered(true)
+  }
+  useEffect(() => {
+    if (!answered) return
+    const t = setTimeout(() => setAnswered(false), 900)
+    return () => clearTimeout(t)
+  }, [answered])
+  if (busy) return "thinking"
+  if (answered) return "answered"
+  return listening ? "listening" : "idle"
 }
 
 function ContextBar({ context, page }: { context: IrisContext; page: PageId }) {

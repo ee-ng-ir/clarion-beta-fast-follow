@@ -1,0 +1,76 @@
+/* Iris mark — motion and colour for <IrisMark>. Kept beside the component (not in
+   index.css) so it travels with it when the mark moves into Picasso.
+
+   The tile never moves much; the eyes do the acting. Translations are in SVG
+   user units (the 24-unit viewBox), so they scale with the mark.            */
+
+.iris-mark {
+  --iris-eye-l: var(--palette-brand-500, #1a92c1);
+  --iris-eye-r: var(--palette-vis-ir-red-500, #e3394f);
+  overflow: visible;
+}
+.dark .iris-mark {
+  --iris-eye-r: var(--palette-vis-ir-red-400, #f94f60);
+}
+
+.iris-mark-eye-l { fill: var(--iris-eye-l); }
+.iris-mark-eye-r { fill: var(--iris-eye-r); }
+.iris-mark[data-tone="mono"] .iris-mark-eye { fill: currentColor; }
+
+.iris-mark-face,
+.iris-mark-eyes,
+.iris-mark-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 280ms cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* idle — glances across the page, blinks every few seconds */
+.iris-mark[data-mood="idle"] .iris-mark-eyes { animation: iris-mark-glance 6s ease-in-out infinite; }
+.iris-mark[data-mood="idle"] .iris-mark-eye { animation: iris-mark-blink 6s ease-in-out infinite; }
+
+/* listening — the prompt has focus: eyes drop toward you and widen a little */
+.iris-mark[data-mood="listening"] .iris-mark-eyes { transform: translate(0.3px, 0.6px); }
+.iris-mark[data-mood="listening"] .iris-mark-eye { transform: scale(1.14); }
+
+/* thinking — eyes look up and drift, the way people look away to think */
+.iris-mark[data-mood="thinking"] .iris-mark-eyes { animation: iris-mark-ponder 4s ease-in-out infinite; }
+
+/* answered — once: a small hop and a wink from the red eye */
+.iris-mark[data-mood="answered"] .iris-mark-face { animation: iris-mark-hop 700ms ease-in-out 1; }
+.iris-mark[data-mood="answered"] .iris-mark-eye-r { animation: iris-mark-wink 700ms ease-in-out 1; }
+
+@keyframes iris-mark-glance {
+  0%, 14% { transform: translate(0, 0); }
+  22%, 40% { transform: translate(-1.5px, 0); }
+  48%, 66% { transform: translate(1.3px, -0.5px); }
+  74%, 100% { transform: translate(0, 0); }
+}
+@keyframes iris-mark-blink {
+  0%, 84%, 90%, 100% { transform: scaleY(1); }
+  87% { transform: scaleY(0.1); }
+}
+@keyframes iris-mark-ponder {
+  0%, 10% { transform: translate(0, 0); }
+  25%, 52% { transform: translate(1.2px, -2px); }
+  66%, 88% { transform: translate(-0.8px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes iris-mark-hop {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-0.7px); }
+}
+@keyframes iris-mark-wink {
+  0%, 100% { transform: scaleY(1); }
+  25%, 70% { transform: scaleY(0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iris-mark *,
+  .iris-mark[data-mood] .iris-mark-eyes,
+  .iris-mark[data-mood] .iris-mark-eye {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}

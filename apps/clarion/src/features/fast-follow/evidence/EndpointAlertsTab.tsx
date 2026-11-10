@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ArrowLeft, ChevronRight, Lock, Sparkles, Users } from "lucide-react"
+import { ArrowLeft, ChevronRight, Lock, Users } from "lucide-react"
 import {
   Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardAction, CardContent, CardHeader, CardTitle,
   EmptyState, SegmentedControl, SegmentedControlItem,
@@ -10,6 +10,7 @@ import { openGroup } from "../alerts/store"
 import { activeGroups } from "../alerts/groups"
 import { sevBadge, sevLabel } from "../alerts/tone"
 import { goTo } from "../navigator"
+import { IrisMark } from "../iris/IrisMark"
 import { openIris } from "../iris/store"
 import { RETENTION_DAYS } from "../iris/answers"
 import { clockTime, evidenceFor, type EndpointAlert, type Likelihood } from "./evidence"
@@ -111,7 +112,7 @@ function AlertDetail({ a, endpoint, offlineSinceMin, onBack, onCloseDrawer }: {
             {!a.active && <Badge>Ended</Badge>}
           </CardTitle>
           <CardAction className="flex items-center gap-2">
-            <Button size="sm" onClick={investigate}><Sparkles aria-hidden /> Investigate with Iris</Button>
+            <Button size="sm" onClick={investigate}><IrisMark tone="mono" /> Investigate with Iris</Button>
             <ExploringTag />
           </CardAction>
         </CardHeader>
