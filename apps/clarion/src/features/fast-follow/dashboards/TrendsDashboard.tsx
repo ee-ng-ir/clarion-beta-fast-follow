@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { listName } from "../alerts/names"
 import {
-  Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
+  Button, Card, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle,
   SegmentedControl, SegmentedControlItem, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TimeSeriesChart,
 } from "@ir/ui"
 import { ALERT_TYPES, categoryLabel } from "../alerts/catalogue"
@@ -63,9 +63,10 @@ export function TrendsDashboard() {
           <div className="flex flex-wrap items-center gap-3">
             <PeriodControl presets={RANGES} days={st.days} range={st.range} presetLabel={(d) => `${d} days`}
               onPreset={(d) => patchTrends({ days: d, range: undefined })} onRange={(r) => patchTrends({ range: r })} />
-            <Select showDetail={false} label="Alert" className="w-44" options={typeOptions} value={st.types} onValueChange={(v) => patchTrends({ types: v })} />
-            <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
-            <Select showDetail={false} label="Site" className="w-44" options={siteOptions} value={sites} onValueChange={(v) => patchTrends({ sites: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Alert" className="w-auto" options={typeOptions} value={st.types} onValueChange={(v) => patchTrends({ types: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Location" className="w-auto" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
+            <Select size="sm" icon={null} showDetail={false} label="Site" className="w-auto" options={siteOptions} value={sites} onValueChange={(v) => patchTrends({ sites: v })} />
+            {(st.types.length + st.locations.length + sites.length) > 0 && <Button variant="ghost" size="sm" onClick={() => patchTrends({ types: [], locations: [], sites: [] })}>Clear filters</Button>}
           </div>
           <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"}${sites.length ? ` · ${sites.join(", ")}` : ""} · ${period}`} onExport={exportCsv} />
         </CardContent>
