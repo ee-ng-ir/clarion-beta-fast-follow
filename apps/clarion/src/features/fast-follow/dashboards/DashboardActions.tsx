@@ -1,19 +1,20 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { ChevronDown, Download, Save } from "lucide-react"
 import {
   Button, Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, FieldControl, FieldDescription, FieldLabel, Input,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
+import { downloadImage } from "./image"
 import { saveDashboard, type DashId } from "./store"
 
 /**
- * Export, with the format chosen from a menu (as in the PO's Reporting prototype).
- * The label stays generic: CSV is the only format for now, and image is listed
- * but not available, so the format is open to what customers turn out to need.
- * Requested by the PO, 11 Nov.
+ * Export, with the format chosen from a menu (as in the PO's Reporting prototype):
+ * CSV (the table) or an image (the dashboard as shown, with what it covers in
+ * a footer). A generic label, requested by the PO, 11 Nov; image kept (Ee).
+ * Without `onImage` (e.g. an endpoint list) only CSV is offered.
  */
-export function ExportMenu({ onCsv, label = "Export" }: { onCsv: () => void; label?: string }) {
+export function ExportMenu({ onCsv, onImage, label = "Export" }: { onCsv: () => void; onImage?: () => void; label?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -21,7 +22,7 @@ export function ExportMenu({ onCsv, label = "Export" }: { onCsv: () => void; lab
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuItem onSelect={onCsv}>CSV</DropdownMenuItem>
-        <DropdownMenuItem disabled>Image (PNG) · not available yet</DropdownMenuItem>
+        {onImage && <DropdownMenuItem onSelect={onImage}>Image (PNG)</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -31,6 +32,14 @@ export function ExportMenu({ onCsv, label = "Export" }: { onCsv: () => void; lab
 export function DashboardActions({ view, suggestedName, onExport }: { view: DashId; suggestedName: string; onExport: () => void }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
+  const here = useRef<HTMLDivElement>(null)
+  // the dashboard as shown, minus its filter bar (marked data-export-skip)
+  const exportImage = () => {
+    const root = here.current?.closest<HTMLElement>("[data-dashboard-root]")
+    if (!root) return
+    downloadImage(root, suggestedName, [suggestedName])
+      .catch(() => toast({ title: "Couldn't make the image", description: "This browser blocked it. Try Chrome, or export CSV.", variant: "danger" }))
+  }
   const start = () => { setName(suggestedName); setOpen(true) }
   const save = () => {
     const n = name.trim()
@@ -40,8 +49,8 @@ export function DashboardActions({ view, suggestedName, onExport }: { view: Dash
     toast({ title: `Saved "${n}"`, description: "Find it under Saved dashboards.", variant: "success" })
   }
   return (
-    <div className="flex shrink-0 items-center gap-2">
-      <ExportMenu onCsv={onExport} />
+    <div ref={here} className="flex shrink-0 items-center gap-2">
+      <ExportMenu onCsv={onExport} onImage={exportImage} />
       <Button variant="outline" size="sm" onClick={start}><Save aria-hidden />Save</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

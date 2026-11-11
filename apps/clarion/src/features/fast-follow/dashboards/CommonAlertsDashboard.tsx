@@ -78,8 +78,8 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
 
   const sum = ranked.reduce((n, x) => n + (st.rank === "times" ? x.times : x.endpoints), 0) || 1
   return (
-    <div className="@container flex w-full flex-col gap-4">
-      <Card>
+    <div data-dashboard-root className="@container flex w-full flex-col gap-4">
+      <Card data-export-skip>
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <PeriodControl presets={PERIODS} days={st.days} range={st.range} presetLabel={(d) => `Last ${d} days`}

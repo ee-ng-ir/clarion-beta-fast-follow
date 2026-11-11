@@ -90,8 +90,8 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
   }
 
   return (
-    <div className="@container flex w-full flex-col gap-4">
-      <Card>
+    <div data-dashboard-root className="@container flex w-full flex-col gap-4">
+      <Card data-export-skip>
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchInventory({ locations: v })} />
