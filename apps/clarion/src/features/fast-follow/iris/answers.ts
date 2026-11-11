@@ -173,7 +173,9 @@ function stepsFor(g: AlertGroup): string[] {
   switch (g.type.category) {
     case "network": return [
       concentrated ? `Check the network at ${top.name} first: ${top.count} of ${g.endpoints.length} endpoints are there.` : "Compare a healthy endpoint with an affected one at the same location.",
-      "Ask Wi-Fi users to plug in a network cable or move closer to the router.",
+      g.energySaverOn
+        ? `Energy saver is on for ${g.energySaverOn} of ${g.endpoints.length}, which cuts Wi-Fi power. Ask those agents to plug in, or change the power plan centrally.`
+        : "Ask Wi-Fi users to plug in a network cable or move closer to the router.",
       "If it's spread across home workers, check their internet providers before the PCs.",
     ]
     case "platform": return [
