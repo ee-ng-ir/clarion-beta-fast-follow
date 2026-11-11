@@ -1,128 +1,102 @@
-import { useEffect, useMemo, useState } from "react"
-import {
-  Alert, AlertDescription, Badge, Button, Card, CardDescription, CardHeader, CardHeaderText, CardTitle, Checkbox,
-  FieldOption, Table, TableBody, TableCell, TableCol, TableColGroup, TableHead, TableHeader, TableRow,
-} from "@ir/ui"
-import { endpoints } from "@/data/endpoints"
+import { useEffect } from "react"
+import { Badge, Card, CardContent, Switch } from "@ir/ui"
+import { toast } from "@/components/ui/toast"
+import { cn } from "@/lib/utils"
 import { useViewer } from "@/lib/viewer"
-import { ALERT_TYPES, categoryLabel, type AlertCategory } from "../alerts/catalogue"
-import { classify } from "../alerts/groups"
+import { ALERT_TYPES, categoryLabel, type AlertCategory, type AlertType } from "../alerts/catalogue"
 import { alertName } from "../alerts/names"
-import { saveTypes, savedLine, useSettings } from "./store"
-import { SectionFooter, type Confirmation } from "./SectionFooter"
+import { saveTypes, useSettings } from "./store"
 
 const categories: AlertCategory[] = ["network", "system", "platform", "devices"]
 
+/** What each alert watches, in a line: what it is, not what goes wrong. */
+const WATCHES: Record<string, string> = {
+  "call-quality": "Network quality for calls, from latency, jitter and packet loss.",
+  wifi: "How strong the endpoint's Wi-Fi connection is.",
+  cpu: "How hard the computer's processor is working.",
+  memory: "How much of the computer's memory is in use.",
+  storage: "How much free space is left on the disk.",
+  battery: "How much charge is left on a laptop.",
+  "audio-device": "Whether a headset or speaker is connected and working.",
+}
+const watches = (t: AlertType) =>
+  t.category === "platform" ? `Call quality on ${alertName(t)}, and whether it can be reached.` : WATCHES[t.id] ?? ""
+
 /**
- * Settings › Alerts: which alerts Clarion raises, on or off for every endpoint.
- * That's all: the core ask is a toggle per alert type (PO, 11 Nov). The numbers
- * that raise each alert stay on Thresholds. Flapping isn't set here any more:
- * the widget handles it (PO and R&D, 11 Nov), so the Sensitive / Balanced / Calm
- * control is gone.
- * A form like every Settings tab (D9): change things, then Save.
- * Off isn't evaluated (D10).
+ * Settings › Alerts: a tile per alert with a switch, for every endpoint (canvas
+ * option F, after the PO's 11 Nov feedback). On/off only: no counts, no
+ * thresholds (they keep their own tab, where admins expect them).
+ * A switch applies straight away with an Undo toast, so this tab has no Save bar:
+ * the one exception to D9, logged. Off isn't evaluated (D10).
+ * `focus` (from Thresholds' "Turn on in Alerts") scrolls to that alert's tile,
+ * highlights it and puts focus on its switch.
+ * An alert that's off isn't shown greyed out, so it's never mistaken for one
+ * you can't change: an On or Off label beside the switch says which (Ee, 11 Nov).
  */
-export function AlertsSection({ onEditThresholds, onDirtyChange }: { onEditThresholds: () => void; onDirtyChange?: (dirty: boolean) => void }) {
+export function AlertsSection({ focus, onFocused }: { focus?: string | null; onFocused?: () => void }) {
   const settings = useSettings()
   const { person } = useViewer()
-  const [off, setOff] = useState<string[]>(settings.disabledTypes)
-  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  // the tile stays highlighted while `focus` is set; the parent clears it after a moment
+  useEffect(() => {
+    if (!focus) return
+    const tile = document.getElementById(`alert-tile-${focus}`)
+    tile?.scrollIntoView({ block: "center" })
+    tile?.querySelector<HTMLElement>('[role="switch"]')?.focus({ preventScroll: true })
+    const t = window.setTimeout(() => onFocused?.(), 2400)
+    return () => window.clearTimeout(t)
+  }, [focus, onFocused])
 
-  const dirty = off.slice().sort().join() !== settings.disabledTypes.slice().sort().join()
-  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
-
-  // endpoints each type alerts on right now, so turning one off isn't a blind choice
-  const affected = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const e of endpoints) if (e.status === "critical" || e.status === "warning") m.set(classify(e), (m.get(classify(e)) ?? 0) + 1)
-    return m
-  }, [])
-
-  const toggle = (id: string, on: boolean) => { setConfirmation(null); setOff((cur) => (on ? cur.filter((x) => x !== id) : [...cur, id])) }
-  const save = () => {
-    const turnedOff = off.filter((x) => !settings.disabledTypes.includes(x)).length
-    const turnedOn = settings.disabledTypes.filter((x) => !off.includes(x)).length
-    const changes = [
-      turnedOff && `${turnedOff} alert${turnedOff === 1 ? "" : "s"} turned off`,
-      turnedOn && `${turnedOn} turned back on`,
-    ].filter(Boolean)
-    saveTypes(off, person.name)
-    setConfirmation({ title: "Alerts saved", description: changes.join(" · ") })
+  const toggle = (t: AlertType, on: boolean) => {
+    const before = settings.disabledTypes
+    const next = on ? before.filter((x) => x !== t.id) : [...before, t.id]
+    saveTypes(next, person.name)
+    toast({
+      variant: on ? "success" : "info",
+      title: `${alertName(t)} alerts ${on ? "on" : "off"}`,
+      description: on ? "Clarion raises it again from now." : "Agents won't see it in the widget, and no one is emailed about it.",
+      action: { label: "Undo", onClick: () => saveTypes(before, person.name) },
+    })
   }
-  const savedOff = settings.disabledTypes.length
 
   return (
-    <div className="flex w-full flex-col gap-gutter">
-      {/* Reflects what's saved, not the draft: an unsaved switch-off hasn't taken effect yet. */}
-      {savedOff > 0 && (
-        <Alert variant="warning">
-          <AlertDescription>
-            {savedOff} alert{savedOff === 1 ? " is" : "s are"} off. Agents won't see {savedOff === 1 ? "it" : "them"} in the widget, and no one will be emailed about {savedOff === 1 ? "it" : "them"}.
-          </AlertDescription>
-        </Alert>
-      )}
+    <div className="@container flex w-full flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-heading-sm text-content-neutral-emphasis">Alerts</h2>
+        <p className="text-body-md text-content-neutral-muted">Turn an alert on or off for every endpoint.</p>
+      </div>
 
-      <Card className="@container gap-0 overflow-hidden">
-        <CardHeader className="pb-6">
-          <CardHeaderText>
-            <CardTitle>Alerts</CardTitle>
-            <CardDescription>Choose which alerts Clarion raises, for every endpoint. All are on by default. Turning one off stops the alert, not the data: readings still show in endpoint detail.</CardDescription>
-          </CardHeaderText>
-        </CardHeader>
-        <Table>
-          <TableColGroup>
-            <TableCol />
-            <TableCol className="w-40" />
-          </TableColGroup>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="ps-6 text-start">Alert</TableHead>
-              <TableHead className="pe-6 text-end">Active now</TableHead>
-            </TableRow>
-          </TableHeader>
-          {categories.map((c) => (
-            <TableBody key={c}>
-              <TableRow className="bg-surface-neutral-subtle hover:bg-surface-neutral-subtle">
-                <TableCell colSpan={2} className="py-3 ps-6">
-                  <h3 className="text-label-md font-semibold text-content-neutral-emphasis">{categoryLabel[c]}</h3>
-                </TableCell>
-              </TableRow>
-              {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
-                const on = !off.includes(t.id)
-                return (
-                  <TableRow key={t.id}>
-                    <TableCell className="ps-6">
-                      <FieldOption className={on ? undefined : "text-content-neutral-subtle"} control={<Checkbox checked={on} onCheckedChange={(v) => toggle(t.id, v === true)} />}>
-                        {alertName(t)}
-                      </FieldOption>
-                    </TableCell>
-                    <TableCell className="pe-6 text-end">
-                      <RowStatus on={on} wasOn={!settings.disabledTypes.includes(t.id)} active={affected.get(t.id) ?? 0} />
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          ))}
-        </Table>
-      </Card>
-
-      <SectionFooter
-        saved={savedLine(settings.saved.types)}
-        dirty={dirty}
-        onDiscard={() => setOff(settings.disabledTypes)}
-        onSave={save}
-        saveLabel="Save alerts"
-        confirmation={confirmation}
-        extra={<Button variant="ghost" onClick={onEditThresholds}>Edit thresholds</Button>}
-      />
+      {categories.map((c) => (
+        <section key={c} aria-labelledby={`alert-cat-${c}`} className="flex flex-col gap-3">
+          <h3 id={`alert-cat-${c}`} className="text-label-md text-content-neutral-emphasis">{categoryLabel[c]}</h3>
+          <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+            {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
+              const on = !settings.disabledTypes.includes(t.id)
+              const id = `alert-switch-${t.id}`
+              return (
+                <Card key={t.id} size="sm" id={`alert-tile-${t.id}`}
+                  className={cn("transition-shadow", focus === t.id && "ring-2 ring-line-focused")}>
+                  <CardContent className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line-neutral-subtle bg-surface-primary-subtle text-content-primary-emphasis">
+                        <t.icon className="size-4" aria-hidden />
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {/* says the state in words, so Off never reads as disabled */}
+                        <Badge color={on ? "success" : undefined} dot={on} aria-hidden>{on ? "On" : "Off"}</Badge>
+                        <Switch id={id} checked={on} onCheckedChange={(v) => toggle(t, v)} aria-describedby={`${id}-desc`} />
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor={id} className="text-label-lg text-content-neutral-emphasis">{alertName(t)}</label>
+                      <p id={`${id}-desc`} className="text-body-sm text-content-neutral-muted">{watches(t)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   )
-}
-
-/** How many endpoints have it now ("None" when none), or "Off" once it has been saved off. An unsaved change says nothing here; the footer covers it. */
-function RowStatus({ on, wasOn, active }: { on: boolean; wasOn: boolean; active: number }) {
-  if (!on && !wasOn) return <Badge>Off</Badge>
-  if (active === 0) return <span className="text-content-neutral-subtle">None</span>
-  return <span className="text-content-neutral-muted">{active} endpoint{active === 1 ? "" : "s"}</span>
 }

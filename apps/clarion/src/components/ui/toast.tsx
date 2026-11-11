@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react"
 import {
-  Toast, ToastBody, ToastClose, ToastContent, ToastDescription, ToastIcon, ToastProvider, ToastTitle, ToastViewport,
+  Button, Toast, ToastAction, ToastBody, ToastClose, ToastContent, ToastDescription, ToastIcon, ToastProvider, ToastTitle, ToastViewport,
 } from "@ir/ui"
 
 type ToastVariant = "success" | "info" | "danger"
-interface ToastItem { id: number; title: string; description?: string; variant?: ToastVariant }
+/** One button on the toast, e.g. Undo for a change that applied straight away. */
+interface ToastActionItem { label: string; onClick: () => void }
+interface ToastItem { id: number; title: string; description?: string; variant?: ToastVariant; action?: ToastActionItem }
 
 let counter = 0
 const EVENT = "clarion:toast"
 
 /** Fire a transient toast from anywhere. */
-export function toast(t: { title: string; description?: string; variant?: ToastVariant }) {
+export function toast(t: { title: string; description?: string; variant?: ToastVariant; action?: ToastActionItem }) {
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { ...t, id: ++counter } }))
 }
 
@@ -37,6 +39,11 @@ export function Toaster() {
               <ToastTitle>{t.title}</ToastTitle>
               {t.description && <ToastDescription>{t.description}</ToastDescription>}
             </ToastContent>
+            {t.action && (
+              <ToastAction asChild altText={t.action.label}>
+                <Button variant="outline" size="xs" onClick={t.action.onClick}>{t.action.label}</Button>
+              </ToastAction>
+            )}
             <ToastClose />
           </ToastBody>
         </Toast>

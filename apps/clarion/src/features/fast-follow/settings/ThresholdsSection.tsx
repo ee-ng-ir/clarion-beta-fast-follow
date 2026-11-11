@@ -6,7 +6,7 @@ import {
 import { useViewer } from "@/lib/viewer"
 import { savedLine, saveThresholds, useSettings } from "./store"
 import { SectionFooter, type Confirmation } from "./SectionFooter"
-import { IR_THRESHOLDS, samePolicy, THRESHOLD_CATEGORIES, THRESHOLD_METRICS, type Policy } from "./thresholds"
+import { IR_THRESHOLDS, samePolicy, THRESHOLD_CATEGORIES, THRESHOLD_METRICS, typesFor, type Policy } from "./thresholds"
 
 /**
  * Settings › Alerting › Thresholds: the original Clarion Thresholds page, on Picasso, minus
@@ -14,7 +14,11 @@ import { IR_THRESHOLDS, samePolicy, THRESHOLD_CATEGORIES, THRESHOLD_METRICS, typ
  * whole tenancy. A form like every Settings tab (D9): drag, then Save.
  * If custom thresholds come in later, where they sit is an IA question (X2).
  */
-export function ThresholdsSection({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+export function ThresholdsSection({ onDirtyChange, onOpenAlert }: {
+  onDirtyChange?: (dirty: boolean) => void
+  /** an alert that's off links back to its tile in Alerts, to turn it on there */
+  onOpenAlert?: (typeId: string) => void
+}) {
   const settings = useSettings()
   const { person, thresholds: acc } = useViewer()
   const readOnly = !acc.editDefaults
@@ -62,6 +66,9 @@ export function ThresholdsSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
                 const ir = IR_THRESHOLDS[m.id]
                 const changed = b.warn !== ir.warn || b.crit !== ir.crit
                 const fmt = (v: number) => `${v.toFixed(m.decimals)}${m.unit}`
+                // off when every alert this slider drives is off (platforms share one slider)
+                const drives = typesFor(m.id)
+                const off = drives.length > 0 && drives.every((id) => settings.disabledTypes.includes(id))
                 return (
                   <div key={m.id} className="flex flex-col gap-4 border-t border-line-neutral-subtle px-6 py-5 @2xl:flex-row @2xl:items-center @2xl:gap-8">
                     <div className="flex items-center gap-3 @2xl:w-60 @2xl:shrink-0">
@@ -80,11 +87,18 @@ export function ThresholdsSection({ onDirtyChange }: { onDirtyChange?: (dirty: b
                             </Tooltip>
                           )}
                         </span>
-                        <span className="text-body-sm text-content-neutral-muted">{m.direction === "higher" ? "Higher is worse" : "Lower is worse"}</span>
+                        {off ? (
+                          <span className="flex flex-wrap items-center gap-x-1.5 text-body-sm text-content-neutral-muted">
+                            Alert is off ·
+                            <Button variant="link" size="xs" className="h-auto p-0" onClick={() => onOpenAlert?.(drives[0])}>Turn on in Alerts</Button>
+                          </span>
+                        ) : (
+                          <span className="text-body-sm text-content-neutral-muted">{m.direction === "higher" ? "Higher is worse" : "Lower is worse"}</span>
+                        )}
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <ThresholdSlider min={m.min} max={m.max} step={m.step} warning={b.warn} critical={b.crit} disabled={readOnly}
+                      <ThresholdSlider min={m.min} max={m.max} step={m.step} warning={b.warn} critical={b.crit} disabled={readOnly || off}
                         format={fmt} aria-label={`${m.name} thresholds`}
                         onChange={({ warning, critical }) => set(m.id, warning, critical)} />
                     </div>

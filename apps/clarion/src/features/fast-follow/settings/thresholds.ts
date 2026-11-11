@@ -35,3 +35,10 @@ export function applyThresholds(p: Policy) {
 }
 
 export const samePolicy = (a: Policy, b: Policy) => METRICS.every((m) => a[m.id].warn === b[m.id].warn && a[m.id].crit === b[m.id].crit)
+
+/** The alert types a slider drives: one, or every platform for the shared Platform Quality Index. */
+export function typesFor(metricId: string): string[] {
+  if (metricId === "platformmos") return ALERT_TYPES.filter((t) => t.category === "platform").map((t) => t.id)
+  const id = DRIVES[metricId]
+  return id ? [id] : []
+}

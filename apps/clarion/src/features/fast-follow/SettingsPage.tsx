@@ -29,6 +29,9 @@ export function SettingsPage() {
   // what's waiting on "Discard unsaved changes?": another tab, or another page
   const [pending, setPending] = useState<{ tab: string } | { proceed: () => void } | null>(null)
   const onDirtyChange = useCallback((d: boolean) => setDirty(d), [])
+  // Thresholds' "Turn on in Alerts" opens Alerts on that alert's tile
+  const [focusAlert, setFocusAlert] = useState<string | null>(null)
+  const clearFocus = useCallback(() => setFocusAlert(null), [])
 
   // leaving Settings for another page with unsaved changes asks first
   useEffect(() => {
@@ -67,8 +70,8 @@ export function SettingsPage() {
         <TabsList aria-label="Settings sections" className="sticky -top-4 z-20 -mt-4 bg-surface-app pt-4">
           {TABS.map((t) => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
         </TabsList>
-        <TabsContent value="alerts"><AlertsSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
-        <TabsContent value="thresholds"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="alerts"><AlertsSection focus={focusAlert} onFocused={clearFocus} /></TabsContent>
+        <TabsContent value="thresholds"><ThresholdsSection onDirtyChange={onDirtyChange} onOpenAlert={(id) => { setFocusAlert(id); go("alerts") }} /></TabsContent>
         <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
         <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
       </Tabs>
