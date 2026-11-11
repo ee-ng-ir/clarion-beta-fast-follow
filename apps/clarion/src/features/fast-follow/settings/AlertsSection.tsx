@@ -64,7 +64,7 @@ export function AlertsSection({ focus, onFocused }: { focus?: string | null; onF
     <div className="@container flex w-full flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h2 className="text-heading-sm text-content-neutral-emphasis">Alerts</h2>
-        <p className="text-body-md text-content-neutral-muted">Turn an alert on or off for every endpoint.</p>
+        <p className="text-body-md text-content-neutral-muted">Turn an alert on or off across the fleet and in agents' widgets.</p>
       </div>
 
       {/* Groups flow down two balanced columns when there's room (canvas option B):
