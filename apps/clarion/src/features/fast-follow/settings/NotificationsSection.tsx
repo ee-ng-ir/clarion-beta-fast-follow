@@ -43,8 +43,8 @@ export function NotificationsSection({ onDirtyChange }: { onDirtyChange?: (dirty
       <Card size="sm">
         <CardHeader>
           <CardHeaderText>
-            <CardTitle>Send to IT reports</CardTitle>
-            <CardDescription>Where reports go when an agent uses Send to IT in the widget. Unchanged.</CardDescription>
+            <CardTitle>Send to IT from the Clarion widget</CardTitle>
+            <CardDescription>When an agent presses Send to IT in the Clarion widget on their computer, the report is emailed to these addresses.</CardDescription>
           </CardHeaderText>
         </CardHeader>
         <CardContent>
