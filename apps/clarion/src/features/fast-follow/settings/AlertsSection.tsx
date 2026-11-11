@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Badge, Card, CardContent, Switch } from "@ir/ui"
+import { Badge, Card, Switch } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
 import { useViewer } from "@/lib/viewer"
@@ -23,12 +23,13 @@ const watches = (t: AlertType) =>
   t.category === "platform" ? `Call quality on ${alertName(t)}, and whether it can be reached.` : WATCHES[t.id] ?? ""
 
 /**
- * Settings › Alerts: a tile per alert with a switch, for every endpoint (canvas
- * option F, after the PO's 11 Nov feedback). On/off only: no counts, no
+ * Settings › Alerts: a row per alert with a switch, for every endpoint, in grouped
+ * lists that flow into two columns when there's room (canvas option B, Ee 11 Nov;
+ * replaced the tile grid, which took too much height). On/off only: no counts, no
  * thresholds (they keep their own tab, where admins expect them).
  * A switch applies straight away with an Undo toast, so this tab has no Save bar:
  * the one exception to D9, logged. Off isn't evaluated (D10).
- * `focus` (from Thresholds' "Turn on in Alerts") scrolls to that alert's tile,
+ * `focus` (from Thresholds' "Turn on in Alerts") scrolls to that alert's row,
  * highlights it and puts focus on its switch.
  * An alert that's off isn't shown greyed out, so it's never mistaken for one
  * you can't change; an "Off" label beside its switch marks it (Ee, 11 Nov).
@@ -66,38 +67,40 @@ export function AlertsSection({ focus, onFocused }: { focus?: string | null; onF
         <p className="text-body-md text-content-neutral-muted">Turn an alert on or off for every endpoint.</p>
       </div>
 
-      {categories.map((c) => (
-        <section key={c} aria-labelledby={`alert-cat-${c}`} className="flex flex-col gap-3">
-          <h3 id={`alert-cat-${c}`} className="text-label-md text-content-neutral-emphasis">{categoryLabel[c]}</h3>
-          <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-            {ALERT_TYPES.filter((t) => t.category === c).map((t) => {
-              const on = !settings.disabledTypes.includes(t.id)
-              const id = `alert-switch-${t.id}`
-              return (
-                <Card key={t.id} size="sm" id={`alert-tile-${t.id}`}
-                  className={cn("transition-shadow", focus === t.id && "ring-2 ring-line-focused")}>
-                  <CardContent className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line-neutral-subtle bg-surface-primary-subtle text-content-primary-emphasis">
-                        <t.icon className="size-4" aria-hidden />
-                      </span>
-                      <span className="flex items-center gap-2">
+      {/* Groups flow down two balanced columns when there's room (canvas option B):
+          the platform list changes per tenant, so no group is pinned to a column. */}
+      <div className="-mb-6 columns-1 gap-6 @4xl:columns-2">
+        {categories.map((c) => {
+          const types = ALERT_TYPES.filter((t) => t.category === c)
+          if (!types.length) return null
+          return (
+            <section key={c} aria-labelledby={`alert-cat-${c}`} className="mb-6 flex break-inside-avoid flex-col gap-2">
+              <h3 id={`alert-cat-${c}`} className="text-label-md text-content-neutral-emphasis">{categoryLabel[c]}</h3>
+              <Card size="sm" className="divide-y divide-line-neutral-muted overflow-hidden">
+                {types.map((t) => {
+                  const on = !settings.disabledTypes.includes(t.id)
+                  const id = `alert-switch-${t.id}`
+                  return (
+                    <div key={t.id} id={`alert-tile-${t.id}`}
+                      className={cn("flex items-center gap-4 px-4 py-3 transition-shadow",
+                        focus === t.id && "bg-surface-primary-subtle ring-2 ring-inset ring-line-focused")}>
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <label htmlFor={id} className="text-label-md text-content-neutral-emphasis">{alertName(t)}</label>
+                        <p id={`${id}-desc`} className="text-body-sm text-content-neutral-muted">{watches(t)}</p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-2">
                         {/* only the exception is labelled: an alert that's off. On is the switch alone */}
                         {!on && <Badge aria-hidden>Off</Badge>}
                         <Switch id={id} checked={on} onCheckedChange={(v) => toggle(t, v)} aria-describedby={`${id}-desc`} />
                       </span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label htmlFor={id} className="text-label-lg text-content-neutral-emphasis">{alertName(t)}</label>
-                      <p id={`${id}-desc`} className="text-body-sm text-content-neutral-muted">{watches(t)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
-      ))}
+                  )
+                })}
+              </Card>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }
