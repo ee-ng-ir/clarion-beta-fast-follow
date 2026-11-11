@@ -11,6 +11,8 @@ export const COUNTING_NOTE = "Times raised counts every time an alert was raised
 
 export interface InventoryState {
   locations: string[]
+  /** customer-assigned sites (G3); optional so saved dashboards from before keep working */
+  sites?: string[]
   tab: "summary" | "endpoints"
   /** "category|value" keys picked on the summary or in the filter: OR within a category, AND across */
   filters: string[]
@@ -19,6 +21,7 @@ export interface InventoryState {
 export interface AlertsState {
   days: number
   locations: string[]
+  sites?: string[]
   severity: string[]
   categories: string[]
   rank: Measure
@@ -28,6 +31,7 @@ export interface TrendsState {
   days: number
   types: string[]
   locations: string[]
+  sites?: string[]
   measure: Measure
 }
 export type DashState = { inventory: InventoryState; alerts: AlertsState; trends: TrendsState }
@@ -68,9 +72,9 @@ export function viewFromPath(path: string): View | null {
 }
 
 const DEFAULTS: DashState = {
-  inventory: { locations: [], tab: "summary", filters: [], q: "" },
-  alerts: { days: 30, locations: [], severity: [], categories: [], rank: "times", selected: null },
-  trends: { days: 90, types: [], locations: [], measure: "times" },
+  inventory: { locations: [], sites: [], tab: "summary", filters: [], q: "" },
+  alerts: { days: 30, locations: [], sites: [], severity: [], categories: [], rank: "times", selected: null },
+  trends: { days: 90, types: [], locations: [], sites: [], measure: "times" },
 }
 
 const H = 3600000

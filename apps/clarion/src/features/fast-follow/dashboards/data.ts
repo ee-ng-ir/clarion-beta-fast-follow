@@ -22,9 +22,48 @@ function rng(seed: string) { let a = hash(seed) || 1; return () => { a ^= a << 1
 export const LOCATIONS = locations.map((l) => ({ id: l.id, name: l.name }))
 export const locationName = (id: string) => LOCATIONS.find((l) => l.id === id)?.name ?? id
 
-export function endpointsIn(locIds: string[]): Endpoint[] {
-  return locIds.length ? endpoints.filter((e) => locIds.includes(e.locationId)) : endpoints
+export function endpointsIn(locIds: string[], sites: string[] = []): Endpoint[] {
+  if (!locIds.length && !sites.length) return endpoints
+  return endpoints.filter((e) => (!locIds.length || locIds.includes(e.locationId)) && (!sites.length || sites.includes(siteOf(e))))
 }
+
+// ---- sites -------------------------------------------------------------------
+// Site is the customer's own name for where someone works. Location is where Clarion
+// sees the endpoint, from its IP address (the map). They often differ, so both are
+// offered and always labelled, never merged (Dashboards epic; X3). The stories here:
+// Cebu agents on the VPN leave the internet in Manila, so Clarion places them in
+// Manila; some of the New York team work from home in Austin and Denver.
+const SITE_MIX: Record<string, [string, number][]> = {
+  london: [["London Bridge", 1]],
+  manilla: [["Ortigas", 70], ["Cebu IT Park", 30]],
+  cebu: [["Cebu IT Park", 1]],
+  newyork: [["Midtown", 1]],
+  austin: [["Austin Domain", 75], ["Midtown", 25]],
+  denver: [["Denver Tech Center", 75], ["Midtown", 25]],
+  bangalore: [["Whitefield", 1]],
+  hyderabad: [["HITEC City", 1]],
+  sydney: [["Chatswood", 60], ["Parramatta", 40]],
+}
+const siteCache = new Map<string, string>()
+/** The site the customer assigned this endpoint's user to. Seeded, so it's stable. */
+export function siteOf(e: Endpoint): string {
+  let s = siteCache.get(e.id)
+  if (!s) {
+    s = weighted(rng(e.id + "site")(), SITE_MIX[e.locationId] ?? [[locationName(e.locationId), 1]])
+    siteCache.set(e.id, s)
+  }
+  return s
+}
+export const SITES = [...new Set(endpoints.map(siteOf))].sort((a, b) => a.localeCompare(b))
+
+/** What a dashboard covers, Location and Site each named: "Manila CC · Site: Cebu IT Park". */
+export function scopeLabel(locIds: string[], sites: string[] = []) {
+  const where = locIds.length ? locIds.map(locationName).join(", ") : "All locations"
+  return sites.length ? `${where} · Site: ${sites.join(", ")}` : where
+}
+
+/** The first day of history, for the "data as of" line (R5: the real history starts on release day). */
+export const historyStart = () => dayDate(HISTORY_DAYS - 1)
 
 // ---- inventory ---------------------------------------------------------------
 
@@ -152,6 +191,7 @@ export function alertHistory(): Raise[] {
 export interface HistoryFilter {
   days: number
   locations: string[]
+  sites: string[]
   types: string[]
   severity: ("critical" | "warning")[]
   categories: AlertCategory[]
@@ -167,6 +207,7 @@ export function filtered(f: Partial<HistoryFilter>): Raise[] {
     if (x.typeId in offFromDay && x.day <= offFromDay[x.typeId]) return false
     const e = endpoints[x.ep]
     if (f.locations?.length && !f.locations.includes(e.locationId)) return false
+    if (f.sites?.length && !f.sites.includes(siteOf(e))) return false
     if (f.types?.length && !f.types.includes(x.typeId)) return false
     if (f.severity?.length === 1 && (f.severity[0] === "critical") !== x.critical) return false
     if (f.categories?.length && !f.categories.includes(alertType(x.typeId).category)) return false

@@ -1,9 +1,8 @@
 import { complianceLabel, type Compliance } from "@ir/telemetry"
 import { categoryLabel, ALERT_TYPES, type AlertCategory } from "../alerts/catalogue"
-import { invValueLabel, locationName, type InvCategory } from "./data"
+import { invValueLabel, locationName, scopeLabel, type InvCategory } from "./data"
 import type { AlertsState, InventoryState, SavedDashboard, TrendsState } from "./store"
 
-const places = (ids: string[]) => (ids.length ? ids.map(locationName).join(", ") : "All locations")
 
 /** One line saying what a saved dashboard shows: its range and filters. */
 export function describeSaved(s: SavedDashboard): string {
@@ -13,15 +12,15 @@ export function describeSaved(s: SavedDashboard): string {
       const [c, ...v] = k.split("|")
       return c === "compliance" ? `Headset ${complianceLabel[v.join("|") as Compliance].toLowerCase()}` : invValueLabel(c as InvCategory, v.join("|"))
     })
-    return [places(st.locations), ...f].join(" · ")
+    return [scopeLabel(st.locations, st.sites), ...f].join(" · ")
   }
   if (s.view === "alerts") {
     const st = s.state as AlertsState
-    return [`Last ${st.days} days`, places(st.locations), ...st.severity, ...st.categories.map((c) => categoryLabel[c as AlertCategory])].join(" · ")
+    return [`Last ${st.days} days`, scopeLabel(st.locations, st.sites), ...st.severity, ...st.categories.map((c) => categoryLabel[c as AlertCategory])].join(" · ")
   }
   const st = s.state as TrendsState
   const what = st.types.length ? st.types.map((t) => ALERT_TYPES.find((x) => x.id === t)?.warning ?? t).join(", ") : "All alerts"
-  return [`${st.days} days`, what, st.locations.length ? st.locations.map(locationName).join(" vs ") : "All locations"].join(" · ")
+  return [`${st.days} days`, what, st.locations.length ? st.locations.map(locationName).join(" vs ") : "All locations", ...(st.sites?.length ? [`Site: ${st.sites.join(", ")}`] : [])].join(" · ")
 }
 
 export function savedAgo(t: number) {
