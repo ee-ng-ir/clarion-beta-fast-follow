@@ -84,10 +84,11 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
           <div className="flex flex-wrap items-center gap-3">
             <PeriodControl presets={PERIODS} days={st.days} range={st.range} presetLabel={(d) => `Last ${d} days`}
               onPreset={(d) => patchAlerts({ days: d, range: undefined })} onRange={(r) => patchAlerts({ range: r })} />
-            <Select showDetail={false} label="Location" className="w-40" options={locationOptions} value={st.locations} onValueChange={(v) => patchAlerts({ locations: v })} />
-            <Select showDetail={false} label="Site" className="w-40" options={siteOptions} value={sites} onValueChange={(v) => patchAlerts({ sites: v })} />
-            <Select showDetail={false} label="Severity" className="w-36" options={severityOptions} value={st.severity} onValueChange={(v) => patchAlerts({ severity: v })} />
-            <Select showDetail={false} label="Category" className="w-40" options={categoryOptions} value={st.categories} onValueChange={(v) => patchAlerts({ categories: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Location" className="w-auto" options={locationOptions} value={st.locations} onValueChange={(v) => patchAlerts({ locations: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Site" className="w-auto" options={siteOptions} value={sites} onValueChange={(v) => patchAlerts({ sites: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Severity" className="w-auto" options={severityOptions} value={st.severity} onValueChange={(v) => patchAlerts({ severity: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Category" className="w-auto" options={categoryOptions} value={st.categories} onValueChange={(v) => patchAlerts({ categories: v })} />
+            {(st.locations.length + sites.length + st.severity.length + st.categories.length) > 0 && <Button variant="ghost" size="sm" onClick={() => patchAlerts({ locations: [], sites: [], severity: [], categories: [] })}>Clear filters</Button>}
           </div>
           <DashboardActions view="alerts" suggestedName={`Top alerts · ${period.toLowerCase()} · ${scope}`} onExport={exportCsv} />
         </CardContent>

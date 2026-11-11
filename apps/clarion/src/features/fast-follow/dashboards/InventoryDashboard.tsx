@@ -94,8 +94,9 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
       <Card>
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchInventory({ locations: v })} />
-            <Select showDetail={false} label="Site" className="w-44" options={siteOptions} value={sites} onValueChange={(v) => patchInventory({ sites: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Location" className="w-auto" options={locationOptions} value={st.locations} onValueChange={(v) => patchInventory({ locations: v })} />
+            <Select size="sm" icon={null} showDetail={false} label="Site" className="w-auto" options={siteOptions} value={sites} onValueChange={(v) => patchInventory({ sites: v })} />
+            {(st.locations.length + sites.length) > 0 && <Button variant="ghost" size="sm" onClick={() => patchInventory({ locations: [], sites: [] })}>Clear filters</Button>}
             <span className="text-body-sm text-content-neutral-muted">{scope}</span>
           </div>
           <DashboardActions view="inventory" suggestedName={st.filters.length ? `${st.filters.map(filterLabel).join(", ")} · ${scope}` : `Device inventory · ${scope}`} onExport={exportCsv} />
