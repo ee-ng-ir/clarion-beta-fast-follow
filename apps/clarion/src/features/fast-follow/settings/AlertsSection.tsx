@@ -81,8 +81,9 @@ export function AlertsSection({ focus, onFocused }: { focus?: string | null; onF
                   const on = !settings.disabledTypes.includes(t.id)
                   const id = `alert-switch-${t.id}`
                   return (
+                    // first and last rows take the card's corners, so the focus highlight follows them instead of being clipped
                     <div key={t.id} id={`alert-tile-${t.id}`}
-                      className={cn("flex items-center gap-4 px-4 py-3 transition-shadow",
+                      className={cn("flex items-center gap-4 px-4 py-3 transition-shadow first:rounded-t-xl last:rounded-b-xl",
                         focus === t.id && "bg-surface-primary-subtle ring-2 ring-inset ring-line-focused")}>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <label htmlFor={id} className="text-label-md text-content-neutral-emphasis">{alertName(t)}</label>
