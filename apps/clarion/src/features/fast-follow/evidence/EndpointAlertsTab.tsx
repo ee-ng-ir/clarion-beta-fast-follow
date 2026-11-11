@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ArrowLeft, ChevronRight, Lock, Users } from "lucide-react"
+import { ArrowLeft, BookOpen, ChevronRight, Lock, Users } from "lucide-react"
 import {
   Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardAction, CardContent, CardHeader, CardTitle,
   EmptyState, SegmentedControl, SegmentedControlItem,
@@ -219,13 +219,15 @@ function AlertDetail({ a, endpoint, offlineSinceMin, onBack, onCloseDrawer }: {
       <Card size="sm">
         <CardHeader>
           <CardTitle>Suggested next steps</CardTitle>
-          <CardAction><span className="text-body-xs text-content-neutral-muted">From the Clarion alert catalogue</span></CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           <ol className="flex list-decimal flex-col gap-1.5 ps-5 text-body-md text-content-neutral-emphasis">
             {a.steps.map((s) => <li key={s}>{s}</li>)}
           </ol>
-          <p className="text-body-xs text-content-neutral-muted">Guidance only. Clarion doesn't change anything on the endpoint.</p>
+          {/* the source, with the same book icon Iris uses for catalogue answers */}
+          <p className="flex items-center gap-1.5 text-body-xs text-content-neutral-muted">
+            <BookOpen className="size-3.5 shrink-0" aria-hidden />From the Clarion alert catalogue
+          </p>
         </CardContent>
       </Card>
     </div>
