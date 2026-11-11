@@ -31,7 +31,8 @@ const watches = (t: AlertType) =>
  * `focus` (from Thresholds' "Turn on in Alerts") scrolls to that alert's tile,
  * highlights it and puts focus on its switch.
  * An alert that's off isn't shown greyed out, so it's never mistaken for one
- * you can't change: an On or Off label beside the switch says which (Ee, 11 Nov).
+ * you can't change; an "Off" label beside its switch marks it (Ee, 11 Nov).
+ * On needs no label: the switch says it, as in most settings UIs.
  */
 export function AlertsSection({ focus, onFocused }: { focus?: string | null; onFocused?: () => void }) {
   const settings = useSettings()
@@ -81,8 +82,8 @@ export function AlertsSection({ focus, onFocused }: { focus?: string | null; onF
                         <t.icon className="size-4" aria-hidden />
                       </span>
                       <span className="flex items-center gap-2">
-                        {/* says the state in words, so Off never reads as disabled */}
-                        <Badge color={on ? "success" : undefined} dot={on} aria-hidden>{on ? "On" : "Off"}</Badge>
+                        {/* only the exception is labelled: an alert that's off. On is the switch alone */}
+                        {!on && <Badge aria-hidden>Off</Badge>}
                         <Switch id={id} checked={on} onCheckedChange={(v) => toggle(t, v)} aria-describedby={`${id}-desc`} />
                       </span>
                     </div>
