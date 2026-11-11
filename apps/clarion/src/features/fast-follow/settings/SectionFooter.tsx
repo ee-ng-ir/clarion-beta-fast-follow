@@ -9,7 +9,7 @@ export type Confirmation = { title: string; description?: string }
 export function SectionFooter({ saved, dirty, onDiscard, onSave, saveLabel, extra, confirmation }: {
   saved: string; dirty: boolean; onDiscard: () => void; onSave: () => void; saveLabel: string; extra?: React.ReactNode
   /** set after a save; shown once as a success toast, the product's pattern for a save landing.
-      Keep the description to what changed ("Network set to Calm"), not what it means. */
+      Keep the description to what changed ("2 alerts turned off"), not what it means. */
   confirmation?: Confirmation | null
 }) {
   // Toast once per save. The ref stops a repeat when the effect re-runs (StrictMode, re-renders);

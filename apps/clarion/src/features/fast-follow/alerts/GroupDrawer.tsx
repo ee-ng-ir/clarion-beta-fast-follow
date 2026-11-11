@@ -16,6 +16,7 @@ import { categoryLabel } from "./catalogue"
 import { notifyRules, type AlertGroup } from "./groups"
 import { ago, duration } from "./format"
 import { AlertIcon, EnergySaverBadge, NotifiedBadge, SeveritySplit } from "./bits"
+import { GroupTrend } from "./GroupTrend"
 import { sevBadge, sevLabel } from "./tone"
 
 const initials = (name: string) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
@@ -99,6 +100,9 @@ function Body({ g, showAll, setShowAll, onClose, onOpenEndpoint }: {
                 </dl>
               </CardContent>
             </Card>
+
+            {/* the single alert's chart, for the whole group (PO, 11 Nov) */}
+            <GroupTrend g={g} />
 
             <Card size="sm">
               <CardHeader>

@@ -190,6 +190,8 @@ export function alertHistory(): Raise[] {
 
 export interface HistoryFilter {
   days: number
+  /** the newest day in the window, in days before today (0 = today); a custom range can end earlier */
+  end: number
   locations: string[]
   sites: string[]
   types: string[]
@@ -199,11 +201,12 @@ export interface HistoryFilter {
 
 export function filtered(f: Partial<HistoryFilter>): Raise[] {
   const days = f.days ?? HISTORY_DAYS
+  const end = f.end ?? 0
   // D10: an alert that's off isn't evaluated, so nothing is recorded from the moment it was turned off
   const { offSince } = getSettings()
   const offFromDay = Object.fromEntries(Object.entries(offSince).map(([id, d]) => [id, Math.floor((Date.now() - d.getTime()) / DAY)]))
   return alertHistory().filter((x) => {
-    if (x.day >= days) return false
+    if (x.day < end || x.day >= end + days) return false
     if (x.typeId in offFromDay && x.day <= offFromDay[x.typeId]) return false
     const e = endpoints[x.ep]
     if (f.locations?.length && !f.locations.includes(e.locationId)) return false
@@ -254,25 +257,53 @@ export function affectedEndpoints(rs: Raise[], typeId: string): Offender[] {
   return [...m.values()].sort((a, b) => b.times - a.times || a.lastDay - b.lastDay)
 }
 
+// ---- periods ------------------------------------------------------------------
+
+/**
+ * A custom period, From and To as calendar dates ("2026-10-31"). Saved as dates,
+ * so a saved custom period always opens on the same days; a preset ("Last 30
+ * days") is saved as a number of days and moves with today (PO, 11 Nov).
+ */
+export interface DayRange { from: string; to: string }
+/** Where a period sits in the history: how many days, ending how many days before today. */
+export interface Span { days: number; end: number; custom: boolean }
+
+const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
+export const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+export const fromIsoDay = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d) }
+const daysBefore = (d: Date) => Math.round((startOfDay(new Date()).getTime() - startOfDay(d).getTime()) / DAY)
+
+/** The span a dashboard covers: its custom range when it has one (kept inside the history), else the last `days`. */
+export function spanOf(days: number, range?: DayRange): Span {
+  if (!range) return { days, end: 0, custom: false }
+  const end = Math.min(HISTORY_DAYS - 1, Math.max(0, daysBefore(fromIsoDay(range.to))))
+  const start = Math.min(HISTORY_DAYS - 1, Math.max(end, daysBefore(fromIsoDay(range.from))))
+  return { days: start - end + 1, end, custom: true }
+}
+/** The range a preset covers today, as dates: where Custom starts when you switch to it. */
+export const rangeOfLast = (days: number): DayRange => ({ from: isoDay(dayDate(days - 1)), to: isoDay(dayDate(0)) })
+/** "Last 30 days", or the dates of a custom range: what a dashboard and its saved card say. */
+export const spanLabel = (sp: Span) => (sp.custom ? fmtRange(sp.days, sp.end) : `Last ${sp.days} days`)
+
 // ---- weeks -------------------------------------------------------------------
 
 export const dayDate = (day: number) => new Date(Date.now() - day * DAY)
 export const fmtDay = (d: Date) => d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
-export const fmtRange = (days: number) => `${fmtDay(dayDate(days - 1))} – ${fmtDay(dayDate(0))} ${dayDate(0).getFullYear()}`
+export const fmtRange = (days: number, end = 0) => `${fmtDay(dayDate(end + days - 1))} – ${fmtDay(dayDate(end))} ${dayDate(end).getFullYear()}`
 
-/** Whole 7-day weeks covering the last `days`, oldest first. The last week ends today. */
-export function weeks(days: number): { label: string; start: number; end: number }[] {
+/** Whole 7-day weeks covering `days`, oldest first. The last week ends on day `last` (0 = today). */
+export function weeks(days: number, last = 0): { label: string; start: number; end: number }[] {
   const n = Math.ceil(days / 7)
   return Array.from({ length: n }, (_, i) => {
-    const end = (n - 1 - i) * 7
+    const end = last + (n - 1 - i) * 7
     return { label: fmtDay(dayDate(end + 6)), start: end + 6, end }
   })
 }
 /** The dates the weeks cover, e.g. "6 Oct – 9 Nov 2026". */
-export const fmtWeeks = (days: number) => fmtRange(Math.ceil(days / 7) * 7)
+export const fmtWeeks = (days: number, last = 0) => fmtRange(Math.ceil(days / 7) * 7, last)
 
-export function weekly(rs: Raise[], days: number, measure: "times" | "endpoints"): number[] {
-  return weeks(days).map((w) => {
+export function weekly(rs: Raise[], days: number, measure: "times" | "endpoints", last = 0): number[] {
+  return weeks(days, last).map((w) => {
     const inWeek = rs.filter((x) => x.day <= w.start && x.day >= w.end)
     return measure === "times" ? inWeek.length : new Set(inWeek.map((x) => x.ep)).size
   })

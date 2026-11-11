@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@ir/ui"
-import { NewDot } from "./ExploringTag"
 import { clearSettingsTab, setLeaveGuard, takeSettingsTab } from "./navigator"
 import { AlertsSection } from "./settings/AlertsSection"
 import { NotificationsSection } from "./settings/NotificationsSection"
@@ -8,19 +7,19 @@ import { ApprovedHeadsetsSection } from "./settings/ApprovedHeadsetsSection"
 import { ThresholdsSection } from "./settings/ThresholdsSection"
 
 /**
- * Settings: the top-level home for everything an IT Admin configures in Clarion,
- * grouped by job (canvas IA option 2): Alerting is what raises an alert (Alerts =
- * on/off and stability, Thresholds = the numbers), Notifications
- * is where alerts go (email now; ticketing and push later slot in here), Devices
- * is the approved headset list. Picasso's Line tabs, its pattern for
- * settings-style navigation. The Alerts page links in ("Alert settings").
- * One pattern throughout (D9): each section is a form — change things, then Save.
- * Leaving a section, or Settings itself, with unsaved changes asks first.
+ * Settings: the top-level home for everything an IT Admin configures in Clarion.
+ * One row of tabs, like User management: no second menu inside Settings (the PO
+ * found the side menu under the main sidebar too deep, 11 Nov). Alerts = which
+ * alerts are on; Thresholds = the numbers that raise them; Notifications = where
+ * alerts go (email now, push and ITSM later); Approved headsets.
+ * One pattern throughout (D9): each tab is a form — change things, then Save.
+ * Leaving a tab, or Settings itself, with unsaved changes asks first.
  */
-const GROUPS: { label: string; items: { value: string; label: string; isNew?: boolean }[] }[] = [
-  { label: "Alerting", items: [{ value: "alerts", label: "Alerts", isNew: true }, { value: "thresholds", label: "Thresholds" }] },
-  { label: "Notifications", items: [{ value: "notifications", label: "Email", isNew: true }] },
-  { label: "Devices", items: [{ value: "devices", label: "Approved headsets", isNew: true }] },
+const TABS = [
+  { value: "alerts", label: "Alerts" },
+  { value: "thresholds", label: "Thresholds" },
+  { value: "notifications", label: "Notifications" },
+  { value: "devices", label: "Approved headsets" },
 ]
 
 export function SettingsPage() {
@@ -63,33 +62,22 @@ export function SettingsPage() {
 
   return (
     <>
-      <div className="@container w-full">
-        <Tabs value={tab} onValueChange={go} variant="line" orientation="vertical" className="flex-col gap-gutter @3xl:flex-row">
-          {/* one tab list per group, so each group is named for screen readers too */}
-          <nav aria-label="Settings sections" className="flex shrink-0 flex-col gap-5 self-start @3xl:sticky @3xl:top-0 @3xl:w-56">
-            {GROUPS.map((g) => (
-              <div key={g.label} className="flex flex-col gap-2">
-                <h2 className="px-3.5 text-label-sm uppercase tracking-wide text-content-neutral-muted">{g.label}</h2>
-                <TabsList aria-label={g.label}>
-                  {g.items.map((i) => (
-                    <TabsTrigger key={i.value} value={i.value}>{i.label}{i.isNew && <NewDot className="ms-1.5" />}</TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            ))}
-          </nav>
-          <TabsContent value="alerts" className="min-w-0"><AlertsSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
-          <TabsContent value="thresholds" className="min-w-0"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
-          <TabsContent value="notifications" className="min-w-0"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
-          <TabsContent value="devices" className="min-w-0"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
-        </Tabs>
-      </div>
+      <Tabs value={tab} onValueChange={go} className="flex w-full flex-col gap-4">
+        {/* sticky, so the tabs stay one click away on a long tab */}
+        <TabsList aria-label="Settings sections" className="sticky -top-4 z-20 -mt-4 bg-surface-app pt-4">
+          {TABS.map((t) => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+        </TabsList>
+        <TabsContent value="alerts"><AlertsSection onEditThresholds={() => go("thresholds")} onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="thresholds"><ThresholdsSection onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="notifications"><NotificationsSection onDirtyChange={onDirtyChange} /></TabsContent>
+        <TabsContent value="devices"><ApprovedHeadsetsSection onDirtyChange={onDirtyChange} /></TabsContent>
+      </Tabs>
 
       <Dialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Discard unsaved changes?</DialogTitle>
-            <DialogDescription>You've changed settings in this section without saving. Leaving now discards those changes.</DialogDescription>
+            <DialogDescription>You've changed settings on this tab without saving. Leaving now discards those changes.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)}>Keep editing</Button>

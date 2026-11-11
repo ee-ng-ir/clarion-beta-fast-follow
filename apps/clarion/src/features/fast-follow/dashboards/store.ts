@@ -2,6 +2,7 @@
 // Saved dashboards keep a dashboard, its filters and its date range (PO prototype).
 
 import { useSyncExternalStore } from "react"
+import type { DayRange } from "./data"
 
 export type DashId = "inventory" | "alerts" | "trends"
 export type View = "home" | DashId
@@ -20,6 +21,8 @@ export interface InventoryState {
 }
 export interface AlertsState {
   days: number
+  /** a custom From–To period; when set it wins over `days`, and a saved dashboard keeps its dates */
+  range?: DayRange
   locations: string[]
   sites?: string[]
   severity: string[]
@@ -29,6 +32,8 @@ export interface AlertsState {
 }
 export interface TrendsState {
   days: number
+  /** a custom From–To period; when set it wins over `days`, and a saved dashboard keeps its dates */
+  range?: DayRange
   types: string[]
   locations: string[]
   sites?: string[]

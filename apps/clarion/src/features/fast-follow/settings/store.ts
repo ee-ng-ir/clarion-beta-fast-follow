@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react"
-import type { AlertCategory } from "../alerts/catalogue"
 import { applyThresholds, IR_THRESHOLDS, type Policy } from "./thresholds"
 
 // Tenancy-wide alert settings for the Fast Follow demo (Settings › Alerts,
@@ -7,7 +6,6 @@ import { applyThresholds, IR_THRESHOLDS, type Policy } from "./thresholds"
 // draft until Save. Turning an alert type off stops the alert, its group, the
 // Send to IT prompt and notifications — not the data (epic rules 4 and 5).
 
-export type Stability = "sensitive" | "balanced" | "calm"
 export interface NotifySettings {
   /** opt-in: nothing is emailed until at least one recipient is added (epic rule 6) */
   enabled: boolean
@@ -19,18 +17,16 @@ export interface NotifySettings {
 export interface Saved { by: string; at: Date }
 
 export const IR_DEFAULT_NOTIFY: NotifySettings = { enabled: true, recipients: ["servicedesk@acme.com"], minEndpoints: 20, minMinutes: 15, cooldownMin: 60 }
-export const IR_DEFAULT_STABILITY: Record<AlertCategory, Stability> = { network: "balanced", system: "balanced", platform: "balanced", devices: "balanced" }
 
 interface State {
   disabledTypes: string[]
   notify: NotifySettings
   /** Send to IT: every address here gets the widget's issue reports (a list, as in Clarion today) */
   itReports: string[]
-  stability: Record<AlertCategory, Stability>
   thresholds: Policy
   /** when each alert that is off was turned off (D10: nothing is recorded from then) */
   offSince: Record<string, Date>
-  saved: Partial<Record<"types" | "thresholds" | "notify" | "stability" | "headsets", Saved>>
+  saved: Partial<Record<"types" | "thresholds" | "notify" | "headsets", Saved>>
   version: number
 }
 
@@ -38,7 +34,6 @@ let state: State = {
   disabledTypes: [],
   notify: IR_DEFAULT_NOTIFY,
   itReports: ["it-reports@acme.com"],
-  stability: IR_DEFAULT_STABILITY,
   thresholds: IR_THRESHOLDS,
   offSince: {},
   saved: { notify: { by: "Marcus Reyes", at: new Date(Date.now() - 3 * 86400000) }, headsets: { by: "Alex Kim", at: new Date(Date.now() - 19 * 86400000) } },
@@ -56,7 +51,6 @@ export const saveTypes = (disabledTypes: string[], by: string) => {
   set({ disabledTypes, offSince, saved: { ...state.saved, types: { by, at: now } } })
 }
 export const saveNotify = (notify: NotifySettings, itReports: string[], by: string) => set({ notify, itReports, saved: { ...state.saved, notify: { by, at: new Date() } } })
-export const saveStability = (stability: Record<AlertCategory, Stability>, by: string) => set({ stability, saved: { ...state.saved, stability: { by, at: new Date() } } })
 
 export const saveThresholds = (thresholds: Policy, by: string) => { applyThresholds(thresholds); set({ thresholds, saved: { ...state.saved, thresholds: { by, at: new Date() } } }) }
 

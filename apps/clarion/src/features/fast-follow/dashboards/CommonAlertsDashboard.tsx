@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Download, X } from "lucide-react"
+import { X } from "lucide-react"
 import {
   BarChart, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, EmptyState,
   SegmentedControl, SegmentedControlItem, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -7,9 +7,10 @@ import {
 import type { Endpoint } from "@/data/endpoints"
 import { alertType, categoryLabel, type AlertCategory } from "../alerts/catalogue"
 import { AlertIcon } from "../alerts/bits"
-import { DashboardActions } from "./DashboardActions"
+import { DashboardActions, ExportMenu } from "./DashboardActions"
 import { downloadCsv } from "./csv"
-import { affectedEndpoints, commonAlerts, dayAgo, dayDate, filtered, fmtDay, fmtRange, fmtWeeks, LOCATIONS, scopeLabel, siteOf, SITES, weekly, weeks, type Raise } from "./data"
+import { affectedEndpoints, commonAlerts, dayAgo, dayDate, filtered, fmtDay, fmtRange, fmtWeeks, LOCATIONS, scopeLabel, siteOf, SITES, spanLabel, spanOf, weekly, weeks, type Raise, type Span } from "./data"
+import { PeriodControl } from "./PeriodControl"
 import { DataAsOf } from "./DataAsOf"
 import { useSettings } from "../settings/store"
 import { OffNotice } from "../OffNotice"
@@ -27,11 +28,13 @@ const OFFENDERS_SHOWN = 10
  * Most common alerts over a period, ranked by times raised or endpoints affected.
  * Pick an alert to see its week-by-week count and the endpoints it hit most.
  */
-/** The last 7 days, oldest first (0 = today). */
-const DAYS = [6, 5, 4, 3, 2, 1, 0]
-/** One count per day for the last 7 days: every raise, or each endpoint once a day. */
-function daily(rs: Raise[], measure: Measure): number[] {
-  return DAYS.map((d) => {
+/** Up to this many days, the chart goes day by day: too few for whole weeks. */
+const BY_DAY_MAX = 14
+/** Each day of a span, oldest first (0 = today). */
+const daysOf = (sp: Span) => Array.from({ length: sp.days }, (_, i) => sp.end + sp.days - 1 - i)
+/** One count per day: every raise, or each endpoint once a day. */
+function daily(rs: Raise[], measure: Measure, sp: Span): number[] {
+  return daysOf(sp).map((d) => {
     const onDay = rs.filter((x) => x.day === d)
     return measure === "times" ? onDay.length : new Set(onDay.map((x) => x.ep)).size
   })
@@ -41,32 +44,35 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
   const { alerts: st } = useDashboards()
   const { version: settingsVersion } = useSettings()
   const sites = st.sites ?? NO_SITES
-  const raises = useMemo(() => filtered({ days: st.days, locations: st.locations, sites, severity: st.severity as ("critical" | "warning")[], categories: st.categories as AlertCategory[] }),
-    [st.days, st.locations, sites, st.severity, st.categories, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sp = useMemo(() => spanOf(st.days, st.range), [st.days, st.range])
+  const period = spanLabel(sp)
+  const dates = fmtRange(sp.days, sp.end)
+  const raises = useMemo(() => filtered({ days: sp.days, end: sp.end, locations: st.locations, sites, severity: st.severity as ("critical" | "warning")[], categories: st.categories as AlertCategory[] }),
+    [sp, st.locations, sites, st.severity, st.categories, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const ranked = useMemo(() => commonAlerts(raises).sort((a, b) => (st.rank === "times" ? b.times - a.times : b.endpoints - a.endpoints)), [raises, st.rank])
   const sel = ranked.find((r) => r.typeId === st.selected) ?? null
   const offenders = useMemo(() => (sel ? affectedEndpoints(raises, sel.typeId) : []), [raises, sel])
   // the chart counts whole weeks, so it reaches a few days further back than the table
-  const selRaises = useMemo(() => (sel ? filtered({ days: Math.ceil(st.days / 7) * 7, types: [sel.typeId], locations: st.locations, sites, severity: st.severity as ("critical" | "warning")[] }) : []),
-    [sel, st.days, st.locations, sites, st.severity])
+  const selRaises = useMemo(() => (sel ? filtered({ days: sp.days > BY_DAY_MAX ? Math.ceil(sp.days / 7) * 7 : sp.days, end: sp.end, types: [sel.typeId], locations: st.locations, sites, severity: st.severity as ("critical" | "warning")[] }) : []),
+    [sel, sp, st.locations, sites, st.severity])
   const total = raises.length
 
   const scope = scopeLabel(st.locations, sites)
   const extra = [st.severity.length === 1 ? (st.severity[0] === "critical" ? "Critical only" : "Warning only") : null, st.categories.length ? st.categories.map((c) => categoryLabel[c as AlertCategory]).join(", ") : null].filter(Boolean)
 
-  const exportCsv = () => downloadCsv(`Most-common-alerts_last-${st.days}-days`,
-    ["Most common alerts", `Last ${st.days} days (${fmtRange(st.days)})`, `Scope: ${scope}`, ...extra.map(String), COUNTING_NOTE],
+  const exportCsv = () => downloadCsv(`Most-common-alerts_${period.replace(/[^A-Za-z0-9]+/g, "-")}`,
+    ["Most common alerts", sp.custom ? dates : `${period} (${dates})`, `Scope: ${scope}`, ...extra.map(String), COUNTING_NOTE],
     [["Rank", "Alert", "Category", "Times raised", "Endpoints affected", "Critical"], ...ranked.map((r, i) => [i + 1, r.name, r.category, r.times, r.endpoints, r.critical])])
 
   const exportOffenders = () => {
     if (!sel) return
-    downloadCsv(`${sel.name}_endpoints_last-${st.days}-days`, [`${sel.name}: endpoints affected`, `Last ${st.days} days (${fmtRange(st.days)})`, `Scope: ${scope}`],
+    downloadCsv(`${sel.name}_endpoints_${period.replace(/[^A-Za-z0-9]+/g, "-")}`, [`${sel.name}: endpoints affected`, sp.custom ? dates : `${period} (${dates})`, `Scope: ${scope}`],
       [["User", "Machine", "Location", "Site", "Times raised", "Last raised"], ...offenders.map((o) => [o.e.user, o.e.machine, o.e.locationName, siteOf(o.e), o.times, dayAgo(o.lastDay)])])
   }
 
   const openTrend = () => {
     if (!sel) return
-    patchTrends({ types: [sel.typeId], locations: st.locations.slice(0, 4), sites, days: Math.max(30, st.days), measure: st.rank })
+    patchTrends({ types: [sel.typeId], locations: st.locations.slice(0, 4), sites, days: Math.max(30, st.days), range: sp.custom && sp.days >= 28 ? st.range : undefined, measure: st.rank })
     showDashboard("trends")
   }
 
@@ -76,15 +82,14 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
       <Card>
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <SegmentedControl aria-label="Period" value={String(st.days)} onValueChange={(v) => v && patchAlerts({ days: Number(v) })}>
-              {PERIODS.map((d) => <SegmentedControlItem key={d} value={String(d)}>Last {d} days</SegmentedControlItem>)}
-            </SegmentedControl>
+            <PeriodControl presets={PERIODS} days={st.days} range={st.range} presetLabel={(d) => `Last ${d} days`}
+              onPreset={(d) => patchAlerts({ days: d, range: undefined })} onRange={(r) => patchAlerts({ range: r })} />
             <Select showDetail={false} label="Location" className="w-40" options={locationOptions} value={st.locations} onValueChange={(v) => patchAlerts({ locations: v })} />
             <Select showDetail={false} label="Site" className="w-40" options={siteOptions} value={sites} onValueChange={(v) => patchAlerts({ sites: v })} />
             <Select showDetail={false} label="Severity" className="w-36" options={severityOptions} value={st.severity} onValueChange={(v) => patchAlerts({ severity: v })} />
             <Select showDetail={false} label="Category" className="w-40" options={categoryOptions} value={st.categories} onValueChange={(v) => patchAlerts({ categories: v })} />
           </div>
-          <DashboardActions view="alerts" suggestedName={`Top alerts · last ${st.days} days · ${scope}`} onExport={exportCsv} />
+          <DashboardActions view="alerts" suggestedName={`Top alerts · ${period.toLowerCase()} · ${scope}`} onExport={exportCsv} />
         </CardContent>
       </Card>
       <DataAsOf view="alerts" />
@@ -94,7 +99,7 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
         <CardHeader>
           <CardHeaderText>
             <CardTitle>Most common alerts</CardTitle>
-            <CardDescription>{fmtRange(st.days)} · {scope}{extra.length ? ` · ${extra.join(" · ")}` : ""} · {total.toLocaleString()} raised in total</CardDescription>
+            <CardDescription>{dates} · {scope}{extra.length ? ` · ${extra.join(" · ")}` : ""} · {total.toLocaleString()} raised in total</CardDescription>
           </CardHeaderText>
           <CardAction>
             <SegmentedControl aria-label="Rank by" size="sm" value={st.rank} onValueChange={(v) => v && patchAlerts({ rank: v as Measure })}>
@@ -158,7 +163,7 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
             <CardHeaderText>
               <CardTitle>{sel.name}</CardTitle>
               <CardDescription>
-                {sel.times.toLocaleString()} times on {sel.endpoints.toLocaleString()} endpoints · {sel.critical.toLocaleString()} at Critical ({alertType(sel.typeId).critical}) · last {st.days} days
+                {sel.times.toLocaleString()} times on {sel.endpoints.toLocaleString()} endpoints · {sel.critical.toLocaleString()} at Critical ({alertType(sel.typeId).critical}) · {sp.custom ? dates : period.toLowerCase()}
               </CardDescription>
             </CardHeaderText>
             <CardAction className="flex items-center gap-1">
@@ -167,25 +172,25 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
             </CardAction>
           </CardHeader>
           <CardContent className="grid gap-6 @4xl:grid-cols-2">
-            {/* 7 days is too short for weeks, so it shows day by day: never an empty half of the card */}
-            {st.days > 7 ? (
+            {/* two weeks or less is too short for weeks, so it shows day by day: never an empty half of the card */}
+            {sp.days > BY_DAY_MAX ? (
               <BarChart size="sm"
-                x={weeks(st.days).map((w) => w.label)}
-                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: weekly(selRaises, st.days, st.rank) }]}
+                x={weeks(sp.days, sp.end).map((w) => w.label)}
+                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: weekly(selRaises, sp.days, st.rank, sp.end) }]}
                 title={`${MEASURE_LABEL[st.rank]} by week`}
-                subtitle={`${fmtWeeks(st.days)} · whole weeks`}
+                subtitle={`${fmtWeeks(sp.days, sp.end)} · whole weeks`}
                 yLabel={MEASURE_LABEL[st.rank]}
                 xLabel="Week starting"
-                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each week over the last ${st.days} days.`} />
+                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each week, ${dates}.`} />
             ) : (
               <BarChart size="sm"
-                x={DAYS.map((d) => fmtDay(dayDate(d)))}
-                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: daily(selRaises, st.rank) }]}
+                x={daysOf(sp).map((d) => fmtDay(dayDate(d)))}
+                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: daily(selRaises, st.rank, sp) }]}
                 title={`${MEASURE_LABEL[st.rank]} by day`}
-                subtitle={fmtRange(7)}
+                subtitle={dates}
                 yLabel={MEASURE_LABEL[st.rank]}
                 xLabel="Day"
-                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each day over the last 7 days.`} />
+                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each day, ${dates}.`} />
             )}
             <div className="flex min-w-0 flex-col gap-2">
               <h3 className="text-label-lg text-content-neutral-emphasis">Endpoints it hit most</h3>
@@ -218,7 +223,7 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
                 <span className="text-body-xs text-content-neutral-muted">
                   {offenders.length > OFFENDERS_SHOWN ? `Top ${OFFENDERS_SHOWN} of ${offenders.length.toLocaleString()}` : `All ${offenders.length.toLocaleString()}`}
                 </span>
-                <Button variant="ghost" size="sm" onClick={exportOffenders}><Download aria-hidden />Export all {offenders.length.toLocaleString()}</Button>
+                <ExportMenu onCsv={exportOffenders} label={`Export all ${offenders.length.toLocaleString()}`} />
               </div>
             </div>
           </CardContent>

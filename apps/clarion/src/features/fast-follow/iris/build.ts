@@ -9,7 +9,7 @@ import { approvedHeadsets } from "@ir/telemetry"
 import { endpoints } from "@/data/endpoints"
 import { ALERT_TYPES, alertType } from "../alerts/catalogue"
 import { complianceFor } from "../headsets/headsets"
-import { commonAlerts, endpointsIn, filtered, inventoryFor, LOCATIONS, locationName, weekly } from "../dashboards/data"
+import { commonAlerts, dayDate, endpointsIn, filtered, fmtRange, HISTORY_DAYS, historyStart, inventoryFor, isoDay, LOCATIONS, locationName, spanOf, weekly, type DayRange } from "../dashboards/data"
 import { describeSaved } from "../dashboards/describe"
 import { type AnyDashState, type DashId, type SavedDashboard } from "../dashboards/store"
 import type { Answer } from "./types"
@@ -45,6 +45,32 @@ function period(t: string): number | undefined {
   return undefined
 }
 
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+/** "31 October", "31st Oct", "Oct 31" → that date this year (last year if it's still ahead). */
+function dateIn(t: string): Date | undefined {
+  const m = t.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/) ??
+    t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/)
+  if (!m) return undefined
+  const [day, mon] = /\d/.test(m[1]) ? [Number(m[1]), m[2]] : [Number(m[2]), m[1]]
+  const d = new Date(new Date().getFullYear(), MONTHS.indexOf(mon), day)
+  if (d > dayDate(0)) d.setFullYear(d.getFullYear() - 1)
+  return d
+}
+/**
+ * A request's own dates: "since 31 October" (to today), or "from 1 Oct to 15 Oct".
+ * Iris sets them as the dashboard's custom period, so it opens, and saves, on
+ * exactly those days (PO, 11 Nov). Kept inside the history.
+ */
+function rangeIn(t: string): DayRange | undefined {
+  const between = t.match(/\b(?:from|between)\s+(.+?)\s+(?:to|and|until|-)\s+(.+)/)
+  const since = t.match(/\b(?:since|from|after)\s+(.+)/)
+  const from = between ? dateIn(between[1]) : since ? dateIn(since[1]) : undefined
+  if (!from) return undefined
+  const to = (between && dateIn(between[2])) || dayDate(0)
+  const first = from < historyStart() ? historyStart() : from
+  return { from: isoDay(first), to: isoDay(to < first ? first : to) }
+}
+
 function places(t: string): string[] {
   return LOCATIONS.filter((l) => t.includes(l.name.toLowerCase().split(" ")[0]) || (l.id === "manilla" && t.includes("manila"))).map((l) => l.id)
 }
@@ -76,6 +102,8 @@ export function plan(text: string): Plan | null {
   const days = period(t)
   const locs = places(t)
   const type = alertIn(t)
+  const range = rangeIn(t)
+  if (type && range) return alertBetween(type, range, locs)
 
   if (/headset/.test(t) && /approv|allowed|list|complian/.test(t)) return headsets(locs)
   if (/windows 10|old windows|outdated windows/.test(t)) return windows10(locs)
@@ -126,6 +154,37 @@ function windows10(locs: string[]): Plan {
   })
   return { built, answer: { sources: [SRC_INVENTORY],
     paragraphs: [`${plural(n, "endpoint")} still run Windows 10 22H2, ${pct(n, eps.length)}% of ${locs.length ? "those at " + locs.map(locationName).join(", ") : "the fleet"}.`] } }
+}
+
+/**
+ * An alert over the request's own dates. Up to four weeks opens Most common
+ * alerts on that alert (day by day up to two weeks); longer opens Alert trends.
+ * Either way the dashboard carries the dates, so saving it keeps them.
+ */
+function alertBetween(typeId: string, range: DayRange, locs: string[]): Plan {
+  const t = alertType(typeId)
+  const sp = spanOf(HISTORY_DAYS, range)
+  const dates = fmtRange(sp.days, sp.end)
+  const rs = filtered({ days: sp.days, end: sp.end, types: [typeId], locations: locs })
+  const eps = new Set(rs.map((x) => x.ep)).size
+  const where = locs.length ? ` · ${locs.map(locationName).join(", ")}` : ""
+  const short = sp.days <= 28
+  const built = asSaved({
+    name: `${listName(t)} · ${dates}${where}`,
+    view: short ? "alerts" : "trends",
+    state: short
+      ? { days: 30, range, locations: locs, severity: [], categories: [], rank: "times", selected: typeId }
+      : { days: 90, range, types: [typeId], locations: locs.slice(0, 5), measure: "times" },
+    metric: rs.length.toLocaleString(), metricLabel: `times raised, ${dates}, on ${plural(eps, "endpoint")}`,
+  })
+  const site = topSites(rs, 1)[0]
+  return { built, answer: { sources: [SRC_HISTORY],
+    paragraphs: [
+      rs.length
+        ? `“${listName(t)}” was raised ${plural(rs.length, "time")} on ${plural(eps, "endpoint")} from ${dates}.${site ? ` ${site.name} had the most (${site.n}).` : ""}`
+        : `“${listName(t)}” wasn't raised from ${dates}.`,
+      "I've set those dates as a custom period, so the dashboard keeps them if you save it.",
+    ] } }
 }
 
 function alertPlan(typeId: string, days: number | undefined, locs: string[], bySite: boolean): Plan {

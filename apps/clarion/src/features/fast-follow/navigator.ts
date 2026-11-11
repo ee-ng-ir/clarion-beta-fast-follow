@@ -15,7 +15,7 @@ export const guarded = (navigate: () => void) => { if (guard?.(navigate)) return
 
 // Fast Follow: open Settings on a given tab (e.g. Dashboards → Approved headsets)
 let settingsTab: string | null = null
-/** Older tab names still land: Alert stability moved into Alerts. */
+/** Older tab names still land: the Alert stability tab is gone (the widget handles flapping). */
 const LEGACY_TAB: Record<string, string> = { types: "alerts", stability: "alerts" }
 const tabName = (t: string) => LEGACY_TAB[t] ?? t
 export const goToSettings = (tab: string) => { settingsTab = tabName(tab); goTo("settings") }

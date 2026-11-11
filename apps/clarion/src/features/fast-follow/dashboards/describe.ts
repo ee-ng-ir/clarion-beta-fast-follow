@@ -1,6 +1,7 @@
 import { complianceLabel, type Compliance } from "@ir/telemetry"
 import { categoryLabel, ALERT_TYPES, type AlertCategory } from "../alerts/catalogue"
-import { invValueLabel, locationName, scopeLabel, type InvCategory } from "./data"
+import { invValueLabel, locationName, scopeLabel, spanLabel, spanOf, type InvCategory } from "./data"
+import { listName } from "../alerts/names"
 import type { AlertsState, InventoryState, SavedDashboard, TrendsState } from "./store"
 
 
@@ -16,11 +17,11 @@ export function describeSaved(s: SavedDashboard): string {
   }
   if (s.view === "alerts") {
     const st = s.state as AlertsState
-    return [`Last ${st.days} days`, scopeLabel(st.locations, st.sites), ...st.severity, ...st.categories.map((c) => categoryLabel[c as AlertCategory])].join(" · ")
+    return [spanLabel(spanOf(st.days, st.range)), scopeLabel(st.locations, st.sites), ...st.severity, ...st.categories.map((c) => categoryLabel[c as AlertCategory])].join(" · ")
   }
   const st = s.state as TrendsState
-  const what = st.types.length ? st.types.map((t) => ALERT_TYPES.find((x) => x.id === t)?.warning ?? t).join(", ") : "All alerts"
-  return [`${st.days} days`, what, st.locations.length ? st.locations.map(locationName).join(" vs ") : "All locations", ...(st.sites?.length ? [`Site: ${st.sites.join(", ")}`] : [])].join(" · ")
+  const what = st.types.length ? st.types.map((t) => (() => { const a = ALERT_TYPES.find((x) => x.id === t); return a ? listName(a) : t })()).join(", ") : "All alerts"
+  return [spanLabel(spanOf(st.days, st.range)), what, st.locations.length ? st.locations.map(locationName).join(" vs ") : "All locations", ...(st.sites?.length ? [`Site: ${st.sites.join(", ")}`] : [])].join(" · ")
 }
 
 export function savedAgo(t: number) {

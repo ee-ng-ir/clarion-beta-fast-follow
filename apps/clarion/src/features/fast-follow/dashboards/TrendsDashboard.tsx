@@ -7,7 +7,8 @@ import {
 import { ALERT_TYPES, categoryLabel } from "../alerts/catalogue"
 import { DashboardActions } from "./DashboardActions"
 import { downloadCsv } from "./csv"
-import { filtered, fmtWeeks, locationName, LOCATIONS, SITES, weekly, weeks } from "./data"
+import { filtered, fmtWeeks, locationName, LOCATIONS, SITES, spanLabel, spanOf, weekly, weeks } from "./data"
+import { PeriodControl } from "./PeriodControl"
 import { DataAsOf } from "./DataAsOf"
 import { COUNTING_NOTE, MEASURE_LABEL, patchTrends, useDashboards, type Measure } from "./store"
 import { useSettings } from "../settings/store"
@@ -37,20 +38,22 @@ function direction(points: number[]) {
 export function TrendsDashboard() {
   const { trends: st } = useDashboards()
   const { version: settingsVersion } = useSettings()
-  const wk = weeks(st.days)
+  const sp = useMemo(() => spanOf(st.days, st.range), [st.days, st.range])
+  const wk = weeks(sp.days, sp.end)
+  const period = spanLabel(sp)
   const sites = st.sites ?? NO_SITES
   const series = useMemo(() => {
     const lines = st.locations.slice(0, MAX_LINES)
     const groups = lines.length ? lines.map((id) => ({ id, label: locationName(id), locs: [id] })) : [{ id: "all", label: "All locations", locs: [] as string[] }]
-    return groups.map((g) => ({ id: g.id, label: g.label, points: weekly(filtered({ days: Math.ceil(st.days / 7) * 7, types: st.types, locations: g.locs, sites }), st.days, st.measure) }))
-  }, [st.days, st.types, st.measure, st.locations, sites, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+    return groups.map((g) => ({ id: g.id, label: g.label, points: weekly(filtered({ days: Math.ceil(sp.days / 7) * 7, end: sp.end, types: st.types, locations: g.locs, sites }), sp.days, st.measure, sp.end) }))
+  }, [sp, st.types, st.measure, st.locations, sites, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = st.locations.slice(0, MAX_LINES)
 
   const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? listName(ALERT_TYPES.find((t) => t.id === st.types[0])!) : `${st.types.length} alerts`
   const summary = series.map((s) => { const d = direction(s.points); return d ? (s.id === "all" ? d : `${s.label}: ${d}`) : null }).filter(Boolean).join(" · ")
 
-  const exportCsv = () => downloadCsv(`Alert-trends_${what}_last-${st.days}-days`,
-    ["Alert trends", `${what} · ${MEASURE_LABEL[st.measure]} per week`, ...(sites.length ? [`Site: ${sites.join(", ")}`] : []), `Last ${wk.length} weeks (${fmtWeeks(st.days)})`, COUNTING_NOTE],
+  const exportCsv = () => downloadCsv(`Alert-trends_${what}_${period.replace(/[^A-Za-z0-9]+/g, "-")}`,
+    ["Alert trends", `${what} · ${MEASURE_LABEL[st.measure]} per week`, ...(sites.length ? [`Site: ${sites.join(", ")}`] : []), `${wk.length} weeks (${fmtWeeks(sp.days, sp.end)})`, COUNTING_NOTE],
     [["Week starting", ...series.map((s) => s.label)], ...wk.map((w, i) => [w.label, ...series.map((s) => s.points[i])])])
 
   return (
@@ -58,14 +61,13 @@ export function TrendsDashboard() {
       <Card>
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <SegmentedControl aria-label="Range" value={String(st.days)} onValueChange={(v) => v && patchTrends({ days: Number(v) })}>
-              {RANGES.map((d) => <SegmentedControlItem key={d} value={String(d)}>{d} days</SegmentedControlItem>)}
-            </SegmentedControl>
+            <PeriodControl presets={RANGES} days={st.days} range={st.range} presetLabel={(d) => `${d} days`}
+              onPreset={(d) => patchTrends({ days: d, range: undefined })} onRange={(r) => patchTrends({ range: r })} />
             <Select showDetail={false} label="Alert" className="w-44" options={typeOptions} value={st.types} onValueChange={(v) => patchTrends({ types: v })} />
             <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
             <Select showDetail={false} label="Site" className="w-44" options={siteOptions} value={sites} onValueChange={(v) => patchTrends({ sites: v })} />
           </div>
-          <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"}${sites.length ? ` · ${sites.join(", ")}` : ""} · ${st.days} days`} onExport={exportCsv} />
+          <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"}${sites.length ? ` · ${sites.join(", ")}` : ""} · ${period}`} onExport={exportCsv} />
         </CardContent>
       </Card>
       <DataAsOf view="trends" />
@@ -75,7 +77,7 @@ export function TrendsDashboard() {
         <CardHeader>
           <CardHeaderText>
             <CardTitle>{what}</CardTitle>
-            <CardDescription>{summary ? `Over ${st.days} days${lines.length ? ", " : ": "}${summary}.` : `Over ${st.days} days.`}</CardDescription>
+            <CardDescription>{summary ? `${period}${lines.length ? ", " : ": "}${summary}.` : `${period}.`}</CardDescription>
           </CardHeaderText>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -87,12 +89,12 @@ export function TrendsDashboard() {
             x={wk.map((w) => w.label)}
             series={series}
             title={`${MEASURE_LABEL[st.measure]} per week`}
-            subtitle={`${fmtWeeks(st.days)} · ${wk.length} weeks, each labelled by the day it starts`}
+            subtitle={`${fmtWeeks(sp.days, sp.end)} · ${wk.length} weeks, each labelled by the day it starts`}
             yLabel={MEASURE_LABEL[st.measure]}
             xLabel="Week starting"
             yZero
             format={(v) => Math.round(v).toLocaleString()}
-            label={`${what}: ${MEASURE_LABEL[st.measure].toLowerCase()} per week over the last ${st.days} days, ${series.map((s) => s.label).join(", ")}.`}
+            label={`${what}: ${MEASURE_LABEL[st.measure].toLowerCase()} per week, ${period.toLowerCase()}, ${series.map((s) => s.label).join(", ")}.`}
           />
           <p className="text-body-xs text-content-neutral-muted">{COUNTING_NOTE}{st.locations.length > MAX_LINES ? ` Showing the first ${MAX_LINES} locations.` : ""}</p>
         </CardContent>

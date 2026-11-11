@@ -1,13 +1,33 @@
 import { useState } from "react"
-import { Download, Save } from "lucide-react"
+import { ChevronDown, Download, Save } from "lucide-react"
 import {
   Button, Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Field, FieldControl, FieldDescription, FieldLabel, Input,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, FieldControl, FieldDescription, FieldLabel, Input,
 } from "@ir/ui"
 import { toast } from "@/components/ui/toast"
 import { saveDashboard, type DashId } from "./store"
 
-/** Save (name it, keep the filters and range) and Export CSV, at the right of each dashboard's filter bar. */
+/**
+ * Export, with the format chosen from a menu (as in the PO's Reporting prototype).
+ * The label stays generic: CSV is the only format for now, and image is listed
+ * but not available, so the format is open to what customers turn out to need.
+ * Requested by the PO, 11 Nov.
+ */
+export function ExportMenu({ onCsv, label = "Export" }: { onCsv: () => void; label?: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm"><Download aria-hidden />{label}<ChevronDown aria-hidden /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onSelect={onCsv}>CSV</DropdownMenuItem>
+        <DropdownMenuItem disabled>Image (PNG) · not available yet</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/** Save (name it, keep the filters and range) and Export, at the right of each dashboard's filter bar. */
 export function DashboardActions({ view, suggestedName, onExport }: { view: DashId; suggestedName: string; onExport: () => void }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
@@ -21,7 +41,7 @@ export function DashboardActions({ view, suggestedName, onExport }: { view: Dash
   }
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <Button variant="outline" size="sm" onClick={onExport}><Download aria-hidden />Export CSV</Button>
+      <ExportMenu onCsv={onExport} />
       <Button variant="outline" size="sm" onClick={start}><Save aria-hidden />Save</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

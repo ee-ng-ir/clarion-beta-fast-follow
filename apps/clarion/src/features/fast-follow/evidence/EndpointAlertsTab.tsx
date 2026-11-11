@@ -218,7 +218,7 @@ function AlertDetail({ a, endpoint, offlineSinceMin, onBack, onCloseDrawer }: {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Next steps</CardTitle>
+          <CardTitle>Suggested next steps</CardTitle>
           <CardAction><span className="text-body-xs text-content-neutral-muted">From the Clarion alert catalogue</span></CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">

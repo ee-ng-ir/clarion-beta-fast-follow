@@ -221,7 +221,12 @@ function AnswerView({ a, onFollow }: { a: Answer; onFollow: (l: IrisLink) => voi
 
         {a.dashboard && <BuiltCard d={a.dashboard} onOpen={() => onFollow({ kind: "dashboard", view: a.dashboard!.view, state: a.dashboard!.state })} />}
 
-        {a.steps && <ol className="flex list-decimal flex-col gap-1.5 ps-5">{a.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>}
+        {a.steps && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-label-md text-content-neutral-emphasis">Suggested next steps</span>
+            <ol className="flex list-decimal flex-col gap-1.5 ps-5">{a.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
+          </div>
+        )}
 
         {a.facts && a.facts.length > 0 && (
           <dl className="flex flex-col divide-y divide-line-neutral-subtle rounded-md border border-line-neutral-subtle">

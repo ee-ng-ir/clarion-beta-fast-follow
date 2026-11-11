@@ -116,7 +116,7 @@ function groupAnswer(id: string, g: AlertGroup, ctx: IrisContext): Answer {
         ] }
     case "check-first":
       return { ...base, basis: "catalogue", sources: [SRC_ALERTS, SRC_CATALOGUE],
-        paragraphs: [`Start with ${g.type.lookFirst}. These steps come from the alert catalogue for ${categoryLabel[g.type.category].toLowerCase()} alerts, applied to what this group shows.`],
+        paragraphs: [`Start with ${g.type.lookFirst}. These suggested next steps come from the alert catalogue for ${categoryLabel[g.type.category].toLowerCase()} alerts, applied to what this group shows.`],
         steps: stepsFor(g) }
     case "elsewhere": {
       const shown = g.locations.slice(0, 5)
@@ -220,7 +220,7 @@ function alertAnswer(id: string, a: EndpointAlert, user: string, cleared: Endpoi
     }
     case "check-first":
       return { ...base, basis: "catalogue", sources: [SRC_ALERTS, SRC_CATALOGUE],
-        paragraphs: [`For ${user}'s “${a.title}” alert, start here. Steps come from the alert catalogue, matched to this alert's evidence.`],
+        paragraphs: [`For ${user}'s “${a.title}” alert, start here. These suggested next steps come from the alert catalogue, matched to this alert's evidence.`],
         steps: a.steps }
     case "elsewhere":
       return group
@@ -294,7 +294,7 @@ function build(text: string): { answer: Answer; thinking: string[] } {
 function howTo(which: "alerts" | "notify"): Answer {
   return which === "alerts"
     ? { basis: "product", asOf: now(), sources: [],
-        paragraphs: ["Alerts are turned on or off in Settings › Alerts, where you also set how settled a problem must be before one is raised. Turning one off stops the alert, not the data: readings still show in endpoint detail. Thresholds are set in Settings › Thresholds."],
+        paragraphs: ["Alerts are turned on or off in Settings › Alerts. Turning one off stops the alert, not the data: readings still show in endpoint detail. Thresholds are set in Settings › Thresholds."],
         links: [{ label: "Open Settings", link: { kind: "page", page: "settings" } }] }
     : { basis: "product", asOf: now(), sources: [],
         paragraphs: [`Proactive emails are set in Settings › Email. Right now a Critical group emails your list when it reaches ${notifyRules().minEndpoints} endpoints or lasts ${notifyRules().minMinutes} minutes, at most once every ${notifyRules().cooldownMin} minutes.`],
