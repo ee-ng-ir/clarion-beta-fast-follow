@@ -7,7 +7,8 @@ import {
 import { ALERT_TYPES, categoryLabel } from "../alerts/catalogue"
 import { DashboardActions } from "./DashboardActions"
 import { downloadCsv } from "./csv"
-import { filtered, fmtWeeks, locationName, LOCATIONS, weekly, weeks } from "./data"
+import { filtered, fmtWeeks, locationName, LOCATIONS, SITES, weekly, weeks } from "./data"
+import { DataAsOf } from "./DataAsOf"
 import { COUNTING_NOTE, MEASURE_LABEL, patchTrends, useDashboards, type Measure } from "./store"
 import { useSettings } from "../settings/store"
 import { OffNotice } from "../OffNotice"
@@ -16,6 +17,8 @@ const RANGES = [30, 60, 90]
 const MAX_LINES = 5
 const typeOptions = ALERT_TYPES.map((t) => ({ value: t.id, label: listName(t), group: categoryLabel[t.category] }))
 const locationOptions = LOCATIONS.map((l) => ({ value: l.id, label: l.name }))
+const siteOptions = SITES.map((s) => ({ value: s, label: s }))
+const NO_SITES: string[] = []
 
 /** Up or down over the period: the last two weeks against the first two, so one noisy week doesn't decide it. */
 function direction(points: number[]) {
@@ -35,18 +38,19 @@ export function TrendsDashboard() {
   const { trends: st } = useDashboards()
   const { version: settingsVersion } = useSettings()
   const wk = weeks(st.days)
+  const sites = st.sites ?? NO_SITES
   const series = useMemo(() => {
     const lines = st.locations.slice(0, MAX_LINES)
     const groups = lines.length ? lines.map((id) => ({ id, label: locationName(id), locs: [id] })) : [{ id: "all", label: "All locations", locs: [] as string[] }]
-    return groups.map((g) => ({ id: g.id, label: g.label, points: weekly(filtered({ days: Math.ceil(st.days / 7) * 7, types: st.types, locations: g.locs }), st.days, st.measure) }))
-  }, [st.days, st.types, st.measure, st.locations, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+    return groups.map((g) => ({ id: g.id, label: g.label, points: weekly(filtered({ days: Math.ceil(st.days / 7) * 7, types: st.types, locations: g.locs, sites }), st.days, st.measure) }))
+  }, [st.days, st.types, st.measure, st.locations, sites, settingsVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = st.locations.slice(0, MAX_LINES)
 
   const what = st.types.length === 0 ? "All alerts" : st.types.length === 1 ? listName(ALERT_TYPES.find((t) => t.id === st.types[0])!) : `${st.types.length} alerts`
   const summary = series.map((s) => { const d = direction(s.points); return d ? (s.id === "all" ? d : `${s.label}: ${d}`) : null }).filter(Boolean).join(" · ")
 
   const exportCsv = () => downloadCsv(`Alert-trends_${what}_last-${st.days}-days`,
-    ["Alert trends", `${what} · ${MEASURE_LABEL[st.measure]} per week`, `Last ${wk.length} weeks (${fmtWeeks(st.days)})`, COUNTING_NOTE],
+    ["Alert trends", `${what} · ${MEASURE_LABEL[st.measure]} per week`, ...(sites.length ? [`Site: ${sites.join(", ")}`] : []), `Last ${wk.length} weeks (${fmtWeeks(st.days)})`, COUNTING_NOTE],
     [["Week starting", ...series.map((s) => s.label)], ...wk.map((w, i) => [w.label, ...series.map((s) => s.points[i])])])
 
   return (
@@ -59,10 +63,12 @@ export function TrendsDashboard() {
             </SegmentedControl>
             <Select showDetail={false} label="Alert" className="w-44" options={typeOptions} value={st.types} onValueChange={(v) => patchTrends({ types: v })} />
             <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchTrends({ locations: v.slice(0, MAX_LINES) })} />
+            <Select showDetail={false} label="Site" className="w-44" options={siteOptions} value={sites} onValueChange={(v) => patchTrends({ sites: v })} />
           </div>
-          <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"} · ${st.days} days`} onExport={exportCsv} />
+          <DashboardActions view="trends" suggestedName={`${what} · ${lines.length ? lines.map(locationName).join(" vs ") : "all locations"}${sites.length ? ` · ${sites.join(", ")}` : ""} · ${st.days} days`} onExport={exportCsv} />
         </CardContent>
       </Card>
+      <DataAsOf view="trends" />
 
       <OffNotice types={st.types} />
       <Card>

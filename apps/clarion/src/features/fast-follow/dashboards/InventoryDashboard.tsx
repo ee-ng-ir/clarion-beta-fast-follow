@@ -12,13 +12,16 @@ import { HeadsetCell } from "../headsets/HeadsetBits"
 import { goToSettings } from "../navigator"
 import { DashboardActions } from "./DashboardActions"
 import { downloadCsv } from "./csv"
-import { endpointsIn, INV_LABEL, invValueLabel, inventoryCounts, inventoryFor, LATEST_WIDGET, locationName, LOCATIONS, type InvCategory } from "./data"
+import { endpointsIn, INV_LABEL, invValueLabel, inventoryCounts, inventoryFor, LATEST_WIDGET, LOCATIONS, scopeLabel, siteOf, SITES, type InvCategory } from "./data"
+import { DataAsOf } from "./DataAsOf"
 import { patchInventory, useDashboards } from "./store"
 
 const CATS: InvCategory[] = ["headset", "microphone", "camera", "windows", "widget"]
 const ROWS_SHOWN = 6
 const PAGE = 50
 const locationOptions = LOCATIONS.map((l) => ({ value: l.id, label: l.name }))
+const siteOptions = SITES.map((s) => ({ value: s, label: s }))
+const NO_SITES: string[] = []
 const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0)
 
 /** "category|value" keys: OR within a category, AND across categories. */
@@ -49,7 +52,8 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
   const [shown, setShown] = useState(PAGE)
   const [expanded, setExpanded] = useState<InvCategory[]>([])
 
-  const eps = useMemo(() => endpointsIn(st.locations), [st.locations])
+  const sites = st.sites ?? NO_SITES
+  const eps = useMemo(() => endpointsIn(st.locations, sites), [st.locations, sites])
   const counts = useMemo(() => Object.fromEntries(CATS.map((c) => [c, inventoryCounts(eps, c)])) as Record<InvCategory, ReturnType<typeof inventoryCounts>>, [eps, approved]) // eslint-disable-line react-hooks/exhaustive-deps
   const compliance = useMemo(() => {
     const m = new Map<string, Compliance>()
@@ -66,7 +70,7 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
   const rows = useMemo(() => eps.filter((e) => matches(e, st.filters, approved) && (!q || `${e.user} ${e.machine}`.toLowerCase().includes(q))),
     [eps, st.filters, q, approved])
 
-  const scope = st.locations.length ? st.locations.map(locationName).join(", ") : "All locations"
+  const scope = scopeLabel(st.locations, sites)
   const pick = (key: string) => { patchInventory({ filters: [key], tab: "endpoints", q: "" }); setShown(PAGE) }
 
   const filterOptions = [
@@ -80,8 +84,8 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
       downloadCsv("Device-inventory-summary", about, [["Category", "Model or version", "Endpoints", "% of endpoints", ...(hasList ? ["Approval"] : [])],
         ...CATS.flatMap((c) => counts[c].map((r) => [INV_LABEL[c], r.key, r.count, pct(r.count, eps.length), ...(hasList ? [c === "headset" ? complianceLabel[compliance.get(r.key) ?? "none"] : ""] : [])]))])
     } else {
-      downloadCsv("Device-inventory-endpoints", [...about, ...st.filters.map(filterLabel)], [["User", "Machine", "Location", "Headset", ...(hasList ? ["Headset approval"] : []), "Microphone", "Camera", "Windows", "Widget version"],
-        ...rows.map((e) => { const i = inventoryFor(e); return [e.user, e.machine, e.locationName, i.headset, ...(hasList ? [complianceLabel[complianceFor(e, approved)]] : []), i.microphone, i.camera, i.windows, i.widget] })])
+      downloadCsv("Device-inventory-endpoints", [...about, ...st.filters.map(filterLabel)], [["User", "Machine", "Location", "Site", "Headset", ...(hasList ? ["Headset approval"] : []), "Microphone", "Camera", "Windows", "Widget version"],
+        ...rows.map((e) => { const i = inventoryFor(e); return [e.user, e.machine, e.locationName, siteOf(e), i.headset, ...(hasList ? [complianceLabel[complianceFor(e, approved)]] : []), i.microphone, i.camera, i.windows, i.widget] })])
     }
   }
 
@@ -91,11 +95,13 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
         <CardContent className="flex-row flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <Select showDetail={false} label="Location" className="w-44" options={locationOptions} value={st.locations} onValueChange={(v) => patchInventory({ locations: v })} />
-            <span className="text-body-sm text-content-neutral-muted">{scope} · as reported now</span>
+            <Select showDetail={false} label="Site" className="w-44" options={siteOptions} value={sites} onValueChange={(v) => patchInventory({ sites: v })} />
+            <span className="text-body-sm text-content-neutral-muted">{scope}</span>
           </div>
           <DashboardActions view="inventory" suggestedName={st.filters.length ? `${st.filters.map(filterLabel).join(", ")} · ${scope}` : `Device inventory · ${scope}`} onExport={exportCsv} />
         </CardContent>
       </Card>
+      <DataAsOf view="inventory" />
 
       <div className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-4">
         <KpiTile label="Endpoints in scope" value={eps.length.toLocaleString()} footer={scope} />
@@ -208,6 +214,7 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
                     <TableRow>
                       <TableHead align="start">User / Machine</TableHead>
                       <TableHead align="start" className="hidden @3xl:table-cell">Location</TableHead>
+                      <TableHead align="start" className="hidden @3xl:table-cell">Site</TableHead>
                       <TableHead align="start">Headset</TableHead>
                       <TableHead align="start" className="hidden @4xl:table-cell">Camera</TableHead>
                       <TableHead align="start" className="hidden @2xl:table-cell">Windows</TableHead>
@@ -226,6 +233,7 @@ export function InventoryDashboard({ onOpenEndpoint }: { onOpenEndpoint: (rows: 
                             </div>
                           </TableCell>
                           <TableCell align="start" className="hidden @3xl:table-cell">{e.locationName}</TableCell>
+                          <TableCell align="start" className="hidden @3xl:table-cell">{siteOf(e)}</TableCell>
                           <TableCell align="start"><HeadsetCell e={e} approved={approved} /></TableCell>
                           <TableCell align="start" className="hidden @4xl:table-cell">{inv.camera}</TableCell>
                           <TableCell align="start" className="hidden @2xl:table-cell">{inv.windows}</TableCell>
