@@ -122,10 +122,10 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
   const audioOut: DeviceRow = hs
     ? { name: hs.model, meta: `${hs.connection} · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
     : { name: pick(headsets), meta: `Bluetooth · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
-  // Fast Follow: about half the endpoints also have a spare approved headset plugged in (a few have two),
+  // Fast Follow: every endpoint with a headset also has one or two spare approved headsets plugged in,
   // so the Devices tab shows more than one headset with its approval badge. Own seed, so the rest of the data doesn't shift.
   const spareRand = seedFrom(e.id + "spare")
-  const spareCount = hs ? (n => (n < 0.15 ? 2 : n < 0.5 ? 1 : 0))(spareRand()) : 0
+  const spareCount = hs ? (spareRand() < 0.3 ? 1 : 2) : 0
   const spares: DeviceRow[] = approvedHeadsets.get()
     .map((id) => headsetById(id))
     .filter((h): h is NonNullable<typeof h> => !!h && h.id !== hs?.id)
