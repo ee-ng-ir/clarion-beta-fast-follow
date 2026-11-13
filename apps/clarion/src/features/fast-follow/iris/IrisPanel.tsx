@@ -78,8 +78,14 @@ export function IrisPanel({
         <span className="flex size-7 items-center justify-center rounded-md border border-line-neutral-muted bg-surface-card text-content-neutral-emphasis">
           <IrisMark mood={mood} className="size-5" />
         </span>
-        <h2 className="text-heading-xs text-content-neutral-emphasis">Iris</h2>
-        <ExploringTag />
+        <div className="flex min-w-0 flex-col">
+          <div className="flex items-center gap-2">
+            <h2 className="text-heading-xs text-content-neutral-emphasis">Iris</h2>
+            <ExploringTag />
+          </div>
+          {/* as in Product's Reporting prototype */}
+          <p className="hidden truncate text-body-xs text-content-neutral-muted md:block">Answers from your Clarion data</p>
+        </div>
         <div className="ms-auto flex items-center gap-1">
           <Button variant="ghost" size="icon-sm" aria-label="Start a new conversation" title="Start a new conversation" onClick={clearThread}><RotateCcw /></Button>
           <Button variant="ghost" size="icon-sm" aria-label="Close Iris" title="Close Iris" onClick={closeIris}><X /></Button>
@@ -92,7 +98,7 @@ export function IrisPanel({
       {/* thread */}
       <div className="min-h-0 flex-1 overflow-y-auto bg-surface-app px-4 py-4">
         <div role="log" aria-live="polite" aria-label="Conversation with Iris" className="flex flex-col gap-3">
-          {messages.length === 0 && <Empty />}
+          {messages.length === 0 && <Empty context={current} />}
           {messages.map((m) => <MessageView key={m.id} m={m} onFollow={follow} />)}
           {thinking && (
             <p className="flex items-center gap-2 text-body-sm text-content-neutral-muted">
@@ -118,7 +124,7 @@ export function IrisPanel({
             onChange={(e) => setText(e.target.value)}
             onFocus={() => setListening(true)} onBlur={() => setListening(false)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder={context?.kind === "group" ? "Ask about this alert group" : context?.kind === "alert" ? "Ask about this alert" : "Ask about your fleet"}
+            placeholder={current?.kind === "group" ? "Ask about this alert group" : current?.kind === "alert" ? "Ask about this alert" : current?.page === "dashboards" ? "Ask for a dashboard view…" : "Ask about your fleet"}
             aria-describedby={over ? "iris-hint" : undefined} aria-invalid={over || undefined}
             className="max-h-32 min-h-9 flex-1 resize-none"
           />
@@ -172,12 +178,21 @@ function ContextBar({ context, page }: { context: IrisContext; page: PageId }) {
   )
 }
 
-function Empty() {
+/** First-use message. On Dashboards it's Product's Reporting prototype copy; elsewhere the same voice, for the page. */
+function Empty({ context }: { context: IrisContext | null }) {
+  const onDashboards = context?.kind === "page" && context.page === "dashboards"
+  const about = context?.kind === "group" ? "this alert group" : context?.kind === "alert" ? "this alert" : "what's on this page"
   return (
     <Card size="sm">
-      <CardContent className="flex flex-col gap-2 text-body-md text-content-neutral-muted">
-        <p className="text-content-neutral-emphasis">Ask about what's on screen. Iris already knows what you're looking at.</p>
-        <p>Every answer shows where it came from and when the data was read.</p>
+      <CardContent className="flex flex-col gap-2 text-body-md text-content-neutral-emphasis">
+        {onDashboards ? (
+          <>
+            <p>Ask me for a dashboard view in your own words. I'll answer with a chart and table from Clarion's data. I never estimate numbers.</p>
+            <p className="text-body-sm text-content-neutral-muted">Dashboards cover up to 180 days.</p>
+          </>
+        ) : (
+          <p>Ask me about {about} in your own words. I'll answer from Clarion's data. I never estimate numbers.</p>
+        )}
       </CardContent>
     </Card>
   )
