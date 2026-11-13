@@ -12,7 +12,7 @@ import type { Endpoint } from "@/data/endpoints"
 import { NetworkTab, PlatformsTab, DevicesTab, SystemTab } from "./tabs"
 import { EndpointAlertsTab } from "@/features/fast-follow/evidence/EndpointAlertsTab"
 import { CountBadge } from "@/features/fast-follow/CountBadge"
-import { HeadsetCompliance } from "@/features/fast-follow/headsets/HeadsetBits"
+import { HeadsetComplianceBadge } from "@/features/fast-follow/headsets/HeadsetBits"
 import { useHeadsetsVersion } from "@/features/fast-follow/headsets/headsets"
 import { activeAlertCount } from "@/features/fast-follow/evidence/evidence"
 
@@ -223,7 +223,7 @@ export function EndpointDrawer({
               <TabsContent value="alerts"><EndpointAlertsTab key={e.id} endpoint={e} onCloseDrawer={() => onOpenChange(false)} /></TabsContent>
               <TabsContent value="network">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <NetworkTab d={detail} />}</TabsContent>
               <TabsContent value="platforms">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <PlatformsTab d={detail} />}</TabsContent>
-              <TabsContent value="devices"><HeadsetCompliance e={e} approved={approved} />{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <DevicesTab d={detail} />}</TabsContent>
+              <TabsContent value="devices">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <DevicesTab d={detail} tagFor={(name) => <HeadsetComplianceBadge e={e} approved={approved} deviceName={name} />} />}</TabsContent>
               <TabsContent value="system">{stale ? <StaleBanner mins={e.lastSeenMinAgo} /> : <SystemTab d={detail} />}</TabsContent>
             </Tabs>
           </div>

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Headphones, Mic, Video, Bluetooth, Usb } from "lucide-react"
 import type { Endpoint } from "@/data/endpoints"
 import type { EndpointDetail, PlatformStatus } from "@/data/endpointDetail"
@@ -105,14 +106,18 @@ const deviceStateColor: Record<string, string> = {
   muted: "var(--fg-neutral-muted)",
 }
 
-export function DevicesTab({ d }: { d: EndpointDetail }) {
+/** `tagFor` adds a tag beside a device's name (Fast Follow: headset approval). */
+export function DevicesTab({ d, tagFor }: { d: EndpointDetail; tagFor?: (name: string) => ReactNode }) {
   const Row = ({ r }: { r: EndpointDetail["devices"]["audio"][number] }) => {
     const Icon = deviceIcon[r.kind]
     return (
       <Panel className="flex items-center gap-3">
         <span className="flex size-9 items-center justify-center rounded-lg" style={{ background: "var(--bg-neutral-muted)", color: "var(--fg-neutral-muted)" }}><Icon className="size-4" /></span>
         <div className="flex min-w-px flex-1 flex-col">
-          <span className="truncate text-sm font-semibold" style={{ color: "var(--fg-neutral-emphasis)" }}>{r.name}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-semibold" style={{ color: "var(--fg-neutral-emphasis)" }}>{r.name}</span>
+            {tagFor?.(r.name)}
+          </span>
           <span className="truncate text-xs" style={{ color: "var(--fg-neutral-muted)" }}>{r.meta}</span>
         </div>
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium" style={{ color: deviceStateColor[r.stateTone] }}>
