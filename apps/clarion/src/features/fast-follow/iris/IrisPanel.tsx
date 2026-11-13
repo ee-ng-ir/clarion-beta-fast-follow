@@ -78,14 +78,8 @@ export function IrisPanel({
         <span className="flex size-7 items-center justify-center rounded-md border border-line-neutral-muted bg-surface-card text-content-neutral-emphasis">
           <IrisMark mood={mood} className="size-5" />
         </span>
-        <div className="flex min-w-0 flex-col">
-          <div className="flex items-center gap-2">
-            <h2 className="text-heading-xs text-content-neutral-emphasis">Iris</h2>
-            <ExploringTag />
-          </div>
-          {/* as in Product's Reporting prototype */}
-          <p className="hidden truncate text-body-xs text-content-neutral-muted md:block">Answers from your Clarion data</p>
-        </div>
+        <h2 className="text-heading-xs text-content-neutral-emphasis">Iris</h2>
+        <ExploringTag />
         <div className="ms-auto flex items-center gap-1">
           <Button variant="ghost" size="icon-sm" aria-label="Start a new conversation" title="Start a new conversation" onClick={clearThread}><RotateCcw /></Button>
           <Button variant="ghost" size="icon-sm" aria-label="Close Iris" title="Close Iris" onClick={closeIris}><X /></Button>
@@ -178,21 +172,14 @@ function ContextBar({ context, page }: { context: IrisContext; page: PageId }) {
   )
 }
 
-/** First-use message. On Dashboards it's Product's Reporting prototype copy; elsewhere the same voice, for the page. */
+/** First-use message, on Dashboards only: Product's Reporting prototype copy. Elsewhere the "Looking at" bar says enough. */
 function Empty({ context }: { context: IrisContext | null }) {
-  const onDashboards = context?.kind === "page" && context.page === "dashboards"
-  const about = context?.kind === "group" ? "this alert group" : context?.kind === "alert" ? "this alert" : "what's on this page"
+  if (!(context?.kind === "page" && context.page === "dashboards")) return null
   return (
     <Card size="sm">
       <CardContent className="flex flex-col gap-2 text-body-md text-content-neutral-emphasis">
-        {onDashboards ? (
-          <>
-            <p>Ask me for a dashboard view in your own words. I'll answer with a chart and table from Clarion's data. I never estimate numbers.</p>
-            <p className="text-body-sm text-content-neutral-muted">Dashboards cover up to 180 days.</p>
-          </>
-        ) : (
-          <p>Ask me about {about} in your own words. I'll answer from Clarion's data. I never estimate numbers.</p>
-        )}
+        <p>Ask me for a dashboard view in your own words. I'll answer with a chart and table from Clarion's data. I never estimate numbers.</p>
+        <p className="text-body-sm text-content-neutral-muted">Dashboards cover up to 180 days.</p>
       </CardContent>
     </Card>
   )
