@@ -71,6 +71,8 @@ function matchText(text: string, ctx: IrisContext): IntentId | "howto-alerts" | 
 }
 
 export function answer(ctx: IrisContext, q: Intent | { text: string }): { answer: Answer; thinking: string | string[] } {
+  // A "Build: …" suggestion always builds, whichever page it was picked on
+  if (!("text" in q) && q.id === "build") return build(q.request ?? q.label)
   // On Dashboards, a request for something to keep an eye on is a request to build it
   if (ctx.kind === "page" && ctx.page === "dashboards") {
     const text = "text" in q ? q.text : q.id === "build" ? q.request ?? q.label : null

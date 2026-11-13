@@ -108,7 +108,7 @@ export function IrisPanel({
       <div className="flex shrink-0 flex-col gap-2 border-t border-line-neutral-muted p-3">
         <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Suggested questions">
           {suggestionsFor(current).map((s) => (
-            <Chip key={s.id} disabled={!!thinking} onClick={() => { syncContext(); ask(s) }} className="shrink-0">{s.label}</Chip>
+            <Chip key={`${s.id}:${s.label}`} disabled={!!thinking} onClick={() => { syncContext(); ask(s) }} className="shrink-0">{s.label}</Chip>
           ))}
         </div>
         <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); send() }}>
