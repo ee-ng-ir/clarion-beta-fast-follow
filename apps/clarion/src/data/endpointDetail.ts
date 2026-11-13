@@ -2,6 +2,7 @@
 // Seeded by the endpoint id so the same endpoint always shows the same detail.
 
 import type { Endpoint, Platform } from "./endpoints"
+import { approvedHeadsets, headsetById } from "@ir/telemetry"
 import { headsetFor } from "@/features/fast-follow/headsets/headsets"
 import { inventoryFor, LATEST_WIDGET } from "@/features/fast-follow/dashboards/data"
 
@@ -121,6 +122,16 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
   const audioOut: DeviceRow = hs
     ? { name: hs.model, meta: `${hs.connection} · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
     : { name: pick(headsets), meta: `Bluetooth · Driver v2.${r(10, 20)}.${r(1, 9)} · Default speaker & mic`, state: "In-use", stateTone: "good", kind: "audio-out" }
+  // Fast Follow: about half the endpoints also have a spare approved headset plugged in (a few have two),
+  // so the Devices tab shows more than one headset with its approval badge. Own seed, so the rest of the data doesn't shift.
+  const spareRand = seedFrom(e.id + "spare")
+  const spareCount = hs ? (n => (n < 0.15 ? 2 : n < 0.5 ? 1 : 0))(spareRand()) : 0
+  const spares: DeviceRow[] = approvedHeadsets.get()
+    .map((id) => headsetById(id))
+    .filter((h): h is NonNullable<typeof h> => !!h && h.id !== hs?.id)
+    .sort(() => spareRand() - 0.5)
+    .slice(0, spareCount)
+    .map((h) => ({ name: h.model, meta: `${h.connection} · Driver v2.${Math.floor(10 + spareRand() * 10)}.${Math.floor(1 + spareRand() * 8)} · Not default`, state: "Connected", stateTone: "muted", kind: "audio-out" }))
   const audioIn: DeviceRow = { name: "Realtek HD Audio (built-in)", meta: `Driver v6.0.${r(9000, 9300)}.1 · Fallback device`, state: "Active", stateTone: "muted", kind: "audio-in" }
   // Fast Follow: the same camera, Windows and widget version the Device inventory dashboard counts
   const inv = inventoryFor(e)
@@ -152,7 +163,7 @@ export function getEndpointDetail(e: Endpoint): EndpointDetail {
     },
     platforms: { rows, why },
     devices: {
-      audio: [audioOut, audioIn],
+      audio: [audioOut, ...spares, audioIn],
       video: [camera],
     },
     system: {
