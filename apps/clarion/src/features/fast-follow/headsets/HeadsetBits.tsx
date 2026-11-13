@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertTitle, Badge, Select } from "@ir/ui"
+import { Badge, Select } from "@ir/ui"
 import { complianceLabel, type Compliance } from "@ir/telemetry"
 import type { Endpoint } from "@/data/endpoints"
 import { complianceBadge, complianceFor, headsetFor } from "./headsets"
@@ -28,25 +28,13 @@ export function HeadsetCell({ e, approved }: { e: Endpoint; approved: string[] }
 }
 
 /**
- * Endpoint › Devices: the headset and its compliance, in words. Advisory only:
- * it never changes the endpoint's status (D4).
+ * Endpoint › Devices: a badge on the headset's own row saying whether it's
+ * approved. Advisory only: it never changes the endpoint's status (D4).
+ * Returns nothing when there's no approved list, or for any other device.
  */
-export function HeadsetCompliance({ e, approved }: { e: Endpoint; approved: string[] }) {
+export function HeadsetComplianceBadge({ e, approved, deviceName }: { e: Endpoint; approved: string[]; deviceName: string }) {
   const h = headsetFor(e)
   const c = complianceFor(e, approved)
-  if (c === "no-list") return null
-  const copy: Record<Exclude<Compliance, "no-list">, { variant: "success" | "warning" | "info"; title: string; body: string }> = {
-    approved: { variant: "success", title: `${h?.model} is approved`, body: `Matched to your IT team's approved list by its USB ID (${h?.vidPid}).` },
-    "not-approved": { variant: "warning", title: `${h?.model} isn't on your approved list`,
-      body: `${h?.onIrList ? "It's on IR's headset list, but your IT team hasn't approved it." : "It isn't on IR's headset list either."} The agent sees a note in the widget. The headset keeps working, and the endpoint's status doesn't change.` },
-    "not-checked": { variant: "info", title: `${h?.model} can't be checked`, body: "Bluetooth headsets don't report a USB ID, so Clarion can't match them to the list. The agent sees no note." },
-    none: { variant: "info", title: "No headset connected", body: "Nothing to check. A missing headset is its own alert, separate from compliance." },
-  }
-  const t = copy[c]
-  return (
-    <Alert variant={t.variant} className="mb-4">
-      <AlertTitle>{t.title}</AlertTitle>
-      <AlertDescription>{t.body}</AlertDescription>
-    </Alert>
-  )
+  if (!h || h.model !== deviceName || c === "no-list" || c === "none") return null
+  return <Badge color={complianceBadge[c]} className="shrink-0">{complianceLabel[c]}</Badge>
 }

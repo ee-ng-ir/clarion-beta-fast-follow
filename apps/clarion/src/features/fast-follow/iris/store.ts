@@ -16,12 +16,20 @@ const key = (c: IrisContext) => (c.kind === "group" ? `g:${c.groupId}` : c.kind 
 const sameContext = (a: IrisContext | null, b: IrisContext) => !!a && key(a) === key(b)
 
 /**
- * Point Iris at something. A change of context is marked in the thread with a
- * divider, so earlier facts are never mistaken for this context (finding C2, C4).
+ * Point Iris at something. Browsing alone leaves no trace in the thread: the
+ * context bar shows what Iris is looking at. The thread only marks a context
+ * when something is asked in it (see `ask`), so earlier answers are never
+ * mistaken for this context (finding C2, C4).
  */
 export function setContext(context: IrisContext) {
   if (sameContext(state.context, context)) return
-  set({ context, messages: [...state.messages, { id: nextId++, role: "context", context }] })
+  set({ context })
+}
+
+/** The context the thread last marked, if any. */
+const lastMarked = (msgs: Message[]) => {
+  for (let i = msgs.length - 1; i >= 0; i--) { const m = msgs[i]; if (m.role === "context") return m.context }
+  return null
 }
 
 export function openIris(context: IrisContext, first?: Intent) {
@@ -32,14 +40,16 @@ export function openIris(context: IrisContext, first?: Intent) {
 }
 
 export const closeIris = () => set({ open: false })
-export const clearThread = () => set({ messages: state.context ? [{ id: nextId++, role: "context", context: state.context }] : [] })
+export const clearThread = () => set({ messages: [] })
 
 /** Ask a question. `q` is a suggested intent or free text. */
 export function ask(q: Intent | { text: string }, shownAs?: string) {
   if (!state.context || state.thinking) return
   const text = "text" in q ? q.text : shownAs ?? q.label
-  const msgs: Message[] = "text" in q || shownAs || !q.auto ? [...state.messages, { id: nextId++, role: "user", text }] : state.messages
   const ctx = state.context
+  // mark the context only when something is asked in it, and only when it changed
+  const marked: Message[] = sameContext(lastMarked(state.messages), ctx) ? state.messages : [...state.messages, { id: nextId++, role: "context", context: ctx }]
+  const msgs: Message[] = "text" in q || shownAs || !q.auto ? [...marked, { id: nextId++, role: "user", text }] : marked
   const { answer: a, thinking } = answer(ctx, q)
   // short, honest pause: the status line says what Iris is reading, step by step when it's building
   const steps = Array.isArray(thinking) ? thinking : [thinking]

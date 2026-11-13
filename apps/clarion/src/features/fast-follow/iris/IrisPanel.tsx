@@ -21,8 +21,8 @@ const MAX_CHARS = 500
  * Iris side panel. Docked beside the page (not a modal), so IT can keep working.
  * On phones it fills the screen below the Fast Follow preview banner.
  * Built on the Iris UX investigation (Nov 2026): context is always attached and
- * shown, every answer states its basis, sources and time, and a change of
- * context is marked in the thread.
+ * shown, every answer states its basis, sources and time, and the thread marks
+ * the context of each question asked (browsing alone leaves no trace).
  */
 export function IrisPanel({
   page, onNavigate, onOpenEndpoint,
@@ -119,14 +119,16 @@ export function IrisPanel({
             onFocus={() => setListening(true)} onBlur={() => setListening(false)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }}
             placeholder={context?.kind === "group" ? "Ask about this alert group" : context?.kind === "alert" ? "Ask about this alert" : "Ask about your fleet"}
-            aria-describedby="iris-hint" aria-invalid={over || undefined}
+            aria-describedby={over ? "iris-hint" : undefined} aria-invalid={over || undefined}
             className="max-h-32 min-h-9 flex-1 resize-none"
           />
           <Button type="submit" size="icon-md" aria-label="Send question" disabled={!text.trim() || over || !!thinking}><ArrowUp /></Button>
         </form>
-        <p id="iris-hint" className={cn("text-body-xs", over ? "text-content-danger-emphasis" : "text-content-neutral-subtle")}>
-          {over ? `Questions can be up to ${MAX_CHARS} characters. This one is ${text.length}.` : "Answers use your Clarion data and the alert catalogue only. Iris can be wrong; check figures before acting."}
-        </p>
+        {over && (
+          <p id="iris-hint" className="text-body-xs text-content-danger-emphasis">
+            Questions can be up to {MAX_CHARS} characters. This one is {text.length}.
+          </p>
+        )}
       </div>
     </aside>
   )
