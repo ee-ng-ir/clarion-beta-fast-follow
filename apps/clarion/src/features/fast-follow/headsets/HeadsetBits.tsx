@@ -1,5 +1,5 @@
 import { Badge, Select } from "@ir/ui"
-import { complianceLabel, type Compliance } from "@ir/telemetry"
+import { complianceLabel, complianceOf, HEADSET_CATALOGUE, type Compliance } from "@ir/telemetry"
 import type { Endpoint } from "@/data/endpoints"
 import { complianceBadge, complianceFor, headsetFor } from "./headsets"
 
@@ -28,13 +28,13 @@ export function HeadsetCell({ e, approved }: { e: Endpoint; approved: string[] }
 }
 
 /**
- * Endpoint › Devices: a badge on the headset's own row saying whether it's
+ * Endpoint › Devices: a badge on each headset's row saying whether it's
  * approved. Advisory only: it never changes the endpoint's status (D4).
- * Returns nothing when there's no approved list, or for any other device.
+ * Returns nothing when there's no approved list, or for a device that isn't a headset.
  */
-export function HeadsetComplianceBadge({ e, approved, deviceName }: { e: Endpoint; approved: string[]; deviceName: string }) {
-  const h = headsetFor(e)
-  const c = complianceFor(e, approved)
-  if (!h || h.model !== deviceName || c === "no-list" || c === "none") return null
+export function HeadsetComplianceBadge({ approved, deviceName }: { approved: string[]; deviceName: string }) {
+  const h = HEADSET_CATALOGUE.find((m) => m.model === deviceName)
+  const c = h ? complianceOf(h, approved) : "none"
+  if (c === "no-list" || c === "none") return null
   return <Badge color={complianceBadge[c]} className="shrink-0">{complianceLabel[c]}</Badge>
 }

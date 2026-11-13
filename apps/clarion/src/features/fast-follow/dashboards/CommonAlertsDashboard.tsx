@@ -1,7 +1,8 @@
 import { useMemo } from "react"
-import { X } from "lucide-react"
 import {
-  BarChart, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, EmptyState,
+  BarChart, Button, Card, CardAction,
+  Drawer, DrawerActions, DrawerBody, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader,
+  DrawerHeading, DrawerIcon, DrawerTitle, DrawerTitleGroup, CardContent, CardDescription, CardHeader, CardHeaderText, CardTitle, EmptyState,
   SegmentedControl, SegmentedControlItem, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@ir/ui"
 import type { Endpoint } from "@/data/endpoints"
@@ -26,7 +27,7 @@ const OFFENDERS_SHOWN = 10
 
 /**
  * Most common alerts over a period, ranked by times raised or endpoints affected.
- * Pick an alert to see its week-by-week count and the endpoints it hit most.
+ * Pick an alert to open a drawer with its week-by-week count and the endpoints it hit most.
  */
 /** Up to this many days, the chart goes day by day: too few for whole weeks. */
 const BY_DAY_MAX = 14
@@ -158,78 +159,86 @@ export function CommonAlertsDashboard({ onOpenEndpoint }: { onOpenEndpoint: (row
         <CardContent className="text-body-xs text-content-neutral-muted">{COUNTING_NOTE}</CardContent>
       </Card>
 
-      {sel && (
-        <Card>
-          <CardHeader>
-            <CardHeaderText>
-              <CardTitle>{sel.name}</CardTitle>
-              <CardDescription>
-                {sel.times.toLocaleString()} times on {sel.endpoints.toLocaleString()} endpoints · {sel.critical.toLocaleString()} at Critical ({alertType(sel.typeId).critical}) · {sp.custom ? dates : period.toLowerCase()}
-              </CardDescription>
-            </CardHeaderText>
-            <CardAction className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={openTrend}>See the trend</Button>
-              <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={() => patchAlerts({ selected: null })}><X /></Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="grid gap-6 @4xl:grid-cols-2">
-            {/* two weeks or less is too short for weeks, so it shows day by day: never an empty half of the card */}
-            {sp.days > BY_DAY_MAX ? (
-              <BarChart size="sm"
-                x={weeks(sp.days, sp.end).map((w) => w.label)}
-                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: weekly(selRaises, sp.days, st.rank, sp.end) }]}
-                title={`${MEASURE_LABEL[st.rank]} by week`}
-                subtitle={`${fmtWeeks(sp.days, sp.end)} · whole weeks`}
-                yLabel={MEASURE_LABEL[st.rank]}
-                xLabel="Week starting"
-                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each week, ${dates}.`} />
-            ) : (
-              <BarChart size="sm"
-                x={daysOf(sp).map((d) => fmtDay(dayDate(d)))}
-                series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: daily(selRaises, st.rank, sp) }]}
-                title={`${MEASURE_LABEL[st.rank]} by day`}
-                subtitle={dates}
-                yLabel={MEASURE_LABEL[st.rank]}
-                xLabel="Day"
-                label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each day, ${dates}.`} />
-            )}
-            <div className="flex min-w-0 flex-col gap-2">
-              <h3 className="text-label-lg text-content-neutral-emphasis">Endpoints it hit most</h3>
-              <Table size="sm" aria-label={`Endpoints affected by ${sel.name}`}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead align="start">User / Machine</TableHead>
-                    <TableHead align="start" className="hidden @2xl:table-cell">Location</TableHead>
-                    <TableHead numeric>Times</TableHead>
-                    <TableHead align="end">Last raised</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {offenders.slice(0, OFFENDERS_SHOWN).map((o, i) => (
-                    <TableRow key={o.e.id} className="cursor-pointer" onClick={() => onOpenEndpoint(offenders.map((x) => x.e), i)}>
-                      <TableCell align="start">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-label-md text-content-neutral-emphasis">{o.e.user}</span>
-                          <span className="truncate font-mono text-body-xs text-content-neutral-muted">{o.e.machine}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell align="start" className="hidden @2xl:table-cell">{o.e.locationName}</TableCell>
-                      <TableCell numeric>{o.times}</TableCell>
-                      <TableCell align="end" className="text-content-neutral-muted">{dayAgo(o.lastDay)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-body-xs text-content-neutral-muted">
-                  {offenders.length > OFFENDERS_SHOWN ? `Top ${OFFENDERS_SHOWN} of ${offenders.length.toLocaleString()}` : `All ${offenders.length.toLocaleString()}`}
-                </span>
-                <ExportMenu onCsv={exportOffenders} label={`Export all ${offenders.length.toLocaleString()}`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* the alert's detail opens in a drawer, like an alert group, so it never lands below the fold */}
+      <Drawer open={!!sel} onOpenChange={(o) => { if (!o) patchAlerts({ selected: null }) }}>
+        <DrawerContent size="wide">
+          {sel && (
+            <>
+              <DrawerHeader type="title">
+                <DrawerHeading>
+                  <DrawerIcon><AlertIcon icon={alertType(sel.typeId).icon} severity={sel.critical * 2 > sel.times ? "critical" : "warning"} size="lg" /></DrawerIcon>
+                  <DrawerTitleGroup>
+                    <DrawerTitle>{sel.name}</DrawerTitle>
+                    <DrawerDescription>
+                      {sel.times.toLocaleString()} times on {sel.endpoints.toLocaleString()} endpoints · {sel.critical.toLocaleString()} at Critical ({alertType(sel.typeId).critical}) · {sp.custom ? dates : period.toLowerCase()}
+                    </DrawerDescription>
+                  </DrawerTitleGroup>
+                  <DrawerActions>
+                    <Button variant="ghost" size="sm" onClick={openTrend}>See the trend</Button>
+                    <DrawerCloseButton />
+                  </DrawerActions>
+                </DrawerHeading>
+              </DrawerHeader>
+              <DrawerBody className="@container flex flex-col gap-6">
+                {/* two weeks or less is too short for weeks, so it shows day by day: never an empty half of the card */}
+                {sp.days > BY_DAY_MAX ? (
+                  <BarChart size="sm"
+                    x={weeks(sp.days, sp.end).map((w) => w.label)}
+                    series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: weekly(selRaises, sp.days, st.rank, sp.end) }]}
+                    title={`${MEASURE_LABEL[st.rank]} by week`}
+                    subtitle={`${fmtWeeks(sp.days, sp.end)} · whole weeks`}
+                    yLabel={MEASURE_LABEL[st.rank]}
+                    xLabel="Week starting"
+                    label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each week, ${dates}.`} />
+                ) : (
+                  <BarChart size="sm"
+                    x={daysOf(sp).map((d) => fmtDay(dayDate(d)))}
+                    series={[{ id: sel.typeId, label: MEASURE_LABEL[st.rank], points: daily(selRaises, st.rank, sp) }]}
+                    title={`${MEASURE_LABEL[st.rank]} by day`}
+                    subtitle={dates}
+                    yLabel={MEASURE_LABEL[st.rank]}
+                    xLabel="Day"
+                    label={`${sel.name}: ${MEASURE_LABEL[st.rank].toLowerCase()} each day, ${dates}.`} />
+                )}
+                <div className="flex min-w-0 flex-col gap-2">
+                  <h3 className="text-label-lg text-content-neutral-emphasis">Endpoints it hit most</h3>
+                  <Table size="sm" aria-label={`Endpoints affected by ${sel.name}`}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead align="start">User / Machine</TableHead>
+                        <TableHead align="start" className="hidden @2xl:table-cell">Location</TableHead>
+                        <TableHead numeric>Times</TableHead>
+                        <TableHead align="end">Last raised</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {offenders.slice(0, OFFENDERS_SHOWN).map((o, i) => (
+                        <TableRow key={o.e.id} className="cursor-pointer" onClick={() => onOpenEndpoint(offenders.map((x) => x.e), i)}>
+                          <TableCell align="start">
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate text-label-md text-content-neutral-emphasis">{o.e.user}</span>
+                              <span className="truncate font-mono text-body-xs text-content-neutral-muted">{o.e.machine}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell align="start" className="hidden @2xl:table-cell">{o.e.locationName}</TableCell>
+                          <TableCell numeric>{o.times}</TableCell>
+                          <TableCell align="end" className="text-content-neutral-muted">{dayAgo(o.lastDay)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-body-xs text-content-neutral-muted">
+                      {offenders.length > OFFENDERS_SHOWN ? `Top ${OFFENDERS_SHOWN} of ${offenders.length.toLocaleString()}` : `All ${offenders.length.toLocaleString()}`}
+                    </span>
+                    <ExportMenu onCsv={exportOffenders} label={`Export all ${offenders.length.toLocaleString()}`} />
+                  </div>
+                </div>
+              </DrawerBody>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
